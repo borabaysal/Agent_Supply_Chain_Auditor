@@ -28,7 +28,8 @@ def iter_servers(doc, *, origin: str) -> list[tuple[str, str, dict]]:
     out: list[tuple[str, str, dict]] = []
     if not isinstance(doc, dict):
         return out
-    for key in ("mcp_servers", "mcpServers"):
+    # mcp_servers: Hermes, Codex · mcpServers: Claude/Cursor/Gemini/Windsurf · servers: VS Code mcp.json
+    for key in ("mcp_servers", "mcpServers", "servers"):
         servers = doc.get(key)
         if isinstance(servers, dict):
             for name, spec in servers.items():
@@ -53,7 +54,7 @@ def audit_server(location: str, name: str, spec: dict) -> list[Finding]:
     if isinstance(command, str) and command.strip():
         argv = command.split() + [str(a) for a in args] if not args else [command] + [str(a) for a in args]
         out.extend(_audit_command(location, name, argv))
-    url = spec.get("url") or spec.get("serverUrl")
+    url = spec.get("url") or spec.get("serverUrl") or spec.get("httpUrl")
     if isinstance(url, str) and url:
         out.extend(_audit_url(location, name, url))
     # inline credentials: env values and headers are the usual places keys get pasted

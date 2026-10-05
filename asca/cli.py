@@ -52,6 +52,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-client-configs", action="store_true",
                    help="don't auto-discover ~/.claude.json, Cursor, Claude Desktop, Windsurf configs")
     p.add_argument("--no-global-git", action="store_true", help="skip ~/.gitconfig and /etc/gitconfig")
+    p.add_argument("--advisories", type=Path, metavar="FILE",
+                   help="extra Hermes version advisories (JSON list; see README)")
     p.add_argument("--fail-on", default="high", help="minimum severity that fails the audit (default: high)")
     p.add_argument("--baseline", type=Path, help="JSON file of accepted fingerprints to suppress")
     p.add_argument("--write-baseline", type=Path, metavar="FILE",
@@ -101,7 +103,14 @@ def run(argv: list[str] | None = None) -> int:
         install = args.hermes_install or _default_install()
         targets["hermes_home"] = str(home)
         targets["hermes_install"] = str(install) if install else ""
-        findings += hermes.audit(home, install, stats)
+        extra = []
+        if args.advisories:
+            try:
+                extra = hermes.load_advisories(args.advisories)
+            except (OSError, ValueError, KeyError, TypeError) as exc:
+                print(f"asca: cannot read advisories: {exc}", file=sys.stderr)
+                return 2
+        findings += hermes.audit(home, install, stats, extra)
 
     client_cfgs = list(args.mcp_config)
     if not args.no_client_configs:

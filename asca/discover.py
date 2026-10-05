@@ -111,32 +111,101 @@ def audit_global_git(env: dict | None = None) -> list[Finding]:
     return out
 
 
+def load_mcp_doc(path: Path):
+    """Parse an MCP client config: JSON (most clients), JSONC (VS Code), or TOML (Codex CLI)."""
+    text = path.read_text(encoding="utf-8")
+    if path.suffix in (".yaml", ".yml"):
+        from . import yamlmini
+        doc = yamlmini.load(text)
+        if isinstance(doc, dict) and isinstance(doc.get("extensions"), dict):
+            # goose: extensions.<name>.{cmd,args,envs,uri}
+            return {"mcp_servers": {k: {"command": v.get("cmd"), "args": v.get("args"), "env": v.get("envs"),
+                                        "url": v.get("uri"), "enabled": v.get("enabled", True)}
+                                    for k, v in doc["extensions"].items() if isinstance(v, dict)}}
+        return doc
+    if path.suffix == ".toml":
+        import tomllib
+        doc = tomllib.loads(text)
+        # Codex: [mcp_servers.<name>] -> same shape as Hermes, iter_servers handles it
+        return doc
+    try:
+        return json.loads(text)
+    except ValueError:
+        return json.loads(_strip_jsonc(text))
+
+
+def _strip_jsonc(text: str) -> str:
+    """Remove // and /* */ comments and trailing commas outside strings (VS Code settings files)."""
+    out, i, n, in_str = [], 0, len(text), False
+    while i < n:
+        ch = text[i]
+        if in_str:
+            out.append(ch)
+            if ch == "\\" and i + 1 < n:
+                out.append(text[i + 1])
+                i += 2
+                continue
+            if ch == '"':
+                in_str = False
+        elif ch == '"':
+            in_str = True
+            out.append(ch)
+        elif text.startswith("//", i):
+            while i < n and text[i] != "\n":
+                i += 1
+            continue
+        elif text.startswith("/*", i):
+            end = text.find("*/", i + 2)
+            i = n if end < 0 else end + 2
+            continue
+        else:
+            out.append(ch)
+        i += 1
+    import re
+    return re.sub(r",(\s*[}\]])", r"\1", "".join(out))
+
+
 def audit_json_mcp(path: Path) -> list[Finding]:
     try:
-        doc = json.loads(path.read_text(encoding="utf-8"))
+        doc = load_mcp_doc(path)
     except (OSError, ValueError) as exc:
         return [Finding("scanner.parse-error", "scanner", Severity.MEDIUM, f"MCP config {path.name} unreadable",
                         str(path), detail=f"{exc}. Not audited (fail closed).",
-                        remediation="Fix the JSON so it can be audited.")]
+                        remediation="Fix the file so it can be audited.")]
     out: list[Finding] = []
     for loc, name, spec in mcp.iter_servers(doc, origin=str(path)):
         out += mcp.audit_server(loc, name, spec)
     return out
 
 
+# Well-known MCP client config locations (user-level). Project-level files are found
+# per repo by audit_repo. Missing files are simply skipped.
+CLIENT_CONFIGS = [
+    ".claude.json",                                                    # Claude Code
+    ".claude/settings.json",
+    ".cursor/mcp.json",                                                # Cursor
+    ".codeium/windsurf/mcp_config.json",                               # Windsurf
+    ".gemini/settings.json",                                           # Gemini CLI
+    ".codex/config.toml",                                              # OpenAI Codex CLI
+    ".config/goose/config.yaml",                                       # goose (YAML: parsed via yamlmini)
+    ".config/Claude/claude_desktop_config.json",                       # Claude Desktop (Linux)
+    "Library/Application Support/Claude/claude_desktop_config.json",   # Claude Desktop (macOS)
+    "AppData/Roaming/Claude/claude_desktop_config.json",               # Claude Desktop (Windows)
+    ".config/Code/User/mcp.json",                                      # VS Code (Linux)
+    "Library/Application Support/Code/User/mcp.json",                  # VS Code (macOS)
+    "AppData/Roaming/Code/User/mcp.json",                              # VS Code (Windows)
+]
+
+
 def default_client_configs(home: Path) -> list[Path]:
-    cands = [home / ".claude.json", home / ".claude" / "settings.json", home / ".cursor" / "mcp.json",
-             home / ".codeium" / "windsurf" / "mcp_config.json",
-             home / ".config" / "Claude" / "claude_desktop_config.json",
-             home / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"]
-    return [p for p in cands if p.is_file()]
+    return [home / c for c in CLIENT_CONFIGS if (home / c).is_file()]
 
 
 def audit_client_configs(paths: list[Path], stats: dict) -> list[Finding]:
     out: list[Finding] = []
     for p in paths:
         try:
-            doc = json.loads(p.read_text(encoding="utf-8"))
+            doc = load_mcp_doc(p)
         except (OSError, ValueError):
             doc = None
         n = len(mcp.iter_servers(doc, origin=str(p))) if doc is not None else 0

@@ -471,6 +471,46 @@ def test_auditor_source_tree_is_clean_under_its_own_secret_scan():
     assert hits == []
 
 
+def test_client_config_formats(tmp_path):
+    vs = tmp_path / "mcp.json"   # VS Code: JSONC + "servers"
+    vs.write_text('{\n // comment\n "servers": {"gh": {"command": "npx", "args": ["-y", "pkg"],},},\n}\n')
+    codex = tmp_path / "config.toml"
+    codex.write_text('[mcp_servers.git]\ncommand = "uvx"\nargs = ["mcp-server-git"]\n')
+    goose = tmp_path / "config.yaml"
+    goose.write_text("extensions:\n  fetch:\n    cmd: uvx\n    args:\n      - mcp-server-fetch\n    enabled: true\n")
+    gem = tmp_path / "settings.json"
+    gem.write_text('{"mcpServers": {"r": {"httpUrl": "http://evil.example.com/mcp"}}}')
+    assert rules(discover.audit_json_mcp(vs)) == ["pin.mcp-package"]
+    assert rules(discover.audit_json_mcp(codex)) == ["pin.mcp-package"]
+    assert rules(discover.audit_json_mcp(goose)) == ["pin.mcp-package"]
+    assert "mcp.plaintext-transport" in rules(discover.audit_json_mcp(gem))
+    bad = tmp_path / "bad.toml"
+    bad.write_text("[[[")
+    assert rules(discover.audit_json_mcp(bad)) == ["scanner.parse-error"]
+
+
+def test_default_client_configs_discovers_known_paths(tmp_path):
+    (tmp_path / ".codex").mkdir()
+    (tmp_path / ".codex" / "config.toml").write_text("")
+    (tmp_path / ".gemini").mkdir()
+    (tmp_path / ".gemini" / "settings.json").write_text("{}")
+    got = {p.relative_to(tmp_path).as_posix() for p in discover.default_client_configs(tmp_path)}
+    assert got == {".codex/config.toml", ".gemini/settings.json"}
+
+
+def test_extra_advisories_file(tmp_path):
+    inst = tmp_path / "inst" / "hermes_cli"
+    inst.mkdir(parents=True)
+    (inst / "__init__.py").write_text('__version__ = "1.2.3"\n')
+    adv = tmp_path / "adv.json"
+    adv.write_text(json.dumps([{"id": "CVE-TEST-1", "first": "1.0.0", "last": "1.2.9", "severity": "high"}]))
+    f = hermes.audit_version(tmp_path / "inst", {}, hermes.load_advisories(adv))
+    assert [x.subject for x in f] == ["CVE-TEST-1"] and f[0].severity == Severity.HIGH
+    adv.write_text(json.dumps([{"id": "X", "first": "nope", "last": "1"}]))
+    with pytest.raises(ValueError):
+        hermes.load_advisories(adv)
+
+
 def test_module_entrypoint_smoke(tmp_path):
     r = subprocess.run([sys.executable, "-m", "asca", "--version"], cwd=ROOT, capture_output=True, text=True)
     assert r.returncode == 0 and r.stdout.startswith("asca ")

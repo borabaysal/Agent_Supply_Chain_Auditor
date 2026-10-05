@@ -1,0 +1,10 @@
+{
+  "suppress": [
+    {
+      "fingerprint": "0123456789abcdef",
+      "rule": "mcp.remote-unpinnable",
+      "title": "Example: MCP server `docs` is a remote service",
+      "reason": "Vendor-operated; reviewed tool list 2026-10-01"
+    }
+  ]
+}

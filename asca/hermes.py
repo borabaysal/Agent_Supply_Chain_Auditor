@@ -208,6 +208,20 @@ def _parse_version(s: str) -> tuple[int, ...] | None:
     return tuple(int(x) for x in m.groups()) if m else None
 
 
+def load_advisories(path: Path) -> list[tuple]:
+    """Extra advisories from JSON so users can track new CVEs without a code release:
+    [{"id": "CVE-…", "first": "0.18.2", "last": "0.21.0", "fixed": "…", "severity": "critical", "summary": "…"}]"""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    out = []
+    for a in data:
+        lo, hi = _parse_version(a["first"]), _parse_version(a["last"])
+        if not lo or not hi:
+            raise ValueError(f"advisory {a.get('id')}: bad version range")
+        out.append((a["id"], lo, hi, a.get("fixed", "see advisory"), Severity.parse(a.get("severity", "high")),
+                    a.get("summary", "")))
+    return out
+
+
 def detect_hermes_version(install: Path | None) -> tuple[str | None, str]:
     candidates = []
     if install:
@@ -223,7 +237,7 @@ def detect_hermes_version(install: Path | None) -> tuple[str | None, str]:
     return None, ""
 
 
-def audit_version(install: Path | None, stats: dict) -> list[Finding]:
+def audit_version(install: Path | None, stats: dict, extra_advisories: list[tuple] = ()) -> list[Finding]:
     version, where = detect_hermes_version(install)
     stats["hermes_version"] = version or "unknown"
     if not version:
@@ -232,7 +246,7 @@ def audit_version(install: Path | None, stats: dict) -> list[Finding]:
     if not v:
         return []
     out = []
-    for adv, lo, hi, fixed, sev, summary in HERMES_ADVISORIES:
+    for adv, lo, hi, fixed, sev, summary in [*HERMES_ADVISORIES, *extra_advisories]:
         if lo <= v <= hi:
             out.append(Finding(
                 rule="agent.vulnerable-version", category="integrity", severity=sev,
@@ -345,12 +359,12 @@ def audit_skill_install_commands(home: Path) -> list[Finding]:
     return out
 
 
-def audit(home: Path, install: Path | None, stats: dict) -> list[Finding]:
+def audit(home: Path, install: Path | None, stats: dict, extra_advisories: list[tuple] = ()) -> list[Finding]:
     findings: list[Finding] = []
     findings += audit_hub(home, stats)
     findings += audit_taps(home)
     findings += audit_plugins(home, stats)
-    findings += audit_version(install, stats)
+    findings += audit_version(install, stats, extra_advisories)
     findings += audit_mcp_config(home, stats)
     findings += audit_secrets(home, stats)
     findings += audit_skill_install_commands(home)

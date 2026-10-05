@@ -1,6 +1,6 @@
 # Agent Supply-Chain Auditor (`asca`)
 
-A zero-dependency CLI for people who **self-host AI agents** (Hermes Agent, Claude Code, Cursor, Claude Desktop, any MCP client). It audits the setup for supply-chain risk, writes a **PASS/FAIL report**, and can **alert you on Telegram**.
+A zero-dependency CLI for people who **self-host AI agents**: Hermes Agent, Claude Code, Codex CLI, Gemini CLI, goose, Cursor, Windsurf, VS Code, Claude Desktop, or any MCP client. It audits the setup for supply-chain risk, writes a **PASS/FAIL report**, and can **alert you on Telegram**.
 
 ```
 $ asca --repos ~/Projects --telegram fail --env-file ~/.hermes/.env
@@ -8,8 +8,8 @@ asca 0.1.0: FAIL (fail-on high)
   critical=1  high=2  medium=1  low=5  info=2  suppressed=0
   [CRITICAL] core.fsmonitor names a program git runs on every index refresh
       ~/Projects/downloaded-repo/.git/config:3
-  [HIGH] Hub skill `polymarket-weather-trader` is not pinned to a commit
-      ~/.hermes/skills/.hub/lock.json#installed.polymarket-weather-trader
+  [HIGH] Hub skill `some-community-skill` is not pinned to a commit
+      ~/.hermes/skills/.hub/lock.json#installed.some-community-skill
   ...
   report: asca-report.md  (asca-report.json)
 ```
@@ -75,11 +75,71 @@ asca --env-file ~/.hermes/.env --telegram fail   # reuse the Hermes gateway's bo
 
 The alert lists counts, up to 8 failing findings, and the report path. It never includes secret material.
 
-### Scheduling
+### Scheduling (daily, alert only on change)
+
+`scripts/asca-daily.sh` wraps the CLI for schedulers. It keeps reports in `~/.local/state/asca` (mode 700), and `--telegram change` compares each run against the previous one, so you only get a message when PASS/FAIL or the set of failing findings changes. It also keeps the last 60 dated JSON reports.
+
+```bash
+# environment knobs (all optional)
+export ASCA_ENV_FILE=~/.hermes/.env          # TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID (or TELEGRAM_HOME_CHANNEL)
+export ASCA_ARGS="--repos $HOME/Projects --baseline $HOME/.config/asca/baseline.json"
+scripts/asca-daily.sh
+```
+
+**cron**
 
 ```cron
-# daily 07:00, alert only when something changes
-0 7 * * * cd /path/to/Agent_Supply_Chain_Auditor && python3 -m asca --repos ~/Projects -o ~/asca/latest --telegram change --env-file ~/.hermes/.env --format none
+0 7 * * * ASCA_ENV_FILE=$HOME/.hermes/.env ASCA_ARGS="--repos $HOME/Projects" /path/to/Agent_Supply_Chain_Auditor/scripts/asca-daily.sh >/dev/null 2>&1
+```
+
+**Hermes Agent scheduler** (no LLM tokens: the script itself is the job)
+
+```text
+cronjob create  schedule="0 7 * * *"  no_agent=true  script=<wrapper that exports the env vars above and calls asca-daily.sh>  deliver=local
+```
+
+Use `deliver=local` so Hermes doesn't post the script's stdout as well. asca sends the Telegram alert itself, and only on change.
+
+**systemd** (user timer)
+
+```ini
+# ~/.config/systemd/user/asca.service
+[Service]
+Type=oneshot
+Environment=ASCA_ENV_FILE=%h/.hermes/.env
+Environment=ASCA_ARGS=--repos %h/Projects
+ExecStart=%h/Agent_Supply_Chain_Auditor/scripts/asca-daily.sh
+SuccessExitStatus=1
+# ~/.config/systemd/user/asca.timer
+[Timer]
+OnCalendar=*-*-* 07:00
+Persistent=true
+[Install]
+WantedBy=timers.target
+```
+
+### MCP clients discovered automatically
+
+| Client | File (relative to `$HOME`) |
+|---|---|
+| Hermes Agent | `$HERMES_HOME/config.yaml` (`mcp_servers`) |
+| Claude Code | `.claude.json` (incl. per-project `mcpServers`), `.claude/settings.json` |
+| Codex CLI | `.codex/config.toml` (`[mcp_servers.*]`) |
+| Gemini CLI | `.gemini/settings.json` |
+| goose | `.config/goose/config.yaml` (`extensions`) |
+| Cursor / Windsurf | `.cursor/mcp.json`, `.codeium/windsurf/mcp_config.json` |
+| VS Code | `Code/User/mcp.json` (Linux, macOS, Windows paths; JSONC) |
+| Claude Desktop | `claude_desktop_config.json` (Linux, macOS, Windows paths) |
+| Repo-level | `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json` in every scanned repo |
+
+Use `--mcp-config FILE` to add others (JSON, JSONC, TOML or YAML).
+
+### Tracking new advisories
+
+The built-in Hermes advisory table covers CVE-2026-71963. Add newer ones without waiting for a release:
+
+```bash
+asca --advisories my-advisories.json     # format: examples/advisories.json
 ```
 
 ## Limits (MVP)
@@ -88,7 +148,11 @@ The alert lists counts, up to 8 failing findings, and the report path. It never 
 - Secret detection is pattern-based. It catches common providers and obvious assignments, not every possible secret.
 - Remote (URL) MCP servers can't be pinned and are reported as `info`.
 - `global core.fsmonitor=false` is suggested as defence in depth only. A repo-local value still overrides it.
-- The version advisory table is built in (`asca/hermes.py: HERMES_ADVISORIES`); update it as new advisories land.
+- Version advisories cover Hermes Agent only. For other agents, check vendor advisories; contributions are welcome.
+
+## Contributing
+
+Issues and PRs are welcome, especially new MCP client config locations, git program-executing keys, and secret patterns. Every rule needs a test, and fixtures must build fake secrets at runtime (see `tests/test_asca.py: fake()`) so the repo stays clean under its own scan. Security problems in asca itself: see [SECURITY.md](SECURITY.md).
 
 ## Development
 
@@ -96,3 +160,7 @@ The alert lists counts, up to 8 failing findings, and the report path. It never 
 uv venv .venv && uv pip install --python .venv/bin/python pytest==8.4.2
 .venv/bin/python -m pytest -q
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
