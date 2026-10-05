@@ -1,0 +1,25 @@
+[project]
+name = "agent-supply-chain-auditor"
+version = "0.1.0"
+description = "Audit self-hosted AI agents (Hermes, MCP clients) for unpinned skills/servers, command-executing git config, and exposed keys."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+# stdlib only, on purpose: an auditor of supply-chain risk should not add any.
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest==8.4.2"]
+
+[project.scripts]
+asca = "asca.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["asca"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

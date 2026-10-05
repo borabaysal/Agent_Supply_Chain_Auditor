@@ -1,0 +1,10 @@
+[
+  {
+    "id": "CVE-2026-71963",
+    "first": "0.18.2",
+    "last": "0.21.0",
+    "fixed": "commit f6234d0 / >0.21.0",
+    "severity": "critical",
+    "summary": "Example entry (already built in). Copy this shape to add new advisories without waiting for an asca release."
+  }
+]
