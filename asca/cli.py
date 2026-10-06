@@ -12,7 +12,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__, discover, hermes, report
+from . import __version__, advisories, discover, hermes, report
 from .model import Finding, Report, Severity
 
 
@@ -54,6 +54,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-global-git", action="store_true", help="skip ~/.gitconfig and /etc/gitconfig")
     p.add_argument("--advisories", type=Path, metavar="FILE",
                    help="extra Hermes version advisories (JSON list; see README)")
+    p.add_argument("--online-advisories", action="store_true",
+                   help="also query OSV.dev and the GitHub Advisory Database for the detected Hermes version "
+                        "(sends package name + version to those services)")
     p.add_argument("--fail-on", default="high", help="minimum severity that fails the audit (default: high)")
     p.add_argument("--baseline", type=Path, help="JSON file of accepted fingerprints to suppress")
     p.add_argument("--write-baseline", type=Path, metavar="FILE",
@@ -111,6 +114,16 @@ def run(argv: list[str] | None = None) -> int:
                 print(f"asca: cannot read advisories: {exc}", file=sys.stderr)
                 return 2
         findings += hermes.audit(home, install, stats, extra)
+        version = stats.get("hermes_version")
+        if args.online_advisories and version and version != "unknown":
+            known = {a[0] for a in [*hermes.HERMES_ADVISORIES, *extra]}
+            result = advisories.fetch("hermes-agent", version)
+            stats["online_advisories"] = len(result.advisories)
+            findings += advisories.feed_findings(result, package="hermes-agent", version=version, known_ids=known,
+                                                 location="osv.dev+github-advisories")
+        findings += advisories.freshness_findings(
+            local_reviewed=hermes.advisories_reviewed_at(args.advisories) if args.advisories else None,
+            local_path=str(args.advisories) if args.advisories else None)
 
     client_cfgs = list(args.mcp_config)
     if not args.no_client_configs:

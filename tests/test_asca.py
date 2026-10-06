@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from asca import cli, discover, gitconfig, hermes, mcp, report, secrets, yamlmini
+from asca import advisories, cli, discover, gitconfig, hermes, mcp, report, secrets, yamlmini
 from asca.model import Finding, Report, Severity, redact
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -509,6 +509,73 @@ def test_extra_advisories_file(tmp_path):
     adv.write_text(json.dumps([{"id": "X", "first": "nope", "last": "1"}]))
     with pytest.raises(ValueError):
         hermes.load_advisories(adv)
+
+
+OSV_SAMPLE = {"vulns": [
+    {"id": "GHSA-aaaa-bbbb-cccc", "aliases": ["CVE-2099-1", "PYSEC-2099-1"], "summary": "dns rebinding",
+     "database_specific": {"severity": "HIGH"},
+     "affected": [{"ranges": [{"events": [{"introduced": "0"}, {"fixed": "0.16.0"}]}]}]},
+    {"id": "PYSEC-2099-1", "aliases": ["CVE-2099-1", "GHSA-aaaa-bbbb-cccc"]},
+    {"id": "GHSA-known-0000-0000", "aliases": ["CVE-2026-71963"], "database_specific": {"severity": "CRITICAL"}},
+]}
+GHSA_SAMPLE = [
+    {"ghsa_id": "GHSA-aaaa-bbbb-cccc", "cve_id": "CVE-2099-1", "severity": "critical", "summary": "dns rebinding x",
+     "html_url": "https://github.com/advisories/GHSA-aaaa-bbbb-cccc",
+     "vulnerabilities": [{"first_patched_version": "0.16.0"}]},
+    {"ghsa_id": "GHSA-dddd-eeee-ffff", "cve_id": None, "severity": "low", "summary": "only in ghsa",
+     "vulnerabilities": [{"first_patched_version": None}]},
+]
+
+
+def test_feeds_merge_aliases_dedupe_known_and_take_max_severity():
+    res = advisories.fetch(
+        "hermes-agent", "0.15.0",
+        osv=lambda e, n, v, t: advisories.query_osv(e, n, v, t, post=lambda *a: OSV_SAMPLE),
+        ghsa=lambda e, n, v, t: advisories.query_ghsa(e, n, v, t, get=lambda *a: GHSA_SAMPLE))
+    assert len(res.advisories) == 3 and res.errors == []
+    f = advisories.feed_findings(res, package="hermes-agent", version="0.15.0",
+                                 known_ids={"CVE-2026-71963"}, location="feeds")
+    by = {x.subject: x for x in f}
+    assert set(by) == {"CVE-2099-1", "GHSA-dddd-eeee-ffff"}           # built-in CVE not duplicated
+    assert by["CVE-2099-1"].severity == Severity.CRITICAL             # GHSA critical beats OSV high
+    assert "0.16.0" in by["CVE-2099-1"].remediation and "osv" in by["CVE-2099-1"].detail
+    assert "No patched version" in by["GHSA-dddd-eeee-ffff"].remediation
+
+
+def test_feed_outage_is_reported_not_fatal():
+    def down(*a):
+        raise advisories.urllib.error.URLError("offline")
+    res = advisories.fetch("hermes-agent", "1.0.0", osv=down,
+                           ghsa=lambda e, n, v, t: advisories.query_ghsa(e, n, v, t, get=lambda *a: []))
+    f = advisories.feed_findings(res, package="hermes-agent", version="1.0.0", known_ids=set(), location="x")
+    assert [x.rule for x in f] == ["scanner.feed-unavailable"] and f[0].severity == Severity.LOW
+
+
+def test_osv_request_shape():
+    seen = {}
+    advisories.query_osv("PyPI", "hermes-agent", "0.21.4", post=lambda url, body, t: seen.update(url=url, body=body) or {})
+    assert seen == {"url": advisories.OSV_URL,
+                    "body": {"package": {"ecosystem": "PyPI", "name": "hermes-agent"}, "version": "0.21.4"}}
+
+
+def test_freshness_newest_review_wins():
+    from datetime import date
+    today = date.fromisoformat(advisories.BUILTIN_REVIEWED)
+    assert advisories.freshness_findings(local_reviewed=None, local_path=None, today=today) == []
+    later = date.fromordinal(today.toordinal() + 45)
+    stale = advisories.freshness_findings(local_reviewed=None, local_path=None, today=later)
+    assert [x.rule for x in stale] == ["advisories.stale"] and "45 days" in stale[0].title
+    fresh_local = date.fromordinal(later.toordinal() - 3).isoformat()
+    assert advisories.freshness_findings(local_reviewed=fresh_local, local_path="a.json", today=later) == []
+
+
+def test_advisories_file_object_form(tmp_path):
+    adv = tmp_path / "a.json"
+    adv.write_text(json.dumps({"reviewed_at": "2026-10-01", "advisories": [
+        {"id": "CVE-X", "first": "0.1.0", "last": "0.2.0"}]}))
+    assert [a[0] for a in hermes.load_advisories(adv)] == ["CVE-X"]
+    assert hermes.advisories_reviewed_at(adv) == "2026-10-01"
+    assert json.loads((ROOT / "examples" / "advisories.json").read_text())["advisories"]
 
 
 def test_module_entrypoint_smoke(tmp_path):

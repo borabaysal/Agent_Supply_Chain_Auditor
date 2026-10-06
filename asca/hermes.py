@@ -212,6 +212,8 @@ def load_advisories(path: Path) -> list[tuple]:
     """Extra advisories from JSON so users can track new CVEs without a code release:
     [{"id": "CVE-…", "first": "0.18.2", "last": "0.21.0", "fixed": "…", "severity": "critical", "summary": "…"}]"""
     data = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(data, dict):  # {"reviewed_at": "YYYY-MM-DD", "advisories": [...]}
+        data = data.get("advisories", [])
     out = []
     for a in data:
         lo, hi = _parse_version(a["first"]), _parse_version(a["last"])
@@ -220,6 +222,14 @@ def load_advisories(path: Path) -> list[tuple]:
         out.append((a["id"], lo, hi, a.get("fixed", "see advisory"), Severity.parse(a.get("severity", "high")),
                     a.get("summary", "")))
     return out
+
+
+def advisories_reviewed_at(path: Path) -> str | None:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return data.get("reviewed_at") if isinstance(data, dict) else None
 
 
 def detect_hermes_version(install: Path | None) -> tuple[str | None, str]:

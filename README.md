@@ -136,11 +136,17 @@ Use `--mcp-config FILE` to add others (JSON, JSONC, TOML or YAML).
 
 ### Tracking new advisories
 
-The built-in Hermes advisory table covers CVE-2026-71963. Add newer ones without waiting for a release:
+asca checks the installed Hermes Agent version against three sources:
 
-```bash
-asca --advisories my-advisories.json     # format: examples/advisories.json
-```
+| Source | Updates | Coverage |
+|---|---|---|
+| Built-in table (`asca/hermes.py`) | with asca releases | hand-curated; includes advisories feeds lack (e.g. CVE-2026-71963 was missing from OSV/GHSA a month after publication) |
+| `--online-advisories` | live, every run | [OSV.dev](https://osv.dev) + [GitHub Advisory Database](https://github.com/advisories). Range matching is done server-side for the exact installed version. Sends package name + version to those services. Set `ASCA_GITHUB_TOKEN` if you hit the anonymous rate limit. |
+| `--advisories FILE` | whenever you edit it | your own additions, format: [`examples/advisories.json`](examples/advisories.json) |
+
+Duplicates across sources are merged by alias (CVE ↔ GHSA ↔ PYSEC), keeping the highest severity. A feed outage is reported as a LOW `scanner.feed-unavailable` finding, not a silent pass.
+
+**Freshness:** if the newest review date (built-in table or your file's `"reviewed_at"`) is older than 30 days, asca adds a LOW `advisories.stale` finding. Bump `reviewed_at` whenever you check for new advisories. A weekly scheduled search that updates it is a good pattern: search NVD, vendor advisories and security news for new IDs, ask a human to confirm candidates, and only then add them to the file.
 
 ## Limits (MVP)
 
@@ -148,7 +154,7 @@ asca --advisories my-advisories.json     # format: examples/advisories.json
 - Secret detection is pattern-based. It catches common providers and obvious assignments, not every possible secret.
 - Remote (URL) MCP servers can't be pinned and are reported as `info`.
 - `global core.fsmonitor=false` is suggested as defence in depth only. A repo-local value still overrides it.
-- Version advisories cover Hermes Agent only. For other agents, check vendor advisories; contributions are welcome.
+- Version advisories cover Hermes Agent only (extend `asca/advisories.py: PACKAGES` for other agents). For other agents, check vendor advisories; contributions are welcome.
 
 ## Contributing
 
