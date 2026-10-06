@@ -578,6 +578,25 @@ def test_advisories_file_object_form(tmp_path):
     assert json.loads((ROOT / "examples" / "advisories.json").read_text())["advisories"]
 
 
+@pytest.mark.parametrize("version,hit", [("0.18.1", False), ("0.18.2", True), ("0.18.99", True), ("0.19.0", False)])
+def test_advisory_exclusive_before_bound(tmp_path, version, hit):
+    adv = tmp_path / "a.json"
+    adv.write_text(json.dumps({"advisories": [{"id": "CVE-B", "first": "0.18.2", "before": "0.19.0"}],
+                               "dismissed": [{"id": "CVE-D", "reason": "x"}, "CVE-E"]}))
+    inst = tmp_path / "inst" / "hermes_cli"
+    inst.mkdir(parents=True)
+    (inst / "__init__.py").write_text(f'__version__ = "{version}"\n')
+    f = hermes.audit_version(tmp_path / "inst", {}, hermes.load_advisories(adv))
+    assert bool([x for x in f if x.subject == "CVE-B"]) is hit
+    assert hermes.advisories_dismissed(adv) == {"CVE-D", "CVE-E"}
+
+
+def test_predecessor_edges():
+    assert hermes._predecessor((1, 0, 0)) == (0, 10 ** 9, 10 ** 9)
+    assert hermes._predecessor((0, 19, 0)) == (0, 18, 10 ** 9)
+    assert hermes._predecessor((0, 0, 0)) is None
+
+
 def test_module_entrypoint_smoke(tmp_path):
     r = subprocess.run([sys.executable, "-m", "asca", "--version"], cwd=ROOT, capture_output=True, text=True)
     assert r.returncode == 0 and r.stdout.startswith("asca ")

@@ -216,12 +216,41 @@ def load_advisories(path: Path) -> list[tuple]:
         data = data.get("advisories", [])
     out = []
     for a in data:
-        lo, hi = _parse_version(a["first"]), _parse_version(a["last"])
+        lo = _parse_version(a["first"])
+        if "before" in a:  # exclusive upper bound, as NVD phrases it ("0.18.2 prior to 0.19.0")
+            b = _parse_version(a["before"])
+            hi = _predecessor(b) if b else None
+        else:
+            hi = _parse_version(a["last"])
         if not lo or not hi:
             raise ValueError(f"advisory {a.get('id')}: bad version range")
         out.append((a["id"], lo, hi, a.get("fixed", "see advisory"), Severity.parse(a.get("severity", "high")),
                     a.get("summary", "")))
     return out
+
+
+def _predecessor(v: tuple[int, ...]) -> tuple[int, ...] | None:
+    """Largest 3-part version strictly below *v* (open-ended patch/minor), for exclusive bounds."""
+    big = 10 ** 9
+    x, y, z = v
+    if z > 0:
+        return (x, y, z - 1)
+    if y > 0:
+        return (x, y - 1, big)
+    if x > 0:
+        return (x - 1, big, big)
+    return None
+
+
+def advisories_dismissed(path: Path) -> set[str]:
+    """IDs a human reviewed and chose not to track (kept so periodic searches don't re-report them)."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return set()
+    if not isinstance(data, dict):
+        return set()
+    return {d["id"] if isinstance(d, dict) else str(d) for d in data.get("dismissed", [])}
 
 
 def advisories_reviewed_at(path: Path) -> str | None:
