@@ -74,6 +74,13 @@ def run(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     state = args.dir or _state_dir()
     logs = state / "logs"
+    if args.cmd in ("proxy", "summary"):
+        # the baseline and pidfile live here; keep the whole state dir private
+        state.mkdir(parents=True, exist_ok=True)
+        try:
+            os.chmod(state, 0o700)
+        except OSError:
+            pass
     if args.cmd == "proxy":
         from .proxy import run as run_proxy
         if args.host not in ("127.0.0.1", "::1", "localhost") and not args.allow:

@@ -354,6 +354,7 @@ def test_cli_summary_exit_codes_and_alert_on_change(tmp_path, monkeypatch):
     assert cli.run(args) == 1 and len(sent) == 1 and "example.net" in sent[0]
     assert cli.run(args) == 0 and len(sent) == 1                 # nothing new since
     assert (st / "baseline.json").stat().st_mode & 0o077 == 0
+    assert st.stat().st_mode & 0o077 == 0
 
 
 def test_cli_env_prints_exports(capsys):
