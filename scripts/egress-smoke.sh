@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # end-to-end smoke test for asca-egress (run from repo root)
 set -u
-D=${1:-/opt/data/cache/scratch/egress-smoke}
+D=${1:-${TMPDIR:-/tmp}/asca-egress-smoke}
 PORT=${2:-18899}
 rm -rf "$D"
 python3 -m asca.egress --dir "$D" proxy --port "$PORT" --sample-direct 1 --hermes-home "${HERMES_HOME:-/nonexistent}" >"$D.out" 2>&1 &
