@@ -16,6 +16,8 @@ asca 0.1.0: FAIL (fail-on high)
 
 ## What it checks
 
+_Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where your agents connect and alerts on new destinations._
+
 | Category | Checks |
 |---|---|
 | **Pinning** | Hermes Skills Hub installs with no upstream commit pin · skill taps that track a branch · plugins checked out on a moving branch · MCP servers launched with `npx`/`bunx`/`uvx`/`pipx` without an exact version · `docker run` images without `@sha256:` digest · `git+https://` installs without a commit SHA · skills that tell the agent to `curl … \| sh` · remote MCP servers (reported as *info*, since they can't be pinned) |
@@ -149,6 +151,66 @@ Duplicates across sources are merged by alias (CVE ↔ GHSA ↔ PYSEC), keeping 
 Advisory file fields: `first` plus either `last` (inclusive) or `before` (exclusive, matching NVD's "X prior to Y" wording), and optionally `aliases`, `fixed`, `severity` and `summary`. A top-level `dismissed` list (`{"id", "reason"}`) records IDs you reviewed and chose not to track. asca ignores it, but periodic search jobs should treat it as known so they don't re-report those IDs.
 
 **Freshness:** if the newest review date (built-in table or your file's `"reviewed_at"`) is older than 30 days, asca adds a LOW `advisories.stale` finding. Bump `reviewed_at` whenever you check for new advisories. A weekly scheduled search that updates it is a good pattern: search NVD, vendor advisories and security news for new IDs, ask a human to confirm candidates, and only then add them to the file.
+
+## Egress auditor (`asca-egress`)
+
+The supply-chain audit looks at what's *installed*. The egress auditor looks at what your agents
+actually *talk to*. It is a small logging forward proxy plus a daily diff: "these destinations
+are new since yesterday".
+
+```bash
+# 1. run the proxy (loopback only; use your supervisor / cron watchdog to keep it up)
+python3 -m asca.egress proxy --port 8899 --hermes-home ~/.hermes --sampler-ignore tailscaled
+
+# 2. route an agent or job through it (and optionally name it in reports)
+eval "$(python3 -m asca.egress env --port 8899 --label nightly-scraper)"
+
+# 3. once a day: diff vs the learned baseline; Telegram only when something changed
+python3 -m asca.egress summary --telegram change --telegram-chat <chat-id> --env-file ~/.hermes/.env
+
+# inspect raw records
+python3 -m asca.egress show --since-hours 6 --agent nightly-scraper
+```
+
+**What gets flagged** (exit code 1 from `summary`):
+
+| Signal | Why it matters |
+|---|---|
+| 🆕 New registrable domain (`evil.xyz`, `foo.github.io`) | The classic exfiltration / C2 / surprise-telemetry signal |
+| 🔸 New host under a known domain (`uploads.github.com`) | Lower risk, but new capability use |
+| 🔁 Known host, first use by this agent | A tool or job reaching somewhere it never did before |
+| 🔢 IP-literal destination | Skipping DNS is unusual for legitimate agent traffic |
+| 🚧 Direct connection that bypassed the proxy | Something ignores `HTTPS_PROXY` (sampled from `/proc/net/tcp`) |
+| ⚠️ No proxy activity in the window | Silence must not look like "all fine" |
+
+The first `summary` run learns a baseline and sends no alert. After that, each run diffs only the
+window since the previous run and folds it into the baseline (`--no-learn` to keep it out).
+
+**Attribution.** On Linux, each proxied connection is traced to the client process via
+`/proc/net/tcp` → socket inode → `/proc/<pid>/fd`, then up the parent chain. It's labelled by
+`ASCA_EGRESS_LABEL` if any ancestor sets it, else a recognised agent (Hermes gateway/TUI/
+dashboard, Claude Code, Codex, goose, Gemini CLI), else the command name. Hermes cron jobs
+running at the time are recorded from `cron/executions.db`. That is a correlation, not proof.
+Other users' processes and non-Linux hosts are logged as `unknown`.
+
+**Privacy and safety.**
+- TLS is never intercepted: HTTPS is an opaque `CONNECT` tunnel, so only host, port, timing
+  and byte counts are known, and no CA certificate is needed.
+- For plain HTTP, the path is kept **without** its query string. Headers, bodies, cookies and
+  auth are never written.
+- Logs are append-only JSONL, one file per UTC day, mode `0600` in a `0700` directory, pruned
+  after `--keep-days`.
+- The proxy logs and forwards; it never blocks. It listens on loopback only and refuses
+  non-loopback binds unless you pass `--allow CIDR`, because an open proxy is an abuse magnet.
+
+**Limits.**
+- It only sees programs that honour `HTTPS_PROXY`/`HTTP_PROXY`. Most Python, Node and Go HTTP
+  clients do; raw sockets, some SDKs and malicious code may not.
+- The bypass sampler polls, so connections shorter than `--sample-direct` seconds can be missed.
+  It's a tripwire, not a complete record.
+- For real enforcement, block direct egress at the firewall/container network and allow only
+  the proxy out.
+- WebSocket and HTTP/2 work through `CONNECT`; plain-HTTP requests are one per connection.
 
 ## Limits (MVP)
 
