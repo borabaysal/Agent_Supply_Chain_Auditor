@@ -16,7 +16,7 @@ asca 0.1.0: FAIL (fail-on high)
 
 ## What it checks
 
-_Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where your agents connect and alerts on new destinations._
+_Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where your agents connect and alerts on new destinations, and a [fleet patch monitor](#fleet-patch-monitor-asca-fleet) that tells you how many Hermes security fixes each instance is behind._
 
 | Category | Checks |
 |---|---|
@@ -211,6 +211,53 @@ Other users' processes and non-Linux hosts are logged as `unknown`.
 - For real enforcement, block direct egress at the firewall/container network and allow only
   the proxy out.
 - WebSocket and HTTP/2 work through `CONNECT`; plain-HTTP requests are one per connection.
+
+## Fleet patch monitor (`asca-fleet`)
+
+"You're N security fixes behind." It reads the Hermes GitHub releases, pulls the security
+fixes out of each release's notes, checks which version every instance you run is on, and
+alerts when that picture changes.
+
+```bash
+python3 -m asca.fleet check \
+  --target home=local:/opt/hermes \
+  --target nas=http://nas.tailnet:9119 \
+  --target vps=ssh:deploy@vps:/opt/hermes \
+  --target box2=docker:hermes-2 \
+  --advisories ~/.hermes/asca-advisories.json \
+  --telegram change --telegram-chat <chat-id> --env-file ~/.hermes/.env
+```
+
+| Target spec | How the version is read |
+|---|---|
+| `local:/path` | `hermes_cli/__init__.py` in that install dir |
+| `http(s)://host:port` | the dashboard's `/api/status` → `version` |
+| `docker:<container>[:/path]` | `docker exec <container> cat <path>/hermes_cli/__init__.py` |
+| `ssh:<host>[:/path]` | `ssh -o BatchMode=yes <host> cat <path>/hermes_cli/__init__.py` |
+
+Many targets can also go in a JSON file (`--fleet fleet.json`, `{"targets":[{"name":..,"spec":..}]}`).
+Remote checks only `cat` a version file. Names and paths are validated, and nothing goes through a shell.
+
+**How fixes are counted.**
+- Bullets under a release-notes heading like *Security Fixes* count as **security fixes**, and
+  so does any bullet naming a CVE or GHSA ID.
+- Bullets under other *Security* headings (e.g. *🔒 Security & Reliability*) count as
+  **hardening** and are reported separately, because they're often defence-in-depth rather
+  than an exploitable bug.
+- Tracked advisories from asca's built-in table and your `--advisories` file are included too.
+
+The counts depend on how releases are written up, so treat them as a floor.
+
+**Alerts** (`--telegram change`):
+- **When:** on a new release with security fixes, when an instance is upgraded or becomes
+  unreadable, or when the feed starts or stops failing.
+- **First run:** sends one message if anything is already behind, so a fleet that's behind on
+  day one doesn't go unannounced.
+- **Failed delivery:** if a Telegram message can't be delivered, the state isn't saved, so it's
+  retried on the next run.
+
+**Exit codes:** 0 when every instance is current on security fixes; 1 when one is behind or
+unreadable, or the feed failed; 2 on errors.
 
 ## Limits (MVP)
 
