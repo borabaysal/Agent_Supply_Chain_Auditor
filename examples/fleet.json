@@ -1,0 +1,8 @@
+{
+  "targets": [
+    {"name": "home", "spec": "local:/opt/hermes"},
+    {"name": "nas", "spec": "http://nas.tailnet.example:9119"},
+    {"name": "vps", "spec": "ssh:deploy@vps.example.com:/opt/hermes"},
+    {"name": "box2", "spec": "docker:hermes-2"}
+  ]
+}

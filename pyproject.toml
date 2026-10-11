@@ -13,13 +13,15 @@ dev = ["pytest==8.4.2"]
 
 [project.scripts]
 asca = "asca.cli:main"
+asca-egress = "asca.egress.cli:main"
+asca-fleet = "asca.fleet.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["asca"]
+packages = ["asca", "asca.egress", "asca.fleet"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
