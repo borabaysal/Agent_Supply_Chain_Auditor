@@ -2,7 +2,7 @@
 
 Target specs (CLI ``--target NAME=SPEC`` or a fleet JSON file):
 
-  local:/opt/hermes                     read hermes_cli/__init__.py from a local install dir
+  local:/opt/hermes                     read install-stamp.json (else hermes_cli/__init__.py) from a local install dir
   http://host:9119                      a Hermes dashboard's /api/status ("version" field)
   docker:<container>[:/opt/hermes]      `docker exec <container> cat …/hermes_cli/__init__.py`
   ssh:<host>[:/opt/hermes]              `ssh -o BatchMode=yes <host> cat …/hermes_cli/__init__.py`
@@ -70,6 +70,21 @@ def _version_from_text(text: str) -> str | None:
     return m.group(1) if m else None
 
 
+def _version_from_stamp(text: str) -> str | None:
+    """Read baseVersion from install-stamp.json.
+
+    Hermes >= 0.21.7 no longer writes a literal ``__version__ = "x"`` in
+    hermes_cli/__init__.py; it is served lazily from install-stamp.json, so the
+    regex above finds nothing and every instance reports "version unknown".
+    The stamp is what Hermes itself treats as authoritative.
+    """
+    try:
+        v = json.loads(text.lstrip("\ufeff")).get("baseVersion")
+    except (ValueError, AttributeError):
+        return None
+    return str(v) if v and str(v) != "0.0.0" else None
+
+
 def _split_remote(spec_rest: str) -> tuple[str, str]:
     host, _, path = spec_rest.partition(":")
     return host, (path or DEFAULT_INSTALL)
@@ -89,6 +104,11 @@ def observe(t: Target, *, timeout: float = 15.0, run=_run, http_get=None) -> Obs
     try:
         if spec.startswith("local:") or spec.startswith("/"):
             root = Path(spec[6:] if spec.startswith("local:") else spec)
+            stamp = root / "install-stamp.json"
+            if stamp.is_file():
+                v = _version_from_stamp(stamp.read_text(encoding="utf-8"))
+                if v:
+                    return Observation(t.name, spec, v, str(stamp))
             f = root / "hermes_cli" / "__init__.py"
             return Observation(t.name, spec, _version_from_text(f.read_text(encoding="utf-8")), str(f))
         if spec.startswith(("http://", "https://")):
@@ -101,10 +121,20 @@ def observe(t: Target, *, timeout: float = 15.0, run=_run, http_get=None) -> Obs
                 host, path = _split_remote(spec[len(scheme):])
                 if not _SAFE_NAME.match(host) or not _SAFE_PATH.match(path) or ".." in path:
                     raise ValueError("unsafe container/host name or path")
-                f = f"{path.rstrip('/')}/hermes_cli/__init__.py"
-                cmd = (["docker", "exec", host, "cat", f] if scheme == "docker:" else
-                       ["ssh", "-o", "BatchMode=yes", "-o", f"ConnectTimeout={int(timeout)}", host, "cat", f])
-                return Observation(t.name, spec, _version_from_text(run(cmd, timeout)), f"{scheme}{host}:{f}")
+                def cat(f):
+                    return run(["docker", "exec", host, "cat", f] if scheme == "docker:" else
+                               ["ssh", "-o", "BatchMode=yes", "-o", f"ConnectTimeout={int(timeout)}",
+                                host, "cat", f], timeout)
+                base = path.rstrip('/')
+                stamp = f"{base}/install-stamp.json"
+                try:                       # newer installs: authoritative stamp
+                    v = _version_from_stamp(cat(stamp))
+                    if v:
+                        return Observation(t.name, spec, v, f"{scheme}{host}:{stamp}")
+                except Exception:          # older installs have no stamp; fall back
+                    pass
+                f = f"{base}/hermes_cli/__init__.py"
+                return Observation(t.name, spec, _version_from_text(cat(f)), f"{scheme}{host}:{f}")
         raise ValueError("unknown target spec (use local:, http(s)://, docker:, ssh:)")
     except Exception as exc:   # one bad target must not hide the rest of the fleet
         return Observation(t.name, spec, None, "", f"{type(exc).__name__}: {exc}"[:240])

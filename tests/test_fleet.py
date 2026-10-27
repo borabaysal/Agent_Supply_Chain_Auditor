@@ -131,8 +131,49 @@ def test_observe_local_http_docker_ssh(tmp_path):
     d = targets.observe(targets.Target("d", "docker:hermes-2"), run=run)
     s = targets.observe(targets.Target("s", "ssh:pi@box:/srv/hermes"), run=run)
     assert d.version == s.version == "0.20.1"
-    assert seen[0] == ["docker", "exec", "hermes-2", "cat", "/opt/hermes/hermes_cli/__init__.py"]
-    assert seen[1][:2] == ["ssh", "-o"] and seen[1][-3:] == ["pi@box", "cat", "/srv/hermes/hermes_cli/__init__.py"]
+    # The stamp is tried first; this fake returns no JSON, so each falls back to __init__.py.
+    assert ["docker", "exec", "hermes-2", "cat", "/opt/hermes/install-stamp.json"] in seen
+    assert ["docker", "exec", "hermes-2", "cat", "/opt/hermes/hermes_cli/__init__.py"] in seen
+    ssh_cmds = [c for c in seen if c[0] == "ssh"]
+    assert all(c[:2] == ["ssh", "-o"] for c in ssh_cmds)
+    assert ssh_cmds[-1][-3:] == ["pi@box", "cat", "/srv/hermes/hermes_cli/__init__.py"]
+
+
+# Hermes >= 0.21.7 serves __version__ lazily; the literal assignment is gone and
+# install-stamp.json is authoritative. Before this fix every such instance
+# reported "version unknown (unreadable)".
+NEW_STYLE_INIT = '__release_date__ = "2026.9.24"\n__version__: str\n\ndef __getattr__(name):\n    ...\n'
+
+
+def test_local_reads_install_stamp_when_init_has_no_literal(tmp_path):
+    (tmp_path / "hermes_cli").mkdir()
+    (tmp_path / "hermes_cli" / "__init__.py").write_text(NEW_STYLE_INIT)
+    (tmp_path / "install-stamp.json").write_text(json.dumps({"baseVersion": "0.21.7", "displayVersion": "0.21.7"}))
+    o = targets.observe(targets.Target("l", f"local:{tmp_path}"))
+    assert o.version == "0.21.7" and o.source.endswith("install-stamp.json") and o.error is None
+
+
+def test_stamp_placeholder_or_garbage_falls_back_to_init(tmp_path):
+    (tmp_path / "hermes_cli").mkdir()
+    (tmp_path / "hermes_cli" / "__init__.py").write_text('__version__ = "0.21.4"\n')
+    for bad in ('{"baseVersion": "0.0.0"}', "not json", "{}"):
+        (tmp_path / "install-stamp.json").write_text(bad)
+        assert targets.observe(targets.Target("l", f"local:{tmp_path}")).version == "0.21.4"
+
+
+def test_new_style_init_without_stamp_is_still_unknown(tmp_path):
+    (tmp_path / "hermes_cli").mkdir()
+    (tmp_path / "hermes_cli" / "__init__.py").write_text(NEW_STYLE_INIT)
+    assert targets.observe(targets.Target("l", f"local:{tmp_path}")).version is None
+
+
+def test_remote_prefers_stamp():
+    def run(cmd, timeout):
+        if cmd[-1].endswith("install-stamp.json"):
+            return '{"baseVersion": "0.21.7"}'
+        return NEW_STYLE_INIT
+    o = targets.observe(targets.Target("d", "docker:hermes"), run=run)
+    assert o.version == "0.21.7" and o.source == "docker:hermes:/opt/hermes/install-stamp.json"
 
 
 @pytest.mark.parametrize("spec", ["docker:x;rm -rf /", "ssh:-oProxyCommand=evil", "docker:ok:/opt/../etc",

@@ -600,3 +600,38 @@ def test_predecessor_edges():
 def test_module_entrypoint_smoke(tmp_path):
     r = subprocess.run([sys.executable, "-m", "asca", "--version"], cwd=ROOT, capture_output=True, text=True)
     assert r.returncode == 0 and r.stdout.startswith("asca ")
+
+
+# --- Hermes version detection (>= 0.21.7: lazy __version__, placeholder pyproject) ---
+_NEW_INIT = '__release_date__ = "2026.9.24"\n__version__: str\n\ndef __getattr__(name):\n    ...\n'
+
+
+def _install(tmp_path, init=_NEW_INIT, pyproject='[project]\nname = "hermes-agent"\nversion = "0.0.0"\n', stamp=None):
+    (tmp_path / "hermes_cli").mkdir()
+    (tmp_path / "hermes_cli" / "__init__.py").write_text(init)
+    (tmp_path / "pyproject.toml").write_text(pyproject)
+    if stamp is not None:
+        (tmp_path / "install-stamp.json").write_text(stamp)
+    return tmp_path
+
+
+def test_version_read_from_install_stamp(tmp_path):
+    inst = _install(tmp_path, stamp=json.dumps({"baseVersion": "0.21.7"}))
+    v, src = hermes.detect_hermes_version(inst)
+    assert v == "0.21.7" and src.endswith("install-stamp.json")
+
+
+def test_placeholder_pyproject_is_unknown_not_vulnerable(tmp_path):
+    # Before the fix this returned "0.0.0" and every historical CVE fired.
+    assert hermes.detect_hermes_version(_install(tmp_path)) == (None, "")
+
+
+def test_bad_stamp_falls_back_to_literal_init(tmp_path):
+    for i, bad in enumerate(('{"baseVersion": "0.0.0"}', "not json", "{}", "[]")):
+        d = tmp_path / str(i); d.mkdir()
+        inst = _install(d, init='__version__ = "0.21.4"\n', stamp=bad)
+        assert hermes.detect_hermes_version(inst)[0] == "0.21.4"
+
+
+def test_old_style_init_still_works(tmp_path):
+    assert hermes.detect_hermes_version(_install(tmp_path, init='__version__ = "0.15.2"\n'))[0] == "0.15.2"

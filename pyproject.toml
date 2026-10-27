@@ -15,13 +15,17 @@ dev = ["pytest==8.4.2"]
 asca = "asca.cli:main"
 asca-egress = "asca.egress.cli:main"
 asca-fleet = "asca.fleet.cli:main"
+asca-skills = "asca.skillscan.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["asca", "asca.egress", "asca.fleet"]
+packages = ["asca", "asca.egress", "asca.fleet", "asca.skillscan"]
+
+[tool.setuptools.package-data]
+"asca.skillscan" = ["data/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -261,17 +261,36 @@ def advisories_reviewed_at(path: Path) -> str | None:
     return data.get("reviewed_at") if isinstance(data, dict) else None
 
 
+# Placeholder versions written by build tooling; never a real release. Treating
+# them as real made every historical advisory "affect" the install.
+_PLACEHOLDER_VERSIONS = {"0.0.0", "0.0.0.0", "0", ""}
+
+
 def detect_hermes_version(install: Path | None) -> tuple[str | None, str]:
-    candidates = []
-    if install:
-        candidates += [install / "hermes_cli" / "__init__.py", install / "pyproject.toml"]
-    for c in candidates:
+    """Return (version, source file), or (None, "") when no real version is found.
+
+    Hermes >= 0.21.7 serves ``__version__`` lazily from install-stamp.json and
+    ships ``version = "0.0.0"`` in pyproject.toml, so the stamp is read first
+    and placeholders are rejected. Unknown is reported as unknown, not as a
+    vulnerable 0.0.0.
+    """
+    if not install:
+        return None, ""
+    stamp = install / "install-stamp.json"
+    try:
+        data = json.loads(stamp.read_text(encoding="utf-8").lstrip("\ufeff"))
+        v = str(data.get("baseVersion") or "").strip() if isinstance(data, dict) else ""
+        if v not in _PLACEHOLDER_VERSIONS:
+            return v, str(stamp)
+    except (OSError, ValueError):
+        pass
+    for c in (install / "hermes_cli" / "__init__.py", install / "pyproject.toml"):
         try:
             text = c.read_text(encoding="utf-8")
         except OSError:
             continue
         m = re.search(r'^(?:__version__|version)\s*=\s*["\']([^"\']+)["\']', text, re.M)
-        if m:
+        if m and m.group(1).strip() not in _PLACEHOLDER_VERSIONS:
             return m.group(1), str(c)
     return None, ""
 
