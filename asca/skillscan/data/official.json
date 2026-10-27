@@ -1,0 +1,4336 @@
+{
+"generated_at": "2026-10-27T23:21:42Z",
+"mcp": [],
+"mcp_hosts": [],
+"npm": [],
+"openclaw_extensions": [
+"a2a",
+"abliteration",
+"acpx",
+"active-memory",
+"admin-http-rpc",
+"advisor",
+"agent-guidance",
+"agentsapi",
+"alibaba",
+"amazon-bedrock",
+"amazon-bedrock-mantle",
+"anthropic",
+"anthropic-vertex",
+"apple-fm",
+"arcee",
+"autoreview",
+"azure-speech",
+"baseten",
+"beam",
+"bifrost",
+"bonjour",
+"brave",
+"browser",
+"buzz",
+"byteplus",
+"canvas",
+"cerebras",
+"chutes",
+"clawrouter",
+"clickclack",
+"cloudflare",
+"cloudflare-ai-gateway",
+"code-mode-quickjs",
+"codex",
+"cohere",
+"comfy",
+"copilot",
+"copilot-proxy",
+"crabbox",
+"cua-computer",
+"deepgram",
+"deepinfra",
+"deepseek",
+"device-pair",
+"diagnostics-otel",
+"diagnostics-prometheus",
+"diffs",
+"diffs-language-pack",
+"discord",
+"document-extract",
+"duckduckgo",
+"elevenlabs",
+"exa",
+"facetime",
+"fal",
+"featherless",
+"feishu",
+"file-transfer",
+"firecrawl",
+"fireworks",
+"fish-audio-speech",
+"geolocation",
+"github",
+"github-copilot",
+"gmi",
+"google",
+"google-meet",
+"googlechat",
+"gradium",
+"groq",
+"huggingface",
+"image-generation-core",
+"imap",
+"imessage",
+"inworld",
+"irc",
+"kie",
+"kilocode",
+"kimi-coding",
+"knowledge",
+"levanto",
+"line",
+"linux-node",
+"liquid-ai",
+"litellm",
+"llama-cpp",
+"llm-task",
+"lmstudio",
+"lobster",
+"logbook",
+"longcat",
+"matrix",
+"mattermost",
+"mcp-events",
+"mcp-relay",
+"memory-core",
+"memory-lancedb",
+"memory-wiki",
+"meta",
+"microsoft",
+"microsoft-foundry",
+"migrate-claude",
+"migrate-hermes",
+"minimax",
+"mistral",
+"moonshot",
+"msteams",
+"muse",
+"mxc",
+"nextcloud-talk",
+"nostr",
+"novita",
+"nvidia",
+"oc-path",
+"ollama",
+"omlx",
+"onepassword",
+"onnx",
+"openai",
+"opencode",
+"opencode-go",
+"openrouter",
+"openshell",
+"parallel",
+"perplexity",
+"pixverse",
+"policy",
+"qa-channel",
+"qa-lab",
+"qianfan",
+"qwen",
+"radius",
+"raft",
+"reef",
+"requesty",
+"runway",
+"searxng",
+"senseaudio",
+"session-share",
+"sglang",
+"signal",
+"slack",
+"slack-huddles",
+"sms",
+"stepfun",
+"subq",
+"synology-chat",
+"synthetic",
+"talk-voice",
+"tavily",
+"team-reports",
+"teams-meetings",
+"telegram",
+"tencent",
+"test-support",
+"tlon",
+"together",
+"tokenjuice",
+"tts-local-cli",
+"twitch",
+"typesafe",
+"vault",
+"venice",
+"vercel-ai-gateway",
+"visitor-access",
+"vllm",
+"voice-call",
+"volcengine",
+"voyage",
+"vydra",
+"web-readability",
+"whatsapp",
+"workboard",
+"x",
+"xai",
+"xiaomi",
+"zai",
+"zalo",
+"zalouser",
+"zoom-meetings"
+],
+"plugins": {
+"0bull": {
+"repo": "https://github.com/0bull/agent-plugin",
+"tier": "community"
+},
+"aave-mcp": {
+"repo": "https://github.com/aave/skills",
+"tier": "community"
+},
+"abstract-provider": {
+"repo": "https://github.com/abstractpbc/hermes-abstract-provider",
+"tier": "community"
+},
+"accent-picker": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"account-pool": {
+"repo": "https://github.com/roqianjas/hermes-account-pool",
+"tier": "community"
+},
+"account-switcher": {
+"repo": "https://github.com/SmelterLabs/hermes-account-switcher",
+"tier": "community"
+},
+"acedatacloud": {
+"repo": "https://github.com/AceDataCloud/AceDataCloudModelProviderHermes",
+"tier": "community"
+},
+"acedatacloud-media": {
+"repo": "https://github.com/AceDataCloud/AceDataCloudMediaHermes",
+"tier": "community"
+},
+"actvox": {
+"repo": "https://github.com/ActVox/actvox-plugins",
+"tier": "community"
+},
+"adaption": {
+"repo": "https://github.com/adaptionlabs/adaption-hermes-plugin",
+"tier": "community"
+},
+"adaptive-inference-routing": {
+"repo": "https://github.com/midhatn/adaptive-inference",
+"tier": "community"
+},
+"adkit": {
+"repo": "https://github.com/adkit/ads-mcp",
+"tier": "community"
+},
+"adspirer": {
+"repo": "https://github.com/Adspirer/adspirer-hermes-plugin",
+"tier": "community"
+},
+"advanced-delegation": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"advisor": {
+"repo": "https://github.com/ljubomirj/hermes-advisor-plugin",
+"tier": "community"
+},
+"adwhispr": {
+"repo": "https://github.com/adwhispr/adwhispr-hermes-plugin",
+"tier": "community"
+},
+"afterforge": {
+"repo": "https://github.com/ussyverse/afterforge",
+"tier": "community"
+},
+"agent-analytics": {
+"repo": "https://github.com/Agent-Analytics/agent-analytics-hermes-plugin",
+"tier": "community"
+},
+"agent-batch": {
+"repo": "https://github.com/raaaas/hermes-agent-batch",
+"tier": "community"
+},
+"agent-hint": {
+"repo": "https://github.com/dachaimahogany/hermes-agent-hint",
+"tier": "community"
+},
+"agent-hold-em": {
+"repo": "https://github.com/tony-simons-aiowa/agent-hold-em",
+"tier": "community"
+},
+"agent-importers": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"agent-janitor": {
+"repo": "https://github.com/ZidoCode/agent-janitor",
+"tier": "community"
+},
+"agent-ledger": {
+"repo": "https://github.com/ZidoCode/agent-ledger",
+"tier": "community"
+},
+"agent-log": {
+"repo": "https://github.com/PixelAlchemist4/hermes-agent-log-plugin",
+"tier": "community"
+},
+"agent-mail-gateway": {
+"repo": "https://github.com/dominikamann/agent-mail-gateway",
+"tier": "community"
+},
+"agent-run-debugger": {
+"repo": "https://github.com/Sahil-SS9/agent-run-debugger",
+"tier": "community"
+},
+"agent-station": {
+"repo": "https://github.com/thealps01-netizen/agent-station",
+"tier": "community"
+},
+"agent_memory_es": {
+"repo": "https://github.com/patrykkopycinski/hermes-plugin-agent-memory-es",
+"tier": "community"
+},
+"agentchat": {
+"repo": "https://github.com/agentchatme/agentchat-hermes",
+"tier": "community"
+},
+"agentplaybooks-memory": {
+"repo": "https://github.com/matebenyovszky/agentplaybooks",
+"tier": "community"
+},
+"agentplaybooks-tools": {
+"repo": "https://github.com/matebenyovszky/agentplaybooks",
+"tier": "community"
+},
+"agentvault": {
+"repo": "https://github.com/synnada-ai/agentvault-plugins",
+"tier": "community"
+},
+"agentwalletapi": {
+"repo": "https://github.com/openclawcash/agentwalletapi-hermes",
+"tier": "community"
+},
+"agora": {
+"repo": "https://github.com/yzy806806/agora",
+"tier": "community"
+},
+"ai-subscriptions": {
+"repo": "https://github.com/rahuloruganti/hermes-ai-subscriptions",
+"tier": "community"
+},
+"ai-usage-tracker": {
+"repo": "https://github.com/lvabarajithan/hermes-ai-usage-tracker",
+"tier": "community"
+},
+"aichipmunk": {
+"repo": "https://github.com/Pacific-Cloud-Solutions/hermes-plugins",
+"tier": "community"
+},
+"aihubmix": {
+"repo": "https://github.com/AIhubmix/hermes-provider-aihubmix",
+"tier": "community"
+},
+"airlock": {
+"repo": "https://github.com/otsoa-dubief/airlock",
+"tier": "community"
+},
+"aistupidlevel": {
+"repo": "https://github.com/StudioPlatforms/aistupidlevel-sdk",
+"tier": "community"
+},
+"alans-way": {
+"repo": "https://github.com/capthvnsen/alans-way-agents",
+"tier": "community"
+},
+"alans-way-computer": {
+"repo": "https://github.com/capthvnsen/alans-way-agents",
+"tier": "community"
+},
+"alice-voice": {
+"repo": "https://github.com/bablobanov/hermes-alice-voice",
+"tier": "community"
+},
+"ample": {
+"repo": "https://github.com/ishanray/hermes-ample",
+"tier": "community"
+},
+"anatomy-museum": {
+"repo": "https://github.com/danrudy33/anatomy-museum",
+"tier": "community"
+},
+"ando-platform": {
+"repo": "https://github.com/Ando-Corporation/hermes-ando",
+"tier": "community"
+},
+"android-emulator": {
+"repo": "https://github.com/PIR8-Software/hermes-android-emulator",
+"tier": "community"
+},
+"antenna": {
+"repo": "https://github.com/ClawReefAntenna/antenna-hermes",
+"tier": "community"
+},
+"antigravity-agy": {
+"repo": "https://github.com/Realtyxxx/hermes-plugin-antigravity-agy",
+"tier": "community"
+},
+"antigravity-oauth": {
+"repo": "https://github.com/neerazz/hermes-antigravity-oauth",
+"tier": "community"
+},
+"antigravity-subscription-directsdk": {
+"repo": "https://github.com/soyelmismo/hermes-antigravity-subscription",
+"tier": "community"
+},
+"anyapi": {
+"repo": "https://github.com/es697/hermes-provider-anyapi",
+"tier": "community"
+},
+"anyrouter": {
+"repo": "https://github.com/duyet/hermes-provider-anyrouter",
+"tier": "community"
+},
+"anysearch": {
+"repo": "https://github.com/vollegrewar/hermes-plugin-anysearch",
+"tier": "community"
+},
+"aphrodite": {
+"repo": "https://github.com/PlayForm/Aphrodite-Hermes",
+"tier": "community"
+},
+"apify": {
+"repo": "https://github.com/apify/apify-hermes-agent-plugin",
+"tier": "community"
+},
+"approval-ledger": {
+"repo": "https://github.com/olric3015/hermes-plugins",
+"tier": "community"
+},
+"ard-kit": {
+"repo": "https://gitlab.com/ameobius-ai/ard-kit",
+"tier": "community"
+},
+"artifact-relay": {
+"repo": "https://github.com/eloktev/hermes-artifact-relay",
+"tier": "community"
+},
+"artifacts": {
+"repo": "https://github.com/dmmeteo/hermes-artifacts",
+"tier": "community"
+},
+"aside-browser": {
+"repo": "https://github.com/leonphull/hermes-aside-browser",
+"tier": "community"
+},
+"astro-agents": {
+"repo": "https://github.com/aidatatools-dev/astro-agents-mcp",
+"tier": "community"
+},
+"athletedata": {
+"repo": "https://github.com/athletedata-health/mcp",
+"tier": "community"
+},
+"atmorouter": {
+"repo": "https://github.com/bayuh85/hermes-atmorouter",
+"tier": "community"
+},
+"author-feed": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-author-feed",
+"tier": "community"
+},
+"auto-pin": {
+"repo": "https://github.com/bmcfiv/hermes-plugin-auto-pin",
+"tier": "community"
+},
+"aux-ledger": {
+"repo": "https://github.com/olric3015/hermes-plugins",
+"tier": "community"
+},
+"b64-ref": {
+"repo": "https://github.com/olric3015/hermes-plugins",
+"tier": "community"
+},
+"background-review-watch": {
+"repo": "https://github.com/vectorforge22/background-review-watch",
+"tier": "community"
+},
+"backupdrill": {
+"repo": "https://github.com/backupdrill/cli",
+"tier": "community"
+},
+"beam": {
+"repo": "https://github.com/Beam-Network/beam-hermes",
+"tier": "community"
+},
+"bento": {
+"repo": "https://github.com/shagghiesuperstar/hermes-plugin-bento",
+"tier": "community"
+},
+"better-session-appearance": {
+"repo": "https://github.com/apoapostolov/hermes-agent-awesome-plugins",
+"tier": "community"
+},
+"betterdb": {
+"repo": "https://github.com/BetterDB-inc/monitor",
+"tier": "community"
+},
+"bharatcode-provider": {
+"repo": "https://github.com/thenabbu/bharatcode-hermes",
+"tier": "community"
+},
+"bilinc": {
+"repo": "https://github.com/ReARCLabs/bilinc-hermes-plugin",
+"tier": "community"
+},
+"billing": {
+"repo": "https://github.com/anotherchu/billing",
+"tier": "community"
+},
+"biomimetic-brain": {
+"repo": "https://github.com/ousiaresearch/biomimetic-brain",
+"tier": "community"
+},
+"birkin-mnemosyne": {
+"repo": "https://github.com/ashmoonori-afk/birkin-mnemosyne",
+"tier": "community"
+},
+"blackbox": {
+"repo": "https://github.com/umanitek/agent-blackbox",
+"tier": "community"
+},
+"blender": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"blinkenbar": {
+"repo": "https://github.com/cygnostik/Hermes-Plugin-Blinkenlights",
+"tier": "community"
+},
+"boardstate": {
+"repo": "https://github.com/100yenadmin/boardstate-hermes-plugin",
+"tier": "community"
+},
+"bot-activity": {
+"repo": "https://github.com/risyadul/hermes-bot-activity",
+"tier": "community"
+},
+"bot-cabinet-v2": {
+"repo": "https://github.com/Dgardenhire/hermes-cabinet",
+"tier": "community"
+},
+"bot-forge": {
+"repo": "https://github.com/BkashJEE/hermes-bot-forge",
+"tier": "community"
+},
+"brain-graph": {
+"repo": "https://github.com/PIR8-Software/hermes-brain-graph",
+"tier": "community"
+},
+"brave-search": {
+"repo": "https://github.com/rabilrbl/hermes-brave-search-plugin",
+"tier": "community"
+},
+"brethof-brain": {
+"repo": "https://github.com/BrethofAI/brethof-brain-client",
+"tier": "community"
+},
+"bridge-adapter": {
+"repo": "https://github.com/Kesuek/hermes-bridge-adapter",
+"tier": "community"
+},
+"browser-toggle": {
+"repo": "https://github.com/jcperdomoybarra/web-browser-button-plugin",
+"tier": "community"
+},
+"browserless": {
+"repo": "https://github.com/browserless/browserless-mcp",
+"tier": "community"
+},
+"browserpaw": {
+"repo": "https://github.com/GoldenLoaf24h/browserpaw",
+"tier": "community"
+},
+"bubblewrap": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"bunny_space-platform": {
+"repo": "https://github.com/jasm001/hermes-plugin-bunny-space",
+"tier": "community"
+},
+"burnclock": {
+"repo": "https://github.com/jersilb/burnclock-hermes",
+"tier": "community"
+},
+"by2kb": {
+"repo": "https://github.com/Charlesmpc/by2kb",
+"tier": "community"
+},
+"call-me": {
+"repo": "https://github.com/radres/hermes-plugin-call-me",
+"tier": "community"
+},
+"camofox": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"camofox-human-auth": {
+"repo": "https://github.com/tim-toothed/hermes-camofox-human-auth",
+"tier": "community"
+},
+"carbonvoice-platform": {
+"repo": "https://github.com/PhononX/hermes-plugin-carbonvoice",
+"tier": "community"
+},
+"cashew": {
+"repo": "https://github.com/magnus919/hermes-cashew",
+"tier": "community"
+},
+"cdp-manager": {
+"repo": "https://github.com/apoapostolov/hermes-agent-awesome-plugins",
+"tier": "community"
+},
+"channel3": {
+"repo": "https://github.com/channel3-ai/channel3-hermes-plugin",
+"tier": "community"
+},
+"chat-length": {
+"repo": "https://github.com/MadeByBrain/hermes-chat-length",
+"tier": "community"
+},
+"chat-studio": {
+"repo": "https://github.com/gchablemeneses-web/hermes-chat-studio",
+"tier": "community"
+},
+"chatto-platform": {
+"repo": "https://github.com/jrimmer/hermes-chatto-plugin",
+"tier": "community"
+},
+"cheatsheet": {
+"repo": "https://github.com/Bonorinoa/hermes-cheatsheet",
+"tier": "community"
+},
+"chorepilot": {
+"repo": "https://github.com/WestWaters/ChorePilot",
+"tier": "community"
+},
+"chronicle": {
+"repo": "https://github.com/indigokarasu/chronicle-agent-context-and-memory",
+"tier": "community"
+},
+"chutes-provider": {
+"repo": "https://github.com/TheStreamCode/hermes-chutes-provider",
+"tier": "community"
+},
+"cjk_sanitizer": {
+"repo": "https://github.com/evanyudis/cjk_sanitizer",
+"tier": "community"
+},
+"claude-code-theme": {
+"repo": "https://github.com/aliilhami/hermes-claude-code-theme",
+"tier": "community"
+},
+"claude-subscription-directsdk": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"clinepass": {
+"repo": "https://github.com/Adolanium/hermes-clinepass",
+"tier": "community"
+},
+"cliproxyapi-provider": {
+"repo": "https://github.com/duu261/hermes-cliproxyapi-provider",
+"tier": "community"
+},
+"cloudflare-sandbox": {
+"repo": "https://github.com/kiyo-e/hermes-cloudflare-sandbox",
+"tier": "community"
+},
+"cloudflare-web-search": {
+"repo": "https://github.com/Adolanium/hermes-cloudflare-web-search",
+"tier": "community"
+},
+"cloudflare-workers-ai-provider": {
+"repo": "https://github.com/AhmetArif0/hermes-cloudflare-workers-ai-provider",
+"tier": "community"
+},
+"coder": {
+"repo": "https://github.com/perqin/hermes-plugin-coder",
+"tier": "community"
+},
+"codex-chat-look": {
+"repo": "https://github.com/steveafrost/hermes-quiet",
+"tier": "community"
+},
+"codex-theme": {
+"repo": "https://github.com/hey-yx/hermes-codex-theme",
+"tier": "community"
+},
+"codex-truly": {
+"repo": "https://github.com/kyssta-exe/hermes-codex-truly",
+"tier": "community"
+},
+"cognee": {
+"repo": "https://github.com/topoteretes/cognee-integrations",
+"tier": "community"
+},
+"cognition": {
+"repo": "https://github.com/aska-digital/cognition-memory",
+"tier": "community"
+},
+"colorado-traffic": {
+"repo": "https://github.com/drkpxl/colorado-traffic",
+"tier": "community"
+},
+"command-ledger": {
+"repo": "https://github.com/olric3015/hermes-plugins",
+"tier": "community"
+},
+"command-tray": {
+"repo": "https://github.com/aydnOktay/hermes-command-tray",
+"tier": "community"
+},
+"commandcode-oauth": {
+"repo": "https://github.com/NanamiMio/hermes-commandcode-oauth",
+"tier": "community"
+},
+"comment-scraper": {
+"repo": "https://github.com/supertj/comment-scraper-mcp",
+"tier": "community"
+},
+"compartment": {
+"repo": "https://github.com/MaxFreedomPollard/Compartment",
+"tier": "community"
+},
+"completion-sound": {
+"repo": "https://github.com/Zamoca42/hermes-completion-sound",
+"tier": "community"
+},
+"composer-modes": {
+"repo": "https://github.com/LisandroNahuelH/hermes-composer-modes",
+"tier": "community"
+},
+"context-audit": {
+"repo": "https://github.com/ZidoCode/context-audit",
+"tier": "community"
+},
+"conxt": {
+"repo": "https://github.com/conxtdevelopmentteam/hermes-conxt",
+"tier": "community"
+},
+"corpus": {
+"repo": "https://github.com/teakesdev/corpus-agent-kit",
+"tier": "community"
+},
+"cortexlayer": {
+"repo": "https://github.com/Cortex-Layer/cortexlayer-hermes-plugin",
+"tier": "community"
+},
+"covision": {
+"repo": "https://github.com/Covision-Consultants/covision-agent-plugin",
+"tier": "community"
+},
+"crawl4ai": {
+"repo": "https://github.com/mblauser/hermes-plugin-crawl4ai",
+"tier": "community"
+},
+"crew": {
+"repo": "https://github.com/macd2/Crew",
+"tier": "community"
+},
+"cron-bulletin": {
+"repo": "https://github.com/lvabarajithan/hermes-cron-bulletin",
+"tier": "community"
+},
+"crontab-ref": {
+"repo": "https://github.com/olric3015/hermes-plugins",
+"tier": "community"
+},
+"crypto-prices": {
+"repo": "https://github.com/cruzlxyz/crypto-prices",
+"tier": "community"
+},
+"csharp-game-editor": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-csharp-game-editor",
+"tier": "community"
+},
+"ctx_checkpoint": {
+"repo": "https://github.com/GottZ/ctx",
+"tier": "community"
+},
+"cua-spaces": {
+"repo": "https://github.com/trycua/hermes-cua-spaces",
+"tier": "verified"
+},
+"cursor-acp": {
+"repo": "https://github.com/neerazz/hermes-cursor-acp",
+"tier": "community"
+},
+"cursor-provider": {
+"repo": "https://github.com/anpicasso/hermes-cursor-provider",
+"tier": "community"
+},
+"cursor-sdk": {
+"repo": "https://github.com/mcpeezy/hermes-cursor-sdk",
+"tier": "community"
+},
+"custodian": {
+"repo": "https://github.com/indigokarasu/hermes-custodian-plugin",
+"tier": "community"
+},
+"custom-dangerous-patterns": {
+"repo": "https://github.com/scross01/hermes-custom-dangerous-patterns-plugin",
+"tier": "community"
+},
+"cut-sprite-sheet": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-sprite-sheet",
+"tier": "community"
+},
+"darkmoon": {
+"repo": "https://github.com/ASCIT31/darkmoon-hermes-plugin",
+"tier": "community"
+},
+"dashboard-auth-feishu": {
+"repo": "https://github.com/xielevi/hermes-dashboard-auth-feishu",
+"tier": "community"
+},
+"dashboard-auth-ldap": {
+"repo": "https://github.com/angel12/hermes-ldap-auth",
+"tier": "community"
+},
+"dashboard-button": {
+"repo": "https://github.com/g3org3yo/dashboard-button",
+"tier": "community"
+},
+"dashscope-image": {
+"repo": "https://github.com/rriggs/hermes-plugin-dashscope-image",
+"tier": "community"
+},
+"dashscope-video": {
+"repo": "https://github.com/rriggs/hermes-plugin-dashscope-video",
+"tier": "community"
+},
+"davinci-resolve": {
+"repo": "https://github.com/wassermanproductions/hermes-davinci-resolve-plugin",
+"tier": "community"
+},
+"day-panel": {
+"repo": "https://github.com/brunosouzas/hermes-day-panel",
+"tier": "community"
+},
+"de-law": {
+"repo": "https://github.com/MadeByBrain/hermes-de-law",
+"tier": "community"
+},
+"deadbolt": {
+"repo": "https://github.com/seanebones-lang/deadbolt-hermes-plugin",
+"tier": "community"
+},
+"debug-desk": {
+"repo": "https://github.com/aydnOktay/hermes-debug-desk",
+"tier": "community"
+},
+"deepgram-voice": {
+"repo": "https://github.com/jaysonsantos/hermes-deepgram-voice-plugin",
+"tier": "community"
+},
+"deepinfra-sandbox": {
+"repo": "https://github.com/deepinfra/deepinfra-hermes-sandbox",
+"tier": "community"
+},
+"deepseek-search-fetch": {
+"repo": "https://github.com/JasonSwindle/hermes-deepseek-search-fetch",
+"tier": "community"
+},
+"deepseek-whale": {
+"repo": "https://github.com/bmtrnavsky/deepseek-whale",
+"tier": "community"
+},
+"deferred-questions": {
+"repo": "https://github.com/web3blind/hermes-deferred-questions",
+"tier": "community"
+},
+"degeneracy-guard": {
+"repo": "https://github.com/simin-yuan/hermes-degeneracy-guard",
+"tier": "community"
+},
+"deja-memory": {
+"repo": "https://github.com/vshulcz/deja-vu",
+"tier": "community"
+},
+"desensitize": {
+"repo": "https://github.com/yubingz/hermes-desensitize",
+"tier": "community"
+},
+"deskrpg": {
+"repo": "https://github.com/dandacompany/deskrpg-hermes-plugin",
+"tier": "community"
+},
+"devin": {
+"repo": "https://github.com/Adolanium/hermes-devin",
+"tier": "community"
+},
+"devkit": {
+"repo": "https://github.com/Zek-Takai/hermes-devkit",
+"tier": "community"
+},
+"dexio": {
+"repo": "https://github.com/dexio-wiki/hermes-plugin",
+"tier": "community"
+},
+"diaktoros": {
+"repo": "https://github.com/coe0718/diaktoros",
+"tier": "community"
+},
+"diff-review": {
+"repo": "https://github.com/sprmn24/hermes-plugin-diff-review",
+"tier": "community"
+},
+"digital-marketing-pro": {
+"repo": "https://github.com/indranilbanerjee/neels-plugins",
+"tier": "community"
+},
+"discord-tps": {
+"repo": "https://github.com/tuancookiez-hub/hermes-discord-tokenpersec",
+"tier": "community"
+},
+"doc-markdown": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-doc-markdown",
+"tier": "community"
+},
+"doctorpack": {
+"repo": "https://github.com/godhiraj-code/hermes-doctorpack",
+"tier": "community"
+},
+"document-reader": {
+"repo": "https://github.com/lEWFkRAD/hermes-document-reader",
+"tier": "community"
+},
+"done-bell": {
+"repo": "https://github.com/aydnOktay/hermes-done-bell-",
+"tier": "community"
+},
+"draft-cards": {
+"repo": "https://github.com/arsiktech/hermes-draft-cards",
+"tier": "community"
+},
+"drag-to-pin-session": {
+"repo": "https://github.com/apoapostolov/hermes-agent-awesome-plugins",
+"tier": "community"
+},
+"duty-board": {
+"repo": "https://github.com/xiaoyaner0201/hermes-duty-board",
+"tier": "community"
+},
+"eatwise": {
+"repo": "https://github.com/harrylabsj/hermes-plugin-eatwise",
+"tier": "community"
+},
+"echarts-in-chat": {
+"repo": "https://github.com/Tommy00748/hermes-plugin-echarts-in-chat",
+"tier": "community"
+},
+"edit-ledger": {
+"repo": "https://github.com/olric3015/hermes-plugins",
+"tier": "community"
+},
+"effortless-hermes": {
+"repo": "https://github.com/ivcained/effortless-hermes",
+"tier": "community"
+},
+"elevenlabs-sound-effects": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"empiriolabs": {
+"repo": "https://github.com/EmpirioLabs-AI/hermes-empiriolabs",
+"tier": "community"
+},
+"empiriolabs-media": {
+"repo": "https://github.com/EmpirioLabs-AI/hermes-empiriolabs",
+"tier": "community"
+},
+"enchanted-composer": {
+"repo": "https://github.com/noxius-studium/enchanted-composer",
+"tier": "community"
+},
+"entropicmem": {
+"repo": "https://github.com/Ufonik88/EntropicMem",
+"tier": "community"
+},
+"epistemic-harness": {
+"repo": "https://github.com/quangphucqp/epistemic-harness",
+"tier": "community"
+},
+"error-ledger": {
+"repo": "https://github.com/olric3015/hermes-plugins",
+"tier": "community"
+},
+"evalroute": {
+"repo": "https://github.com/keppy/hermes-plugin-evalroute",
+"tier": "community"
+},
+"event-read": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-event-read",
+"tier": "community"
+},
+"excel_line": {
+"repo": "https://github.com/kalice-vi/hermes-excel-line",
+"tier": "community"
+},
+"field-academy": {
+"repo": "https://github.com/Dgardenhire/hermes-field-academy",
+"tier": "community"
+},
+"file-tray": {
+"repo": "https://github.com/aydnOktay/hermes-file-tray",
+"tier": "community"
+},
+"filebox": {
+"repo": "https://github.com/AndreasHiltner/hermes-filebox",
+"tier": "community"
+},
+"financial-datasets": {
+"repo": "https://github.com/financial-datasets/hermes-plugin",
+"tier": "community"
+},
+"fish-audio": {
+"repo": "https://github.com/100yenadmin/fish-audio-hermes",
+"tier": "community"
+},
+"flashdata-plugin": {
+"repo": "https://github.com/rocosen/flashdata-mcp",
+"tier": "community"
+},
+"fleet-policy": {
+"repo": "https://github.com/Julientalbot/hermes-fleet-policy",
+"tier": "community"
+},
+"fluxer-platform": {
+"repo": "https://github.com/elkimek/hermes-fluxer-plugin",
+"tier": "community"
+},
+"fmsg-platform": {
+"repo": "https://github.com/markmnl/hermes-fmsg",
+"tier": "community"
+},
+"foresee": {
+"repo": "https://github.com/Foresee-Tech/foresee",
+"tier": "community"
+},
+"freight-reconciliation": {
+"repo": "https://github.com/harrylabsj/hermes-plugin-freight-reconciliation",
+"tier": "community"
+},
+"freshdesk": {
+"repo": "https://github.com/aedelgod/hermes-plugin-freshdesk",
+"tier": "community"
+},
+"frihet": {
+"repo": "https://github.com/Frihet-io/hermes-frihet",
+"tier": "community"
+},
+"fusion": {
+"repo": "https://github.com/BoredSexyJordan/hermes-fusion",
+"tier": "community"
+},
+"fxmacrodata": {
+"repo": "https://github.com/fxmacrodata/hermes-fxmacrodata",
+"tier": "community"
+},
+"gadget": {
+"repo": "https://github.com/Adolanium/hermes-gadget-sdk",
+"tier": "community"
+},
+"game-dev": {
+"repo": "https://github.com/123mikeyd/hermes-game-dev",
+"tier": "community"
+},
+"game-editor": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-game-editor",
+"tier": "community"
+},
+"gbrain-plugin": {
+"repo": "https://github.com/kerrz2020/hermes-gbrain",
+"tier": "community"
+},
+"gbrain-pointer": {
+"repo": "https://github.com/praggybuilds/hermes-gbrain-pointer",
+"tier": "community"
+},
+"gbrain-retrieval-reflex": {
+"repo": "https://github.com/aean0x/hermes-gbrain-retrieval-reflex",
+"tier": "community"
+},
+"gemini-live-bridge": {
+"repo": "https://github.com/cruzlxyz/gemini-live-bridge",
+"tier": "community"
+},
+"gemini-media": {
+"repo": "https://github.com/bytecakelake/hermes-gemini-media-generation",
+"tier": "community"
+},
+"genealogy-research-recipes": {
+"repo": "https://github.com/Kinprove/genealogy-research-recipes",
+"tier": "community"
+},
+"genesispay-catalog": {
+"repo": "https://github.com/GenesisTechAT/genesispay-agent-skill",
+"tier": ""
+},
+"gh-ref": {
+"repo": "https://github.com/EloquentBrush0x/hermes-context-refs",
+"tier": "community"
+},
+"gigamail": {
+"repo": "https://github.com/adecubed/hermes-plugin-gigamail",
+"tier": "community"
+},
+"git-autosave": {
+"repo": "https://github.com/xiaoyaner0201/hermes-git-autosave",
+"tier": "community"
+},
+"git-hook": {
+"repo": "https://github.com/aean0x/hermes-git-hook",
+"tier": "community"
+},
+"git-review": {
+"repo": "https://github.com/mister-ideas/git-review",
+"tier": "community"
+},
+"git-tasks": {
+"repo": "https://github.com/meviusisback/git-tasks",
+"tier": "community"
+},
+"githermes": {
+"repo": "https://github.com/claudiumio/githermes",
+"tier": "community"
+},
+"github-copilot": {
+"repo": "https://github.com/NousResearch/hermes-labs-plugins",
+"tier": "community"
+},
+"github_app": {
+"repo": "https://github.com/himanusia/hermes-github-app-plugin",
+"tier": "community"
+},
+"glasser": {
+"repo": "https://github.com/glasser-ai/hermes-plugin-glasser",
+"tier": "community"
+},
+"gmail": {
+"repo": "https://github.com/guberm/hermes-gmail-desktop-plugin",
+"tier": "community"
+},
+"go-whatsapp": {
+"repo": "https://github.com/anpicasso/hermes-go-whatsapp",
+"tier": "community"
+},
+"godot-studio": {
+"repo": "https://github.com/Foolafroos/godot-studio",
+"tier": "community"
+},
+"gondola-provider": {
+"repo": "https://github.com/Gondola-Market/hermes-gondola-provider",
+"tier": "community"
+},
+"gonogo": {
+"repo": "https://github.com/keppy/hermes-plugin-gonogo",
+"tier": "community"
+},
+"good-student": {
+"repo": "https://github.com/harrylabsj/hermes-plugin-good-student",
+"tier": "community"
+},
+"govee": {
+"repo": "https://github.com/promptclickrun/hermes-govee",
+"tier": "community"
+},
+"greyridge-token-safety": {
+"repo": "https://github.com/rezearcher/greyridge-token-safety-skill",
+"tier": "community"
+},
+"grok-acp": {
+"repo": "https://github.com/nicolasdmolina/hermes-grok-acp",
+"tier": "community"
+},
+"groq-provider": {
+"repo": "https://github.com/AhmetArif0/hermes-groq-provider",
+"tier": "community"
+},
+"gurusup-brain": {
+"repo": "https://github.com/gurusup/gurusup-brain-plugin",
+"tier": "community"
+},
+"ha-sidebar-navigator": {
+"repo": "https://github.com/badiyee85/HA-Plugins-sidebar-navigator",
+"tier": "community"
+},
+"hades-coding-workflows": {
+"repo": "https://github.com/singhguri/hades-coding-workflows",
+"tier": "community"
+},
+"handflow": {
+"repo": "https://github.com/DECRUX9812/hermes-handflow",
+"tier": "community"
+},
+"hardlight-ui": {
+"repo": "https://github.com/nosliwhtes/hardlight-ui",
+"tier": "community"
+},
+"health-data": {
+"repo": "https://github.com/Infinite-Labs-AI/hermes-health-apollo",
+"tier": "community"
+},
+"health-insights": {
+"repo": "https://github.com/mwdearing/hermes-health-insights",
+"tier": "community"
+},
+"healthcare": {
+"repo": "https://github.com/harrylabsj/hermes-plugin-healthcare",
+"tier": "community"
+},
+"healthrelay": {
+"repo": "https://github.com/mwdearing/hermes-healthrelay",
+"tier": "community"
+},
+"heartbeat2": {
+"repo": "https://github.com/electricsheephq/heartbeat2",
+"tier": "community"
+},
+"hermes-aac": {
+"repo": "https://github.com/TREE-Ind/hermes-aac",
+"tier": "community"
+},
+"hermes-activity": {
+"repo": "https://github.com/hassan-kamel/hermes-activity",
+"tier": "community"
+},
+"hermes-adaptive-effort": {
+"repo": "https://github.com/atostivint/hermes-adaptive-effort",
+"tier": "community"
+},
+"hermes-agent-builder": {
+"repo": "https://github.com/itsflownium/hermes-agent-builder",
+"tier": "community"
+},
+"hermes-agent-mixer": {
+"repo": "https://github.com/Sahil-SS9/hermes-agent-mixer",
+"tier": "community"
+},
+"hermes-anilist": {
+"repo": "https://github.com/BatataBF/hermes-anilist",
+"tier": "community"
+},
+"hermes-asgard": {
+"repo": "https://github.com/Adolanium/hermes-asgard",
+"tier": "community"
+},
+"hermes-atoll": {
+"repo": "https://github.com/himanusia/hermes-notch-plugin",
+"tier": "community"
+},
+"hermes-auto-titler": {
+"repo": "https://github.com/Vocllum/hermes-auto-titler",
+"tier": "community"
+},
+"hermes-beads": {
+"repo": "https://github.com/jacobhausler/hermes-beads",
+"tier": "community"
+},
+"hermes-blogwatcher": {
+"repo": "https://github.com/irfansofyana/hermes-blogwatcher",
+"tier": "community"
+},
+"hermes-board": {
+"repo": "https://github.com/skk2010/hermes-board-plugin",
+"tier": "community"
+},
+"hermes-boot-screen": {
+"repo": "https://github.com/OMOX563/hermes-boot-screen",
+"tier": "community"
+},
+"hermes-bot-hq": {
+"repo": "https://github.com/RohanRJ389/hermes-bot-hq",
+"tier": "community"
+},
+"hermes-call-ledger": {
+"repo": "https://github.com/skappafrost/hermes-call-ledger",
+"tier": "community"
+},
+"hermes-chat-share": {
+"repo": "https://github.com/smallmj/hermes-chat-share",
+"tier": "community"
+},
+"hermes-cloud-file-manager": {
+"repo": "https://github.com/electricsheephq/hermes-cloud-file-manager",
+"tier": "community"
+},
+"hermes-codex-resets": {
+"repo": "https://github.com/sxuff/hermes-codex-resets",
+"tier": "community"
+},
+"hermes-context-overview": {
+"repo": "https://github.com/AsoTora/hermes-context-overview",
+"tier": "community"
+},
+"hermes-council": {
+"repo": "https://github.com/girayk/hermes-council",
+"tier": "community"
+},
+"hermes-cron": {
+"repo": "https://github.com/itpartypattaya/hermes-cron",
+"tier": "community"
+},
+"hermes-desktop-camera": {
+"repo": "https://github.com/BrokeSkill/Hermes-Camera",
+"tier": "community"
+},
+"hermes-discord-rpc": {
+"repo": "https://github.com/DarRahman/hermes-discord-presence",
+"tier": "community"
+},
+"hermes-dpapi-secrets": {
+"repo": "https://github.com/Yicheng-Mark/hermes-windows-plugins",
+"tier": "community"
+},
+"hermes-dreaming": {
+"repo": "https://github.com/itpartypattaya/hermes-dreaming",
+"tier": "community"
+},
+"hermes-experientiallabs": {
+"repo": "https://github.com/kyoto-aircon/hermes-experientiallabs",
+"tier": "community"
+},
+"hermes-federated-search": {
+"repo": "https://github.com/kumaxs/hermes-federated-search",
+"tier": "community"
+},
+"hermes-field-notes": {
+"repo": "https://github.com/itpartypattaya/hermes-field-notes",
+"tier": "community"
+},
+"hermes-fleet-connector": {
+"repo": "https://github.com/tony-simons-aiowa/hermes-fleet-connector",
+"tier": "community"
+},
+"hermes-gemini-live": {
+"repo": "https://github.com/skappafrost/hermes-gemini-live",
+"tier": "community"
+},
+"hermes-gensyn-delphi": {
+"repo": "https://github.com/TakeshiTGAL/hermes-gensyn-plugins",
+"tier": "community"
+},
+"hermes-gensyn-ree": {
+"repo": "https://github.com/TakeshiTGAL/hermes-gensyn-plugins",
+"tier": "community"
+},
+"hermes-guide": {
+"repo": "https://github.com/iap/hermes-guide",
+"tier": "community"
+},
+"hermes-herald": {
+"repo": "https://github.com/bennybuoy/hermes-herald",
+"tier": "community"
+},
+"hermes-honcho-plugin": {
+"repo": "https://github.com/outpoints/hermes-honcho-plugin",
+"tier": "community"
+},
+"hermes-impossibl": {
+"repo": "https://github.com/impossiblco/hermes-impossibl",
+"tier": "community"
+},
+"hermes-insight": {
+"repo": "https://github.com/BrokeSkill/Hermes-Insight",
+"tier": "community"
+},
+"hermes-iroh-interconnect": {
+"repo": "https://github.com/rahlquist/hermes-iroh-interconnect",
+"tier": "community"
+},
+"hermes-jailbreak-kernel": {
+"repo": "https://github.com/Enchanted0911/hermes-jailbreak-kernel",
+"tier": "community"
+},
+"hermes-jetstream": {
+"repo": "https://github.com/atbrace/hermes-jetstream",
+"tier": "community"
+},
+"hermes-jev-routing": {
+"repo": "https://github.com/apoapostolov/hermes-agent-awesome-plugins",
+"tier": "community"
+},
+"hermes-jina": {
+"repo": "https://github.com/Adolanium/hermes-jina",
+"tier": "community"
+},
+"hermes-kame-api-rotation": {
+"repo": "https://github.com/Kame696/kame-api-rotation-for-hermes",
+"tier": "community"
+},
+"hermes-kame-provider": {
+"repo": "https://github.com/Kame696/kame-api-rotation-for-hermes",
+"tier": "community"
+},
+"hermes-kemet": {
+"repo": "https://github.com/Adolanium/hermes-kemet",
+"tier": "community"
+},
+"hermes-lang-ca": {
+"repo": "https://github.com/jordimas/hermes-lang-ca",
+"tier": "community"
+},
+"hermes-lang-cs": {
+"repo": "https://github.com/ostravajih/hermes-lang-cs",
+"tier": "community"
+},
+"hermes-lang-el": {
+"repo": "https://github.com/axiom-agent-ai/hermes-lang-el",
+"tier": "community"
+},
+"hermes-lang-he": {
+"repo": "https://github.com/Adolanium/hermes-lang-he",
+"tier": "community"
+},
+"hermes-lang-it": {
+"repo": "https://github.com/Lazzdaycod/hermes-lang-it",
+"tier": "community"
+},
+"hermes-lang-it-full": {
+"repo": "https://github.com/gradia64/hermes-lang-it-full",
+"tier": "community"
+},
+"hermes-lang-ko": {
+"repo": "https://github.com/dandacompany/hermes-lang-ko",
+"tier": "community"
+},
+"hermes-lang-pt-br": {
+"repo": "https://github.com/StudioCodeAI/hermes-lang-pt-br",
+"tier": "community"
+},
+"hermes-lang-th": {
+"repo": "https://github.com/shoesroom13/hermes-lang-thai",
+"tier": "community"
+},
+"hermes-lang-vi": {
+"repo": "https://github.com/moken627-hub/hermes-lang-vi",
+"tier": "community"
+},
+"hermes-lcm-x": {
+"repo": "https://github.com/electricsheephq/lcm-x",
+"tier": "community"
+},
+"hermes-ledgerline": {
+"repo": "https://github.com/Adolanium/hermes-ledgerline",
+"tier": "community"
+},
+"hermes-live-voice": {
+"repo": "https://github.com/Synero/hermes-live-voice",
+"tier": "community"
+},
+"hermes-loadout": {
+"repo": "https://github.com/qwertyuiop97/hermes-loadout",
+"tier": "community"
+},
+"hermes-memory-pane": {
+"repo": "https://github.com/Adolanium/hermes-memory-pane",
+"tier": "community"
+},
+"hermes-memory-ui": {
+"repo": "https://github.com/xraysight/hermes-memory-ui",
+"tier": "community"
+},
+"hermes-memory-wiki": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"hermes-minimizer": {
+"repo": "https://github.com/nosliwhtes/hermes-minimizer",
+"tier": "community"
+},
+"hermes-mobile": {
+"repo": "https://github.com/geniok1980/hermes-mobile-adapter",
+"tier": "community"
+},
+"hermes-model-switcher": {
+"repo": "https://github.com/nicolasestrem/hermes-model-switcher",
+"tier": "community"
+},
+"hermes-monitor": {
+"repo": "https://github.com/mr-3mm3/hermes-monitor",
+"tier": "community"
+},
+"hermes-monitoring-dashboard": {
+"repo": "https://github.com/austinpickett/hermes-monitoring-dashboard",
+"tier": "community"
+},
+"hermes-mpp": {
+"repo": "https://github.com/tempoxyz/hermes-mpp",
+"tier": "community"
+},
+"hermes-muse": {
+"repo": "https://github.com/xiaohei-info/hermes-muse",
+"tier": "community"
+},
+"hermes-muse-code": {
+"repo": "https://github.com/TheStreamCode/hermes-muse-code",
+"tier": "community"
+},
+"hermes-newswire": {
+"repo": "https://github.com/tony-simons-aiowa/hermes-newswire",
+"tier": "community"
+},
+"hermes-nous-prices": {
+"repo": "https://github.com/Adolanium/hermes-nous-prices",
+"tier": "community"
+},
+"hermes-office": {
+"repo": "https://github.com/Adolanium/hermes-office",
+"tier": "community"
+},
+"hermes-openwhispr": {
+"repo": "https://github.com/mooserini/hermes-openwhispr",
+"tier": "community"
+},
+"hermes-opper": {
+"repo": "https://github.com/opper-ai/hermes-opper",
+"tier": "community"
+},
+"hermes-osint-map": {
+"repo": "https://github.com/Adolanium/hermes-osint-map",
+"tier": "community"
+},
+"hermes-pantheon": {
+"repo": "https://github.com/Adolanium/hermes-pantheon",
+"tier": "community"
+},
+"hermes-pets-all": {
+"repo": "https://github.com/poponline63/hermes-pets-all",
+"tier": "community"
+},
+"hermes-pickup": {
+"repo": "https://github.com/murenovich/hermes-pickup",
+"tier": "community"
+},
+"hermes-pii": {
+"repo": "https://github.com/lukefx/hermes-pii",
+"tier": "community"
+},
+"hermes-plex-music": {
+"repo": "https://github.com/imzacksong/hermes-plex-music",
+"tier": "community"
+},
+"hermes-plugin-chrome-profiles": {
+"repo": "https://github.com/anpicasso/hermes-plugin-chrome-profiles",
+"tier": "community"
+},
+"hermes-plugin-gen": {
+"repo": "https://github.com/iruzen-dono/hermes-plugin-gen",
+"tier": "community"
+},
+"hermes-plugin-guard": {
+"repo": "https://github.com/mauricemohr88-debug/hermes-plugin-guard",
+"tier": "community"
+},
+"hermes-plugin-netbox": {
+"repo": "https://github.com/andrewvieyra/hermes-plugin-netbox",
+"tier": "community"
+},
+"hermes-pokemon": {
+"repo": "https://github.com/sxuff/hermes-pokemon",
+"tier": "community"
+},
+"hermes-project-stewardship": {
+"repo": "https://github.com/Sahil-SS9/hermes-project-stewardship",
+"tier": "community"
+},
+"hermes-proton": {
+"repo": "https://github.com/Maytrella007/hermes-proton",
+"tier": "community"
+},
+"hermes-pubky": {
+"repo": "https://github.com/MCarlomagno/hermes-pubky",
+"tier": "community"
+},
+"hermes-quest": {
+"repo": "https://github.com/ap08960695/hermes-quest",
+"tier": "community"
+},
+"hermes-resetwatch": {
+"repo": "https://github.com/Adolanium/hermes-resetwatch",
+"tier": "community"
+},
+"hermes-rich-ui": {
+"repo": "https://github.com/jacobhausler/hermes-rich-ui",
+"tier": "community"
+},
+"hermes-routines": {
+"repo": "https://github.com/crdesign8/hermes-routines",
+"tier": "community"
+},
+"hermes-rss": {
+"repo": "https://github.com/Adolanium/hermes-rss",
+"tier": "community"
+},
+"hermes-rustpush-imessage": {
+"repo": "https://github.com/boobutler/hermes-rustpush-imessage",
+"tier": "community"
+},
+"hermes-security-audit": {
+"repo": "https://github.com/dafka007/hermes-security-audit",
+"tier": "community"
+},
+"hermes-self-healing-context": {
+"repo": "https://github.com/forumevi/hermes-self-healing-context",
+"tier": "community"
+},
+"hermes-seo": {
+"repo": "https://github.com/yuzushi-dev/hermes-seo",
+"tier": "community"
+},
+"hermes-session-diff": {
+"repo": "https://github.com/Adolanium/hermes-session-diff",
+"tier": "community"
+},
+"hermes-session-reset-policy": {
+"repo": "https://github.com/fastfinge/hermes-session-reset-policy",
+"tier": "community"
+},
+"hermes-session-warmer": {
+"repo": "https://github.com/mojomast/hermes-session-warmer",
+"tier": "community"
+},
+"hermes-sidepulse": {
+"repo": "https://github.com/d31tcjg/hermes-sidepulse",
+"tier": "community"
+},
+"hermes-slash-router": {
+"repo": "https://github.com/raitoxlol/hermes-slash-router",
+"tier": "community"
+},
+"hermes-snapcompact": {
+"repo": "https://github.com/vimona3ds/hermes-snapcompact",
+"tier": "community"
+},
+"hermes-soniox": {
+"repo": "https://github.com/XimilalaXiang/hermes-soniox",
+"tier": "community"
+},
+"hermes-speech": {
+"repo": "https://github.com/allmodels-io/hermes-speech",
+"tier": "community"
+},
+"hermes-ssh": {
+"repo": "https://github.com/Adolanium/hermes-ssh",
+"tier": "community"
+},
+"hermes-structured-aux-models": {
+"repo": "https://github.com/trajectoire-ai/hermes-structured-aux-models",
+"tier": "community"
+},
+"hermes-stt-enhance": {
+"repo": "https://github.com/dmmeteo/hermes-stt-enhance",
+"tier": "community"
+},
+"hermes-subscription-meter": {
+"repo": "https://github.com/NealZhouPanda/hermes-subscription-meter",
+"tier": "community"
+},
+"hermes-switchyard": {
+"repo": "https://github.com/bgrablin/hermes-switchyard",
+"tier": "community"
+},
+"hermes-t3-control": {
+"repo": "https://github.com/thetasigmaio/hermes-t3-control",
+"tier": "community"
+},
+"hermes-tabular": {
+"repo": "https://github.com/frankiethull/hermes-tabular",
+"tier": "community"
+},
+"hermes-tailscale": {
+"repo": "https://github.com/Adolanium/hermes-tailscale",
+"tier": "community"
+},
+"hermes-talk": {
+"repo": "https://github.com/TheSmokeDev/hermes-talk",
+"tier": "community"
+},
+"hermes-taskbar-badge": {
+"repo": "https://github.com/BrokeSkill/hermes-taskbar-badge",
+"tier": "community"
+},
+"hermes-teammates": {
+"repo": "https://github.com/100yenadmin/hermes-teammates",
+"tier": "community"
+},
+"hermes-telegram-business": {
+"repo": "https://github.com/NousResearch/hermes-labs-plugins",
+"tier": "community"
+},
+"hermes-telemetry": {
+"repo": "https://github.com/nujovich/hermes-telemetry",
+"tier": "community"
+},
+"hermes-telemetry-dashboard": {
+"repo": "https://github.com/cybertecla/hermes-telemetry-dashboard",
+"tier": "community"
+},
+"hermes-tenuo": {
+"repo": "https://github.com/tenuo-ai/hermes-tenuo",
+"tier": "community"
+},
+"hermes-terminal": {
+"repo": "https://github.com/Adolanium/hermes-terminal",
+"tier": "community"
+},
+"hermes-token-speed": {
+"repo": "https://github.com/Ayshinko/hermes-token-speed",
+"tier": "community"
+},
+"hermes-toolsmith": {
+"repo": "https://github.com/Adolanium/hermes-toolsmith",
+"tier": "community"
+},
+"hermes-town": {
+"repo": "https://github.com/sxuff/hermes-town",
+"tier": "community"
+},
+"hermes-tripo": {
+"repo": "https://github.com/Adolanium/hermes-tripo",
+"tier": "community"
+},
+"hermes-trove": {
+"repo": "https://github.com/misterdas/hermes-trove",
+"tier": "community"
+},
+"hermes-vcc": {
+"repo": "https://github.com/agentbox-tech/hermes-vcc",
+"tier": "community"
+},
+"hermes-vcc-engine": {
+"repo": "https://github.com/danbiocchi/hermes-vcc-engine",
+"tier": "community"
+},
+"hermes-verifier": {
+"repo": "https://github.com/am423/hermes-verifier",
+"tier": "community"
+},
+"hermes-video-editor": {
+"repo": "https://github.com/oliverhees/hermes-video-editor",
+"tier": "community"
+},
+"hermes-vision-inline": {
+"repo": "https://github.com/BrokeSkill/hermes-vision-inline",
+"tier": "community"
+},
+"hermes-vpn": {
+"repo": "https://github.com/Maytrella007/Hermes-VPN",
+"tier": "community"
+},
+"hermes-whatsapp-voice": {
+"repo": "https://github.com/ashwanthbalakrishnan5/hermes-whatsapp-voice",
+"tier": "community"
+},
+"hermes-wincred": {
+"repo": "https://github.com/Yicheng-Mark/hermes-windows-plugins",
+"tier": "community"
+},
+"hermes-windows-computer-use": {
+"repo": "https://github.com/TREE-Ind/THEIA-UI-Computer-Use",
+"tier": "community"
+},
+"hermes-windows-eventlog": {
+"repo": "https://github.com/Yicheng-Mark/hermes-windows-plugins",
+"tier": "community"
+},
+"hermes-windows-ops": {
+"repo": "https://github.com/Yicheng-Mark/hermes-windows-plugins",
+"tier": "community"
+},
+"hermes-windows-ports": {
+"repo": "https://github.com/Yicheng-Mark/hermes-windows-plugins",
+"tier": "community"
+},
+"hermes-windows-process": {
+"repo": "https://github.com/Yicheng-Mark/hermes-windows-plugins",
+"tier": "community"
+},
+"hermes-workbench": {
+"repo": "https://github.com/sxuff/hermes-workbench",
+"tier": "community"
+},
+"hermes-worker-monitor": {
+"repo": "https://github.com/djmango/hermes-worker-monitor",
+"tier": "community"
+},
+"hermes-workflows": {
+"repo": "https://github.com/jacobhausler/hermes-workflows",
+"tier": "community"
+},
+"hermes-wsl-terminal": {
+"repo": "https://github.com/Yicheng-Mark/hermes-windows-plugins",
+"tier": "community"
+},
+"hermes-wslc-sandbox": {
+"repo": "https://github.com/Yicheng-Mark/hermes-windows-plugins",
+"tier": "community"
+},
+"hermes-xai": {
+"repo": "https://github.com/Julientalbot/hermes-xai",
+"tier": "community"
+},
+"hermes-zh": {
+"repo": "https://github.com/Cody292/hermes-zh",
+"tier": "community"
+},
+"hermes_otel": {
+"repo": "https://github.com/briancaffey/hermes-otel",
+"tier": "community"
+},
+"hermetic": {
+"repo": "https://github.com/forefy/hermetic",
+"tier": "community"
+},
+"hicortex": {
+"repo": "https://github.com/gamaze-labs/hicortex-hermes-plugin",
+"tier": "community"
+},
+"hindsight": {
+"repo": "https://github.com/vectorize-io/hindsight",
+"tier": "community"
+},
+"holographic": {
+"repo": "https://github.com/itpartypattaya/hermes-plugin-holographic",
+"tier": "community"
+},
+"home-dashboard": {
+"repo": "https://github.com/albertocvrrbs/hermes-home-dashboard",
+"tier": "community"
+},
+"homeassistant": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"homeassistant-statistics": {
+"repo": "https://github.com/goncami/hermes-homeassistant-statistics",
+"tier": "community"
+},
+"honcho": {
+"repo": "https://github.com/plastic-labs/honcho",
+"tier": "community"
+},
+"hopper": {
+"repo": "https://github.com/mykeura/hopper",
+"tier": "community"
+},
+"hud-teach": {
+"repo": "https://github.com/iamlukethedev/hermes-hud-teach",
+"tier": "community"
+},
+"huddo": {
+"repo": "https://github.com/puffo-ai/huddo-mcp",
+"tier": "community"
+},
+"hwiki": {
+"repo": "https://github.com/ottosulin/hwiki",
+"tier": "community"
+},
+"hyatlas": {
+"repo": "https://github.com/tuancookiez-hub/HyAtlas-Memory",
+"tier": "community"
+},
+"hydradb": {
+"repo": "https://github.com/hydra-db/hydradb-hermes-plugin",
+"tier": "community"
+},
+"hypd-ai-ads": {
+"repo": "https://github.com/HYPD-AI/hypd-hermes-plugin",
+"tier": "community"
+},
+"icarus": {
+"repo": "https://github.com/esaradev/icarus-plugin",
+"tier": "community"
+},
+"identity": {
+"repo": "https://github.com/indigokarasu/hermes-identity-plugin",
+"tier": "community"
+},
+"image-utils": {
+"repo": "https://github.com/MazenMkhinini/hermes-image-plugin",
+"tier": "community"
+},
+"inbox": {
+"repo": "https://github.com/NousResearch/hermes-labs-plugins",
+"tier": "community"
+},
+"index-network": {
+"repo": "https://github.com/indexnetwork/hermes-plugin",
+"tier": "community"
+},
+"index-search": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-index-search",
+"tier": "community"
+},
+"infisical": {
+"repo": "https://github.com/antonba/hermes-infisical-plugin",
+"tier": "community"
+},
+"inkbox": {
+"repo": "https://github.com/inkbox-ai/hermes-agent-plugin",
+"tier": "community"
+},
+"inline-platform": {
+"repo": "https://github.com/inline-chat/inline",
+"tier": "community"
+},
+"intelligent-tool-break": {
+"repo": "https://github.com/apoapostolov/hermes-agent-awesome-plugins",
+"tier": "community"
+},
+"intelligent_memory": {
+"repo": "https://github.com/hoysama/hermes-intelligent-memory",
+"tier": "community"
+},
+"interim-ledger": {
+"repo": "https://github.com/olric3015/hermes-plugins",
+"tier": "community"
+},
+"invinoveritas-receipts": {
+"repo": "https://github.com/babyblueviper1/hermes-invinoveritas",
+"tier": "community"
+},
+"iowap": {
+"repo": "https://github.com/iowap-org/iowap-hermes-integration",
+"tier": "community"
+},
+"iteration-budget-meter": {
+"repo": "https://github.com/apoapostolov/hermes-agent-awesome-plugins",
+"tier": "community"
+},
+"ja-writing-guard": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-ja-writing-guard",
+"tier": "community"
+},
+"jackal-verified": {
+"repo": "https://github.com/AnubisQuantumCipher/hermes-jackal-verified",
+"tier": "community"
+},
+"jekyll-hyde": {
+"repo": "https://github.com/jnorthrup/hermes-jekyl-hyde",
+"tier": "community"
+},
+"jet-browser": {
+"repo": "https://github.com/masakaai/jet-browser",
+"tier": "community"
+},
+"jev": {
+"repo": "https://github.com/ourines/hermes-jev",
+"tier": "community"
+},
+"jev-agent-router": {
+"repo": "https://github.com/Pinutss/jev-agent-router",
+"tier": "community"
+},
+"jev-approvals": {
+"repo": "https://github.com/anpicasso/hermes-jev-approvals",
+"tier": "community"
+},
+"jev-cron-gate": {
+"repo": "https://github.com/superlowburn/hermes-jev-cron-gate",
+"tier": "community"
+},
+"jev-curator": {
+"repo": "https://github.com/anpicasso/hermes-jev-curator",
+"tier": "community"
+},
+"jev-effort-router": {
+"repo": "https://github.com/AlphaPerseii3000/jev-effort-router",
+"tier": "community"
+},
+"jev-judge": {
+"repo": "https://github.com/DoGMaTiiC/hermes-jev",
+"tier": "community"
+},
+"jev-mcp-router": {
+"repo": "https://github.com/Pinutss/jev-mcp-router",
+"tier": "community"
+},
+"jev-memory-selector": {
+"repo": "https://github.com/Pinutss/jev-memory-selector",
+"tier": "community"
+},
+"jev-model-router": {
+"repo": "https://github.com/Pinutss/jev-model-router",
+"tier": "community"
+},
+"jev-skill-router": {
+"repo": "https://github.com/DoGMaTiiC/hermes-jev",
+"tier": "community"
+},
+"jev-skill-router-mcp": {
+"repo": "https://github.com/ydmw74/jev-skill-router",
+"tier": "community"
+},
+"jev-typesafe": {
+"repo": "https://github.com/ajensenwaud/hermes-jev-plugin",
+"tier": "community"
+},
+"jira-browser": {
+"repo": "https://github.com/LikelyLucid/hermes-jira-browser",
+"tier": "community"
+},
+"job-search": {
+"repo": "https://github.com/agent-data/job-search",
+"tier": "community"
+},
+"jot": {
+"repo": "https://github.com/Totoro-qaq/hermes-jot",
+"tier": "community"
+},
+"jp-address": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-address",
+"tier": "community"
+},
+"jp-charts": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-charts",
+"tier": "community"
+},
+"jp-chatwork": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-chatwork",
+"tier": "community"
+},
+"jp-corporate": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-jp-corporate",
+"tier": "community"
+},
+"jp-edinet": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-edinet",
+"tier": "community"
+},
+"jp-egov-law": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-egov-law",
+"tier": "community"
+},
+"jp-estat": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-estat",
+"tier": "community"
+},
+"jp-kokkai": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-kokkai",
+"tier": "community"
+},
+"jp-reinfolib": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-reinfolib",
+"tier": "community"
+},
+"jp-subsidies": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-subsidies",
+"tier": "community"
+},
+"junie-acp": {
+"repo": "https://github.com/JetBrains/junie",
+"tier": "community"
+},
+"jwt-ref": {
+"repo": "https://github.com/olric3015/hermes-plugins",
+"tier": "community"
+},
+"kanban-gantt": {
+"repo": "https://github.com/e-is/hermes-kanban-gantt",
+"tier": "community"
+},
+"kanban-graph": {
+"repo": "https://github.com/Senci/hermes-kanban-graph",
+"tier": "community"
+},
+"kanban-live-gantt": {
+"repo": "https://github.com/ningfangbin/hermes-kanban-live-gantt",
+"tier": "community"
+},
+"kanban-stream": {
+"repo": "https://github.com/mbgulden/hermes-kanban-stream",
+"tier": "community"
+},
+"kanban-task-threads": {
+"repo": "https://github.com/diegomarino/kanban-task-threads",
+"tier": "community"
+},
+"keenable-plugin": {
+"repo": "https://github.com/keenableai/keenable-hermes-plugin",
+"tier": "community"
+},
+"kfchow-llm-value-router": {
+"repo": "https://github.com/kfchow-ai/kfchow-llm-value-router",
+"tier": "community"
+},
+"kimchi-acp-provider": {
+"repo": "https://github.com/getkimchi/kimchi-hermes",
+"tier": "community"
+},
+"kimchi-provider": {
+"repo": "https://github.com/getkimchi/kimchi-hermes",
+"tier": "community"
+},
+"kimi-code-delegate": {
+"repo": "https://github.com/s-a-s-k-i-a/hermes-kimi-code",
+"tier": "community"
+},
+"kinocut": {
+"repo": "https://github.com/KyaniteLabs/kinocut",
+"tier": "community"
+},
+"kiro-acp": {
+"repo": "https://github.com/tobenwarrior/hermes-kiro-provider",
+"tier": "community"
+},
+"kiro-provider": {
+"repo": "https://github.com/anpicasso/hermes-kiro-provider",
+"tier": "community"
+},
+"kiwi": {
+"repo": "https://github.com/harrylabsj/hermes-plugin-kiwi",
+"tier": "community"
+},
+"klipper-print-watch": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-klipper-print-watch",
+"tier": "community"
+},
+"kokoro-tts": {
+"repo": "https://github.com/brunosouzas/hermes-kokoro-tts",
+"tier": "community"
+},
+"kuma": {
+"repo": "https://github.com/nitishagar/hermes-kuma",
+"tier": "community"
+},
+"kumiho-memory": {
+"repo": "https://github.com/KumihoIO/kumiho-plugins",
+"tier": "community"
+},
+"lancedb": {
+"repo": "https://github.com/lancedb/hermes-agent-memory",
+"tier": "community"
+},
+"lancedb-suite": {
+"repo": "https://github.com/3L0935/hermes-lancedb-memory-suite",
+"tier": "community"
+},
+"langfuse": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"laso-finance": {
+"repo": "https://github.com/LasoFinance/hermes-plugin",
+"tier": "community"
+},
+"ld-workbench": {
+"repo": "https://github.com/Dgardenhire/hermes-ld-workbench",
+"tier": "community"
+},
+"letsfg": {
+"repo": "https://github.com/LetsFG/LetsFG",
+"tier": "community"
+},
+"lib-docs": {
+"repo": "https://github.com/aydnOktay/hermes-lib-docs",
+"tier": "community"
+},
+"lightkeeper": {
+"repo": "https://github.com/Light5566/claude-lightkeeper",
+"tier": "community"
+},
+"lightningai": {
+"repo": "https://github.com/dinosauria123/hermes-lightningai-provider",
+"tier": "community"
+},
+"lightningai-rate-limit": {
+"repo": "https://github.com/dinosauria123/hermes-lightningai-rate-limit",
+"tier": "community"
+},
+"limbic": {
+"repo": "https://github.com/dyiapanis/limbic",
+"tier": "community"
+},
+"linkedcamp": {
+"repo": "https://github.com/LinkedCamp/hermes-plugin",
+"tier": "community"
+},
+"linkup": {
+"repo": "https://github.com/LinkupPlatform/linkup-hermes-plugin",
+"tier": "community"
+},
+"liquid-inference-provider": {
+"repo": "https://github.com/architect-xyz/hermes-liquid-inference",
+"tier": "community"
+},
+"little-canary": {
+"repo": "https://github.com/hermes-labs-ai/little-canary",
+"tier": "community"
+},
+"live-time": {
+"repo": "https://github.com/chenfeijiang95-ui/hermes-live-time",
+"tier": "community"
+},
+"llm-antidote": {
+"repo": "https://github.com/GroveMinting/llmAntidote",
+"tier": "community"
+},
+"llmslim": {
+"repo": "https://github.com/Thanatos9404/llmslim",
+"tier": "community"
+},
+"loaded-skills-indicator": {
+"repo": "https://github.com/yugasurfer/loaded-skills-indicator",
+"tier": "community"
+},
+"local-system-one-hermes": {
+"repo": "https://github.com/NMTZ-z/system-one-benchmark-lab",
+"tier": "community"
+},
+"local_knowledge": {
+"repo": "https://github.com/stepanov1975/hermes-local-knowledge",
+"tier": "community"
+},
+"long-conversations": {
+"repo": "https://github.com/cspears32/hermes-long-conversations",
+"tier": "community"
+},
+"looot": {
+"repo": "https://github.com/loootai/hermes-looot",
+"tier": "community"
+},
+"loreconvo": {
+"repo": "https://github.com/labyrinth-analytics/loreconvo",
+"tier": "community"
+},
+"lowrouter": {
+"repo": "https://github.com/carboniferio/hermes-lowrouter-provider",
+"tier": "community"
+},
+"lumberroom": {
+"repo": "https://github.com/lumberroom/lumberroom-hermes",
+"tier": "community"
+},
+"machine-library": {
+"repo": "https://github.com/SpaceFrontiers/hermes-machine-library",
+"tier": "community"
+},
+"machine-spirit": {
+"repo": "https://github.com/KuboKubis25/hermes-machine-spirit",
+"tier": "community"
+},
+"made-shelf": {
+"repo": "https://github.com/aydnOktay/hermes-made-shelf",
+"tier": "community"
+},
+"magi": {
+"repo": "https://github.com/MarcosAlves90/magi",
+"tier": "community"
+},
+"make-parts-now": {
+"repo": "https://github.com/makepartsnow/makepartsnow-hermes",
+"tier": "community"
+},
+"maqami-travel": {
+"repo": "https://github.com/negm17111995/mcp-server",
+"tier": "community"
+},
+"markdown-new": {
+"repo": "https://github.com/nosliwhtes/hermes-markdown-new",
+"tier": "community"
+},
+"markifact": {
+"repo": "https://github.com/markifact/markifact-mcp",
+"tier": "community"
+},
+"max-platform": {
+"repo": "https://github.com/Realmagnum/hermes-max-integration",
+"tier": "community"
+},
+"mcp-plugin-creator": {
+"repo": "https://github.com/tonbistudio/hermes-mcp-plugin-creator",
+"tier": "community"
+},
+"mcp-serve": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"meeting-overlay": {
+"repo": "https://github.com/taxbax/meeting-overlay",
+"tier": "community"
+},
+"mem-os": {
+"repo": "https://github.com/Markgatcha/memos",
+"tier": "community"
+},
+"mem0": {
+"repo": "https://github.com/mem0ai/mem0",
+"tier": "community"
+},
+"memanto": {
+"repo": "https://github.com/moorcheh-ai/memanto",
+"tier": "community"
+},
+"memex8": {
+"repo": "https://github.com/Ex8-ca/memex8",
+"tier": "community"
+},
+"memlock": {
+"repo": "https://github.com/Sahil-SS9/hermes-memlock",
+"tier": "community"
+},
+"memobase": {
+"repo": "https://github.com/fred0m/hermes-memobase-provider",
+"tier": "community"
+},
+"memoria": {
+"repo": "https://github.com/matrixorigin/memoria",
+"tier": "community"
+},
+"memory-review": {
+"repo": "https://github.com/apoapostolov/hermes-agent-awesome-plugins",
+"tier": "community"
+},
+"memory-rewind": {
+"repo": "https://github.com/AhmetArif0/hermes-memory-rewind",
+"tier": "community"
+},
+"memory-shield": {
+"repo": "https://github.com/churnast/hermes-memory-shield",
+"tier": "community"
+},
+"memory-zvec": {
+"repo": "https://github.com/kuntao2011/kkk-hermes-memory-zvec",
+"tier": "community"
+},
+"memtomem": {
+"repo": "https://github.com/memtomem/memtomem",
+"tier": "community"
+},
+"mermail": {
+"repo": "https://github.com/Nudgen-Marketing/mermail-skills",
+"tier": "community"
+},
+"meshy": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"metamask-wallet": {
+"repo": "https://github.com/akugone/hermes-metamask-wallet",
+"tier": "community"
+},
+"metronix": {
+"repo": "https://github.com/mtrnix/hermes-memory-metronix",
+"tier": "community"
+},
+"microsoft365": {
+"repo": "https://github.com/fabiomotta0311/hermes-microsoft365-plugin",
+"tier": "community"
+},
+"mindgraph": {
+"repo": "https://github.com/shuruheel/mindgraph",
+"tier": "community"
+},
+"minecraft-platform": {
+"repo": "https://github.com/kyssta-exe/hermes-minecraft-gateway",
+"tier": "community"
+},
+"minimax-image": {
+"repo": "https://github.com/rriggs/hermes-plugin-minimax-image",
+"tier": "community"
+},
+"minimax-search": {
+"repo": "https://github.com/pdonizete/hermes-minimax-search",
+"tier": "community"
+},
+"minimax-video": {
+"repo": "https://github.com/rriggs/hermes-plugin-minimax-video",
+"tier": "community"
+},
+"mistral-vibe": {
+"repo": "https://github.com/nebneo/hermes-mistral-vibe",
+"tier": "community"
+},
+"mixar": {
+"repo": "https://github.com/Mixar-AI/hermes-mixar",
+"tier": "community"
+},
+"mnemostack": {
+"repo": "https://github.com/udjin-labs/hermes-mnemostack",
+"tier": "community"
+},
+"mnemosyne": {
+"repo": "https://github.com/mnemosyne-oss/mnemosyne",
+"tier": "community"
+},
+"mnemosyne-dashboard": {
+"repo": "https://github.com/wysie/mnemosyne-dashboard",
+"tier": "community"
+},
+"mnemoverse": {
+"repo": "https://github.com/mnemoverse/claude-plugin",
+"tier": "community"
+},
+"mock-review": {
+"repo": "https://github.com/arspesk/hermes-mock-review",
+"tier": "community"
+},
+"model-drift-watch": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-model-drift",
+"tier": "community"
+},
+"model-leaderboard": {
+"repo": "https://github.com/e-is/hermes-model-leaderboard",
+"tier": "community"
+},
+"model-picker": {
+"repo": "https://github.com/aean0x/hermes-model-picker",
+"tier": "community"
+},
+"model-router": {
+"repo": "https://github.com/metamindedu/hermes-model-router",
+"tier": "community"
+},
+"model-usage-status": {
+"repo": "https://github.com/krapwoo/hermes-model-usage-status",
+"tier": "community"
+},
+"modernisation-engine": {
+"repo": "https://github.com/Sahil-SS9/modernisation-engine",
+"tier": "community"
+},
+"monid": {
+"repo": "https://github.com/monid-ai/hermes-plugin",
+"tier": "community"
+},
+"morning-briefing": {
+"repo": "https://github.com/drkpxl/morning-briefing",
+"tier": "community"
+},
+"mrscraper": {
+"repo": "https://github.com/ai-mrscraper/hermes-mrscraper-plugin",
+"tier": "community"
+},
+"ms-decision-provider": {
+"repo": "https://github.com/guglxni/ms-decision-provider",
+"tier": "community"
+},
+"my-github": {
+"repo": "https://github.com/tomekdot/hermes-my-github-plugin",
+"tier": "community"
+},
+"mybot-farm": {
+"repo": "https://github.com/okita-io/mybot-farm",
+"tier": "community"
+},
+"myswarm": {
+"repo": "https://github.com/tomkubik/hermes-myswarm",
+"tier": "community"
+},
+"nachos": {
+"repo": "https://github.com/Nacho-Labs-LLC/hermes-plugin-nachos",
+"tier": "community"
+},
+"needs-you": {
+"repo": "https://github.com/aydnOktay/hermes-needs-you",
+"tier": "community"
+},
+"nerve": {
+"repo": "https://github.com/keeltrace/hermes-nerve",
+"tier": "community"
+},
+"netmind-provider": {
+"repo": "https://github.com/NetMind-AI/netmind-hermes-provider",
+"tier": "community"
+},
+"next-prompt": {
+"repo": "https://github.com/soymarketing/hermes-plugin-next-prompt",
+"tier": "community"
+},
+"next-steps": {
+"repo": "https://github.com/Agantila/next-steps",
+"tier": "community"
+},
+"nextcloud-talk": {
+"repo": "https://github.com/Cliff3c/hermes-nextcloud-talk",
+"tier": "community"
+},
+"nextcloud-talk-platform": {
+"repo": "https://github.com/smilinTux/hermes-nextcloud-talk",
+"tier": "community"
+},
+"nextdns": {
+"repo": "https://github.com/shanelord01/hermes-nextdns",
+"tier": "community"
+},
+"nexus": {
+"repo": "https://github.com/Neboy72/nexus-memory",
+"tier": "community"
+},
+"ngrok-ai-gateway": {
+"repo": "https://github.com/ngrok/hermes-ngrok",
+"tier": "community"
+},
+"nine-balance-widget": {
+"repo": "https://github.com/OMOX563/nine-balance-widget",
+"tier": "community"
+},
+"node-search": {
+"repo": "https://github.com/Heeervas/node-search-plugin",
+"tier": "community"
+},
+"nord-theme": {
+"repo": "https://github.com/Audiofool934/hermes-nord-theme",
+"tier": "community"
+},
+"nowstamp": {
+"repo": "https://github.com/zakiyys/hermes-nowstamp",
+"tier": "community"
+},
+"ntfy-approval": {
+"repo": "https://github.com/AhmetArif0/hermes-ntfy-approval",
+"tier": "community"
+},
+"nvidia-app": {
+"repo": "https://github.com/NousResearch/hermes-nvidia",
+"tier": "verified"
+},
+"nvidia-broadcast": {
+"repo": "https://github.com/NousResearch/hermes-nvidia",
+"tier": "verified"
+},
+"obsidian-memory": {
+"repo": "https://github.com/kyssta-exe/hermes-obsidian-memory",
+"tier": "community"
+},
+"oc-free-provider": {
+"repo": "https://github.com/anpicasso/hermes-oc-free-provider",
+"tier": "community"
+},
+"office-3d": {
+"repo": "https://github.com/oslook/hermes-desktop-plugin-office-3d",
+"tier": "community"
+},
+"office-desk": {
+"repo": "https://github.com/DECRUX9812/hermes-office",
+"tier": "community"
+},
+"offpeak-bekci": {
+"repo": "https://github.com/onkanat/hermes-offpeak-bekci",
+"tier": "community"
+},
+"omh": {
+"repo": "https://github.com/rlaope/oh-my-hermes",
+"tier": "community"
+},
+"omnivoice": {
+"repo": "https://github.com/ThaungThanHan/hermes-omnivoice",
+"tier": "community"
+},
+"opaque-composer": {
+"repo": "https://github.com/apoapostolov/hermes-agent-awesome-plugins",
+"tier": "community"
+},
+"openai-compatible": {
+"repo": "https://github.com/duu261/hermes-imagegen-openai-compatible",
+"tier": "community"
+},
+"openalex": {
+"repo": "https://github.com/Adolanium/hermes-plugin-openalex",
+"tier": "community"
+},
+"opencode-shepherd": {
+"repo": "https://github.com/okazakee/opencode-shepherd",
+"tier": "community"
+},
+"openinvest": {
+"repo": "https://github.com/longsizhuo/openInvest",
+"tier": "community"
+},
+"openltm": {
+"repo": "https://github.com/RohiRIK/OpenLtm",
+"tier": "community"
+},
+"openmail": {
+"repo": "https://github.com/openmailsh/hermes-plugin",
+"tier": "community"
+},
+"openpaths": {
+"repo": "https://github.com/lee101/hermes-openpaths",
+"tier": "community"
+},
+"openrouter-picker": {
+"repo": "https://github.com/PIR8-Software/Hermes-OR-Picker",
+"tier": "community"
+},
+"openrouter-spend": {
+"repo": "https://github.com/AllenRobinHubert/openrouter-spend",
+"tier": "community"
+},
+"openrouter-voice": {
+"repo": "https://github.com/esketids/hermes-openrouter-voice",
+"tier": "community"
+},
+"openspec": {
+"repo": "https://github.com/FelineStateMachine/hermes-openspec",
+"tier": "community"
+},
+"openviking": {
+"repo": "https://github.com/volcengine/OpenViking",
+"tier": "community"
+},
+"operations": {
+"repo": "https://github.com/c-pompa/operations-hermes-desktop-plugin",
+"tier": "community"
+},
+"optchat": {
+"repo": "https://github.com/aska-digital/optchat-memory",
+"tier": "community"
+},
+"optmem-hermes": {
+"repo": "https://github.com/rarf/optmem-hermes-plugin",
+"tier": "community"
+},
+"orbit-desktop": {
+"repo": "https://github.com/mojomast/orbitdesktop",
+"tier": "community"
+},
+"orcaslicer": {
+"repo": "https://github.com/mazzanfar/hermes-orcaslicer",
+"tier": "community"
+},
+"orquehelx": {
+"repo": "https://github.com/TicoraX/OrqueHelx",
+"tier": "community"
+},
+"osv-ref": {
+"repo": "https://github.com/EloquentBrush0x/hermes-context-refs",
+"tier": "community"
+},
+"parallel-search": {
+"repo": "https://github.com/parallel-web/search-mcp",
+"tier": "community"
+},
+"parcel-deliveries": {
+"repo": "https://github.com/promptclickrun/hermes-parcel",
+"tier": "community"
+},
+"parlor": {
+"repo": "https://github.com/dariorapisardi/parlor.sh",
+"tier": "community"
+},
+"parrotnotes": {
+"repo": "https://github.com/ascetx/parrot-notes-hermes-plugin",
+"tier": "community"
+},
+"pass-secrets": {
+"repo": "https://github.com/dyiapanis/pass-secrets",
+"tier": "community"
+},
+"pastdotdev": {
+"repo": "https://github.com/pastdotdev/hermes-plugin",
+"tier": "community"
+},
+"pay": {
+"repo": "https://github.com/solana-foundation/pay",
+"tier": "verified"
+},
+"pay-cli": {
+"repo": "https://github.com/solana-foundation/pay",
+"tier": "verified"
+},
+"pcs-security-tls-posture": {
+"repo": "https://github.com/Pacific-Cloud-Solutions/hermes-plugins",
+"tier": "community"
+},
+"pdf-surgeon": {
+"repo": "https://github.com/Samuek9/pdf-surgeon",
+"tier": "community"
+},
+"pending-queue-monitor": {
+"repo": "https://github.com/Ardenye/pending-queue-monitor",
+"tier": "community"
+},
+"penny": {
+"repo": "https://github.com/HelperLabs/penny-hermes",
+"tier": "community"
+},
+"pep-ref": {
+"repo": "https://github.com/EloquentBrush0x/hermes-context-refs",
+"tier": "community"
+},
+"personae": {
+"repo": "https://github.com/SmoothMarx/personae",
+"tier": "community"
+},
+"phone-harness": {
+"repo": "https://github.com/ShawnPana/phone-harness",
+"tier": "community"
+},
+"photofresco": {
+"repo": "https://github.com/photofresco/photofresco-agent",
+"tier": "community"
+},
+"pidgeon": {
+"repo": "https://github.com/pidgeon-ai/pidgeon-python",
+"tier": "community"
+},
+"pinned-folders": {
+"repo": "https://github.com/jacobhausler/hermes-pinned-folders",
+"tier": "community"
+},
+"pixel-worlds": {
+"repo": "https://github.com/cygnostik/pd-pixel-worlds",
+"tier": "community"
+},
+"plan-mode": {
+"repo": "https://github.com/100yenadmin/hermes-plan-mode",
+"tier": "community"
+},
+"pocket-watch": {
+"repo": "https://github.com/indigokarasu/hermes-pocket-watch-plugin",
+"tier": "community"
+},
+"post-cortex": {
+"repo": "https://github.com/julymetodiev/hermes-plugin-post-cortex",
+"tier": "community"
+},
+"ppq": {
+"repo": "https://github.com/thepurpose-npub/ppq-hermes-provider",
+"tier": "community"
+},
+"precleared": {
+"repo": "https://github.com/gabrielaoimevbore-beep/hermes-precleared",
+"tier": "community"
+},
+"preview-text-size": {
+"repo": "https://github.com/pandengyao/hermes-preview-text-size",
+"tier": "community"
+},
+"pricewin": {
+"repo": "https://github.com/PriceDotWin/pricewin-hermes-plugin",
+"tier": "community"
+},
+"print-job-watch": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-print-job-watch",
+"tier": "community"
+},
+"print3d": {
+"repo": "https://github.com/mfranzon/print3d",
+"tier": "community"
+},
+"prism": {
+"repo": "https://github.com/prismhq/hermes-prism-provider",
+"tier": "community"
+},
+"privacy-gateway": {
+"repo": "https://github.com/saiteja-madha/hermes-privacy-gateway",
+"tier": "community"
+},
+"profile-models": {
+"repo": "https://github.com/AllenRobinHubert/profile-models",
+"tier": "community"
+},
+"profile-pane": {
+"repo": "https://github.com/taxbax/profile-pane",
+"tier": "community"
+},
+"profile-picker": {
+"repo": "https://github.com/weltmaister/hermes-profile-picker",
+"tier": "community"
+},
+"profile-switcher": {
+"repo": "https://github.com/okyssta/hermes-profile-switcher",
+"tier": "community"
+},
+"progress-squash": {
+"repo": "https://github.com/pierrenode/hermes-progress-squash",
+"tier": "community"
+},
+"project-manager": {
+"repo": "https://github.com/AiSolve-me/hermes-project-manager",
+"tier": "community"
+},
+"promoat": {
+"repo": "https://github.com/TechHiveDev/promoat_partner_hermes_plugin",
+"tier": "community"
+},
+"prompt-enhance": {
+"repo": "https://github.com/apoapostolov/hermes-agent-awesome-plugins",
+"tier": "community"
+},
+"prompt-enhancer": {
+"repo": "https://github.com/Heybinshao/prompt-enhancer",
+"tier": "community"
+},
+"prompt-optimizer": {
+"repo": "https://github.com/Sahil-SS9/hermes-multichannel-prompt-optimizer",
+"tier": "community"
+},
+"prompt-pocket": {
+"repo": "https://github.com/xraysight/hermes-prompt-pocket",
+"tier": "community"
+},
+"prompt-queue": {
+"repo": "https://github.com/vectorforge22/prompt-queue",
+"tier": "community"
+},
+"prompt-snippets": {
+"repo": "https://github.com/Heybinshao/prompt-snippets",
+"tier": "community"
+},
+"prompt-studio": {
+"repo": "https://github.com/bwoliveira/prompt-studio",
+"tier": "community"
+},
+"prompt-tray": {
+"repo": "https://github.com/aydnOktay/hermes-prompt-tray",
+"tier": "community"
+},
+"proofable-mcp": {
+"repo": "https://github.com/proofable/mcp",
+"tier": "community"
+},
+"protean-model-sync": {
+"repo": "https://github.com/aska-digital/protean-model-sync",
+"tier": "community"
+},
+"protean-ordaprompt": {
+"repo": "https://github.com/aska-digital/protean-ordaprompt",
+"tier": "community"
+},
+"protean-subagent-viewer": {
+"repo": "https://github.com/aska-digital/protean-subagent-viewer",
+"tier": "community"
+},
+"protonpass": {
+"repo": "https://github.com/lucas-nicolas/hermes-protonpass",
+"tier": "community"
+},
+"provenance-gate": {
+"repo": "https://github.com/simin-yuan/hermes-provenance-gate",
+"tier": "community"
+},
+"provider-copy": {
+"repo": "https://github.com/tobenwarrior/hermes-provider-copy",
+"tier": "community"
+},
+"provider-status": {
+"repo": "https://github.com/apoapostolov/hermes-agent-awesome-plugins",
+"tier": "community"
+},
+"provider-usage": {
+"repo": "https://github.com/PhoeniXAbhisheK/hermes-plugin-provider-usage",
+"tier": "community"
+},
+"pstack": {
+"repo": "https://github.com/Cloeille/pstack",
+"tier": "community"
+},
+"public-holidays": {
+"repo": "https://github.com/Akloenx123/hermes-public-holidays",
+"tier": "community"
+},
+"pushary": {
+"repo": "https://github.com/Pushary/hermes-plugin-pushary",
+"tier": "community"
+},
+"pushover-hermes-plugin": {
+"repo": "https://github.com/lightx/pushover-hermes-plugin",
+"tier": "community"
+},
+"qdrant": {
+"repo": "https://github.com/kuehnberger/hermes-qdrant-memory",
+"tier": "community"
+},
+"qdrant-memory": {
+"repo": "https://github.com/cnkang/hermes-plugin-qdrant-memory",
+"tier": "community"
+},
+"quota": {
+"repo": "https://github.com/rarf/hermes-quota-plugin",
+"tier": "community"
+},
+"quote-ask": {
+"repo": "https://github.com/freefate258/quote-ask",
+"tier": "community"
+},
+"quotum": {
+"repo": "https://github.com/qvotvm/hermes-quotum",
+"tier": "community"
+},
+"radio-dm-gateway": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-radio-dm-gateway",
+"tier": "community"
+},
+"rea": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"rea-captcha": {
+"repo": "https://github.com/masakaai/rea-captcha",
+"tier": "community"
+},
+"reaction-feedback": {
+"repo": "https://github.com/AhmetArif0/hermes-reaction-feedback",
+"tier": "community"
+},
+"reaction-ledger": {
+"repo": "https://github.com/olric3015/hermes-plugins",
+"tier": "community"
+},
+"reading-buddy": {
+"repo": "https://github.com/harrylabsj/hermes-plugin-reading-buddy",
+"tier": "community"
+},
+"reasoning-switch": {
+"repo": "https://github.com/apoapostolov/hermes-agent-awesome-plugins",
+"tier": "community"
+},
+"recency-anchor": {
+"repo": "https://github.com/etkecc/hermes-recency-anchor",
+"tier": "community"
+},
+"redaction-pack": {
+"repo": "https://github.com/pierrenode/hermes-redaction-pack",
+"tier": "community"
+},
+"redline": {
+"repo": "https://github.com/silentpr0/hermes-redline",
+"tier": "community"
+},
+"refusal": {
+"repo": "https://github.com/0ldev/refusal",
+"tier": "community"
+},
+"reka-provider": {
+"repo": "https://github.com/reka-ai/reka-hermes",
+"tier": "verified"
+},
+"remarkable": {
+"repo": "https://github.com/cygnostik/hermes-plugin-remarkable",
+"tier": "community"
+},
+"reme": {
+"repo": "https://github.com/agentscope-ai/ReMe",
+"tier": "community"
+},
+"remesher": {
+"repo": "https://github.com/remesher/remesher",
+"tier": "community"
+},
+"render-platform": {
+"repo": "https://github.com/ojusave/render-hermes-plugin",
+"tier": "community"
+},
+"rentahuman": {
+"repo": "https://github.com/rentahuman-ai/hermes-plugin",
+"tier": "community"
+},
+"replaid": {
+"repo": "https://github.com/replaid-pro/replaid-hermes",
+"tier": "community"
+},
+"requesty": {
+"repo": "https://github.com/requestyai/hermes-provider-requesty",
+"tier": "community"
+},
+"rfc-ref": {
+"repo": "https://github.com/EloquentBrush0x/hermes-context-refs",
+"tier": "community"
+},
+"rocketchat-platform": {
+"repo": "https://github.com/HalfbitStudio/hermes-plugin-rocketchat",
+"tier": "community"
+},
+"rply-platform": {
+"repo": "https://github.com/joshuaKnauber/rply",
+"tier": "community"
+},
+"rss-reader": {
+"repo": "https://github.com/apoapostolov/hermes-agent-awesome-plugins",
+"tier": "community"
+},
+"rtk-rewrite": {
+"repo": "https://github.com/kerrz2020/hermes-rtk-rewrite",
+"tier": "community"
+},
+"rtk-rewrite-docker": {
+"repo": "https://github.com/petertaras/hermes-rtk-rewrite-with-docker-support",
+"tier": "community"
+},
+"ruapi": {
+"repo": "https://github.com/RuAPI-ai/hermes-provider-ruapi",
+"tier": "community"
+},
+"runbox": {
+"repo": "https://github.com/Zek-Takai/hermes-runbox",
+"tier": "community"
+},
+"runcrate-provider": {
+"repo": "https://github.com/runcrateai/hermes-runcrate",
+"tier": "community"
+},
+"s2docs": {
+"repo": "https://github.com/c-pompa/s2docs",
+"tier": "community"
+},
+"s3": {
+"repo": "https://github.com/lagoon-labs/hermes-s3-plugin",
+"tier": "community"
+},
+"sabi-metadata": {
+"repo": "https://github.com/vizuh/sabi",
+"tier": "community"
+},
+"safeailabs-provider": {
+"repo": "https://github.com/nevertrust-ai/hermes-safeailabs-provider",
+"tier": "community"
+},
+"salesforce-chatter": {
+"repo": "https://github.com/zenplace-system/hermes-plugin-salesforce-chatter",
+"tier": "community"
+},
+"scalekit": {
+"repo": "https://github.com/scalekit-inc/hermes-tools",
+"tier": "community"
+},
+"scamgate": {
+"repo": "https://github.com/odaiameera/scamgate",
+"tier": "community"
+},
+"search1api": {
+"repo": "https://github.com/superagents-lab/hermes-search1api",
+"tier": "community"
+},
+"secret-drop": {
+"repo": "https://github.com/Goitonthefloor/hermes-secret-drop",
+"tier": "community"
+},
+"secret-handoff": {
+"repo": "https://github.com/aean0x/hermes-secret-handoff",
+"tier": "community"
+},
+"secure-env-ingress": {
+"repo": "https://github.com/web3blind/hermes-secure-env-plugin",
+"tier": "community"
+},
+"sem-weave": {
+"repo": "https://github.com/Ataraxy-Labs/sem",
+"tier": "community"
+},
+"sendblue": {
+"repo": "https://github.com/duoi/hermes-sendblue-plugin",
+"tier": "community"
+},
+"senler-io-user": {
+"repo": "https://github.com/SenlerBot/senler-io-user-hermes-plugin",
+"tier": "community"
+},
+"serpapi": {
+"repo": "https://github.com/serpapi/serpapi-hermes-plugin",
+"tier": "community"
+},
+"serverless-inference-for-hermes": {
+"repo": "https://github.com/coreweave/serverless-inference-for-hermes",
+"tier": "verified"
+},
+"session-dashboard": {
+"repo": "https://github.com/tommulkins/hermes-plugin-session-analyzer",
+"tier": "community"
+},
+"session-find": {
+"repo": "https://github.com/djmango/session-find",
+"tier": "community"
+},
+"session-flow": {
+"repo": "https://github.com/agantila/session-flow",
+"tier": "community"
+},
+"session-lens": {
+"repo": "https://github.com/abualnassr/hermes-session-lens",
+"tier": "community"
+},
+"session-mirror": {
+"repo": "https://github.com/rrrrnmtsu/hermes-session-mirror",
+"tier": "community"
+},
+"session-ref": {
+"repo": "https://github.com/kama-dev/hermes-session-ref",
+"tier": "community"
+},
+"session-token-counter": {
+"repo": "https://github.com/Vsemagush/session-token-counter",
+"tier": "community"
+},
+"sgme": {
+"repo": "https://github.com/freehul/sgme",
+"tier": "community"
+},
+"shodan": {
+"repo": "https://github.com/Adolanium/hermes-plugin-shodan",
+"tier": "community"
+},
+"showly": {
+"repo": "https://github.com/cuboteam/showly-plugin",
+"tier": "community"
+},
+"sidebar-cycle": {
+"repo": "https://github.com/devseunggwan/hermes-sidebar-cycle",
+"tier": "community"
+},
+"sidebar-manager": {
+"repo": "https://github.com/apoapostolov/hermes-agent-awesome-plugins",
+"tier": "community"
+},
+"sigrex": {
+"repo": "https://github.com/sigrexio/agent-plugin",
+"tier": "community"
+},
+"singularity": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"sketch-pad": {
+"repo": "https://github.com/aydnOktay/hermes-sketch-pad",
+"tier": "community"
+},
+"skill-integrity": {
+"repo": "https://github.com/ZidoCode/skill-integrity",
+"tier": "community"
+},
+"skill-lineage": {
+"repo": "https://github.com/simin-yuan/hermes-skill-lineage",
+"tier": "community"
+},
+"skill-retrieval": {
+"repo": "https://github.com/moonlight-lupin/agent-skills",
+"tier": "community"
+},
+"skill-router": {
+"repo": "https://github.com/xXLODXx/hermes-skill-router",
+"tier": "community"
+},
+"snag-shelf": {
+"repo": "https://github.com/aydnOktay/hermes-snag-shelf",
+"tier": "community"
+},
+"snyk": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"source-tray": {
+"repo": "https://github.com/aydnOktay/hermes-source-tray",
+"tier": "community"
+},
+"specstream": {
+"repo": "https://github.com/specstream/specstream-tools",
+"tier": "community"
+},
+"spectator": {
+"repo": "https://github.com/Sahil-SS9/spectator-mode",
+"tier": "community"
+},
+"speechify": {
+"repo": "https://github.com/Speechify-AI/hermes-speechify",
+"tier": "community"
+},
+"spotify": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"spotify-desktop": {
+"repo": "https://github.com/cruzlxyz/hermes-spotify-desktop",
+"tier": "community"
+},
+"stack": {
+"repo": "https://github.com/Karb-Interactive/hermes-plugin-stack-memory",
+"tier": "community"
+},
+"stacktree": {
+"repo": "https://github.com/stevysmith/stacktree-skill",
+"tier": "community"
+},
+"stalkchain": {
+"repo": "https://github.com/StalkC/stalkchain-plugin",
+"tier": "community"
+},
+"sticky-notes": {
+"repo": "https://github.com/VGFreakXBL/hermes-sticky-notes",
+"tier": "community"
+},
+"stop-ledger": {
+"repo": "https://github.com/olric3015/hermes-plugins",
+"tier": "community"
+},
+"storm-fusion-research": {
+"repo": "https://github.com/bmtrnavsky/storm-fusion-research-pipeline",
+"tier": "community"
+},
+"stream-speed": {
+"repo": "https://github.com/olric3015/hermes-plugins",
+"tier": "community"
+},
+"stt-vocab": {
+"repo": "https://github.com/pierrenode/hermes-stt-vocab",
+"tier": "community"
+},
+"sugar": {
+"repo": "https://github.com/roboticforce/sugar",
+"tier": "community"
+},
+"sunshine-moonlight": {
+"repo": "https://github.com/lEWFkRAD/hermes-plugin-sunshine-moonlight",
+"tier": "community"
+},
+"superlocalmemory": {
+"repo": "https://github.com/qualixar/superlocalmemory",
+"tier": "community"
+},
+"supermemory": {
+"repo": "https://github.com/supermemoryai/hermes-supermemory",
+"tier": "community"
+},
+"surp-hermes-x402-llm": {
+"repo": "https://github.com/ivcained/surp-hermes-x402-llm",
+"tier": "community"
+},
+"switchbot-control": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-switchbot-control",
+"tier": "community"
+},
+"t3-code-theme": {
+"repo": "https://github.com/mariomondev/t3-code-theme",
+"tier": "community"
+},
+"tabella": {
+"repo": "https://github.com/dyiapanis/tabella",
+"tier": "community"
+},
+"tailgate": {
+"repo": "https://github.com/c0mrade/tailgate",
+"tier": "community"
+},
+"talaria-webui": {
+"repo": "https://github.com/liamsmith86/talaria-webui",
+"tier": "community"
+},
+"tam": {
+"repo": "https://github.com/vbcherepanov/hermes-tam-memory",
+"tier": "community"
+},
+"tamahermes": {
+"repo": "https://github.com/ahrazzle/TamaHermes",
+"tier": "community"
+},
+"tameru": {
+"repo": "https://github.com/0xWhiteMage/hermes-tameru-plugin",
+"tier": "community"
+},
+"tavily-plugin": {
+"repo": "https://github.com/tavily-ai/tavily-hermes-plugin",
+"tier": "verified"
+},
+"teamorouter": {
+"repo": "https://github.com/2867297362mjb-sketch/hermes-provider-teamorouter",
+"tier": "community"
+},
+"telegram-client": {
+"repo": "https://github.com/guberm/hermes-telegram-desktop-plugin",
+"tier": "community"
+},
+"telegram-notify": {
+"repo": "https://github.com/madpower2000/hermes-telegram-notify",
+"tier": "community"
+},
+"telegram-stickers": {
+"repo": "https://github.com/churnast/hermes-telegram-stickers",
+"tier": "community"
+},
+"telegram_dashboard_probe": {
+"repo": "https://github.com/bablobanov/hermes-agent-telegram-dashboard",
+"tier": "community"
+},
+"telesec": {
+"repo": "https://github.com/neoromantic/telesec",
+"tier": "community"
+},
+"telnyx-provider": {
+"repo": "https://github.com/team-telnyx/hermes-inference-provider",
+"tier": "community"
+},
+"terraform-drift": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-terraform-drift",
+"tier": "community"
+},
+"thomas": {
+"repo": "https://github.com/keppy/hermes-plugin-thomas",
+"tier": "community"
+},
+"tidal": {
+"repo": "https://github.com/lEWFkRAD/hermes-plugin-tidal",
+"tier": "community"
+},
+"time-gap": {
+"repo": "https://github.com/Randool/time-gap",
+"tier": "community"
+},
+"timestamp-ref": {
+"repo": "https://github.com/olric3015/hermes-plugins",
+"tier": "community"
+},
+"tinyfish": {
+"repo": "https://github.com/tinyfish-io/tinyfish-web-agent-integrations",
+"tier": "verified"
+},
+"titanos-mcp": {
+"repo": "https://github.com/guilherme-vasques-ltda/hermes-plugin-titanos",
+"tier": "community"
+},
+"together": {
+"repo": "https://github.com/pepijndevos/hermes-together-provider",
+"tier": "community"
+},
+"token-cost-meter": {
+"repo": "https://github.com/IT-dreamer/token-cost-meter",
+"tier": "community"
+},
+"token-lens": {
+"repo": "https://github.com/patrickluvsoj/hermes-token-lens",
+"tier": "community"
+},
+"tokenwatch": {
+"repo": "https://github.com/0xBernard/tokenwatch",
+"tier": "community"
+},
+"tokstat": {
+"repo": "https://github.com/heerey525/tokstat",
+"tier": "community"
+},
+"tool-slimmer": {
+"repo": "https://github.com/aliasocracy/hermes-tool-slimmer",
+"tier": "community"
+},
+"toolaria": {
+"repo": "https://github.com/Sahil-SS9/Toolaria",
+"tier": "community"
+},
+"touchdesigner": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"tracekit": {
+"repo": "https://github.com/Cygnux-Labs/Tracekit",
+"tier": "community"
+},
+"traceverse_hermes_otel": {
+"repo": "https://github.com/Mandark-droid/hermes-otel-plugin",
+"tier": "community"
+},
+"true402-swap-guard": {
+"repo": "https://github.com/true402/hermes-swap-guard",
+"tier": "community"
+},
+"tsubasa": {
+"repo": "https://github.com/PalmAndWand/tsubasa-integrations",
+"tier": "community"
+},
+"ttsbuddy": {
+"repo": "https://github.com/ngelik/ttsbuddy-cli",
+"tier": "community"
+},
+"turn-bell": {
+"repo": "https://github.com/BrokeSkill/turn-bell",
+"tier": "community"
+},
+"turn-usage": {
+"repo": "https://github.com/tpte/hermes-turn-usage",
+"tier": "community"
+},
+"twenty-crm": {
+"repo": "https://github.com/TREE-Ind/hermes-twenty-crm",
+"tier": "community"
+},
+"typesafe-skill-router": {
+"repo": "https://github.com/DECRUX9812/typesafe-skill-router",
+"tier": "community"
+},
+"umt": {
+"repo": "https://github.com/Markgatcha/universal-mcp-toolkit",
+"tier": "community"
+},
+"unbrowse": {
+"repo": "https://github.com/unbrowse-ai/unbrowse",
+"tier": "community"
+},
+"unibaseio-membase": {
+"repo": "https://github.com/unibaseio/membase",
+"tier": "community"
+},
+"unicode-ref": {
+"repo": "https://github.com/olric3015/hermes-plugins",
+"tier": "community"
+},
+"unitares": {
+"repo": "https://github.com/cirwel/unitares-host-adapter",
+"tier": "community"
+},
+"unraid": {
+"repo": "https://github.com/Anunnaki-Astronaut/hermes-unraid",
+"tier": "community"
+},
+"usage-flame": {
+"repo": "https://github.com/maxshafransky-a11y/hermes-usage-flame",
+"tier": "community"
+},
+"usage-guard": {
+"repo": "https://github.com/mister-ideas/usage-guard",
+"tier": "community"
+},
+"usage-ledger": {
+"repo": "https://github.com/3DPrintPioneers/hermes-usage-ledger",
+"tier": "community"
+},
+"usage-stats": {
+"repo": "https://github.com/meviusisback/usage-stats",
+"tier": "community"
+},
+"ux3-product-design-harness": {
+"repo": "https://github.com/cis2042/ux3-product-design-harness",
+"tier": "community"
+},
+"vault-view": {
+"repo": "https://github.com/ergocogn/hermes-desktop-plugin-vault-view",
+"tier": "community"
+},
+"vaultknox": {
+"repo": "https://github.com/Ufonik88/Hermes-VaultKnox",
+"tier": "community"
+},
+"vaultwarden": {
+"repo": "https://github.com/hansipie/hermes-vaultwarden",
+"tier": "community"
+},
+"vector-platform": {
+"repo": "https://github.com/BonesGit/hermes-vector-platform",
+"tier": "community"
+},
+"vet402": {
+"repo": "https://github.com/kzmttkc/vet402-hermes",
+"tier": "community"
+},
+"viajante": {
+"repo": "https://github.com/felipebasurto/viajante",
+"tier": "community"
+},
+"vidiq": {
+"repo": "https://github.com/vid-io/vidiq-mcp",
+"tier": "community"
+},
+"vk-platform": {
+"repo": "https://github.com/web3blind/hermes-vk-platform",
+"tier": "community"
+},
+"voice-ledger": {
+"repo": "https://github.com/olric3015/hermes-plugins",
+"tier": "community"
+},
+"voicestudio": {
+"repo": "https://github.com/aska-digital/protean-voice-studio",
+"tier": "community"
+},
+"vornik-companion": {
+"repo": "https://github.com/EaseIT-cz/vornik",
+"tier": "community"
+},
+"wait-ledger": {
+"repo": "https://github.com/olric3015/hermes-plugins",
+"tier": "community"
+},
+"walkie-talkie": {
+"repo": "https://github.com/barronlroth/hermes-walkie-talkie",
+"tier": "community"
+},
+"wallaby-provider": {
+"repo": "https://github.com/Dawncoral/wallaby-hermes-plugin",
+"tier": "community"
+},
+"wallpaper-theme": {
+"repo": "https://github.com/strnadchristopher/hermes-wallpaper-theme",
+"tier": "community"
+},
+"watchline": {
+"repo": "https://github.com/qordinate-ai/watchline-hermes-plugin",
+"tier": "community"
+},
+"waypoint": {
+"repo": "https://github.com/mochiNJ/hermes-waypoint",
+"tier": "community"
+},
+"weather": {
+"repo": "https://github.com/FahrenheitResearch/hermes-weather-plugin",
+"tier": "community"
+},
+"web-crawler-spider": {
+"repo": "https://github.com/mistrysiddh/web-crawler-spider",
+"tier": "community"
+},
+"web-deepseek": {
+"repo": "https://github.com/Leegenux/hermes-web-deepseek",
+"tier": "community"
+},
+"web-defuddle": {
+"repo": "https://github.com/annalinneajohansson82/hermes-defuddle",
+"tier": "community"
+},
+"web-local": {
+"repo": "https://github.com/enzo-adami/hermes-plugin-web-local",
+"tier": "community"
+},
+"web-meta-ai": {
+"repo": "https://github.com/ajaynomics/hermes-web-meta-ai",
+"tier": "community"
+},
+"web-octen": {
+"repo": "https://github.com/Octen-Team/hermes-octen-plugin",
+"tier": "community"
+},
+"web-ollama-cloud": {
+"repo": "https://github.com/rriggs/hermes-plugin-ollama-cloud-search",
+"tier": "community"
+},
+"web-oxylabs": {
+"repo": "https://github.com/oxylabs/hermes-web-oxylabs",
+"tier": "community"
+},
+"web-search-plus": {
+"repo": "https://github.com/robbyczgw-cla/hermes-web-search-plus",
+"tier": "community"
+},
+"web-serply": {
+"repo": "https://github.com/serply-inc/hermes-web-serply",
+"tier": "community"
+},
+"web-toon": {
+"repo": "https://github.com/drew-dot-com/hermes-toon",
+"tier": "community"
+},
+"web-venice": {
+"repo": "https://github.com/MnrGreg/hermes-venice-web",
+"tier": "community"
+},
+"webly": {
+"repo": "https://github.com/Webly-AI/webly-plugin",
+"tier": "community"
+},
+"wechat-social-assistant": {
+"repo": "https://github.com/harrylabsj/hermes-plugin-wechat-social-assistant",
+"tier": "community"
+},
+"whatsapp-agent-platform": {
+"repo": "https://github.com/ahtishamdilawar/hermes-whatsapp-agent-platform",
+"tier": "community"
+},
+"wicked-memory": {
+"repo": "https://github.com/WickedAPI/hermes-wicked-memory",
+"tier": "community"
+},
+"wiki-ref": {
+"repo": "https://github.com/EloquentBrush0x/hermes-context-refs",
+"tier": "community"
+},
+"wireguard": {
+"repo": "https://github.com/lEWFkRAD/hermes-plugin-wireguard",
+"tier": "community"
+},
+"wolfmarkdown": {
+"repo": "https://github.com/WolfMarkTools/WolfMarkDown",
+"tier": "community"
+},
+"woof": {
+"repo": "https://github.com/recastsystems/hermes-woof",
+"tier": "community"
+},
+"workflow-record": {
+"repo": "https://github.com/NousResearch/hermes-labs-plugins",
+"tier": "community"
+},
+"world-clock": {
+"repo": "https://github.com/cygnostik/hermes-world-clock",
+"tier": "community"
+},
+"wyoming-voice-bridge": {
+"repo": "https://github.com/TakeshiTGAL/hermes-plugin-wyoming-voice-bridge",
+"tier": "community"
+},
+"xchat": {
+"repo": "https://github.com/NousResearch/hermes-official-plugins",
+"tier": "official"
+},
+"xmemo": {
+"repo": "https://github.com/yonro/hermes-xmemo-plugin",
+"tier": "community"
+},
+"yandex": {
+"repo": "https://github.com/akinfold/hermes-yandex-search-api",
+"tier": "community"
+},
+"yandex-disk": {
+"repo": "https://github.com/akinfold/hermes-yandex-disk",
+"tier": "community"
+},
+"yandex_calendar": {
+"repo": "https://github.com/akinfold/hermes-yandex-calendar",
+"tier": "community"
+},
+"yantrikdb": {
+"repo": "https://github.com/yantrikos/yantrikdb-hermes-plugin",
+"tier": "community"
+},
+"yantrikdb-hermes-dashboard": {
+"repo": "https://github.com/wysie/yantrikdb-hermes-dashboard",
+"tier": "community"
+},
+"yolo-auto": {
+"repo": "https://github.com/yolo-auto-org/hermes-provider-yolo-auto",
+"tier": "community"
+},
+"you": {
+"repo": "https://github.com/youdotcom-oss/agent-skills",
+"tier": "community"
+},
+"youtube-dock": {
+"repo": "https://github.com/metamindedu/hermes-youtube-dock",
+"tier": "community"
+},
+"zalo-platform": {
+"repo": "https://github.com/moken627-hub/hermes-plugin-zalo",
+"tier": "community"
+},
+"zerosignal": {
+"repo": "https://github.com/TxnLab/hermes-zerosignal-provider",
+"tier": "community"
+}
+},
+"pypi": [],
+"removed_plugins": {
+"or-picker": "Folded into openrouter-picker. Installing the provider alone left the picker broken. Install openrouter-picker."
+},
+"skills": {
+"1password": "hermes-index:builtin:NousResearch/hermes-agent",
+"3-statement-model": "hermes-index:builtin:NousResearch/hermes-agent",
+"academy-guide": "hermes-index:trusted:anthropics/skills",
+"accelerate": "hermes-index:builtin:NousResearch/hermes-agent",
+"accelerated-computing-cudf": "hermes-index:trusted:NVIDIA/skills",
+"actual-setup": "hermes-index:builtin:NousResearch/hermes-agent",
+"adversarial-ux-test": "hermes-index:builtin:NousResearch/hermes-agent",
+"agent-merge-conflict-arbiter": "hermes-index:builtin:NousResearch/hermes-agent",
+"agentmail": "hermes-index:builtin:NousResearch/hermes-agent",
+"ai-presenter-video": "hermes-index:builtin:NousResearch/hermes-agent",
+"algorithmic-art": "hermes-index:trusted:anthropics/skills",
+"ambient-healthcare-agent-with-nemotron-voice-agent": "hermes-index:trusted:NVIDIA/skills",
+"amc-run-rtsp-calibration": "hermes-index:trusted:NVIDIA/skills",
+"amc-run-sample-calibration": "hermes-index:trusted:NVIDIA/skills",
+"amc-run-video-calibration": "hermes-index:trusted:NVIDIA/skills",
+"amc-setup-calibration-stack": "hermes-index:trusted:NVIDIA/skills",
+"anatomy": "hermes-index:builtin:NousResearch/hermes-agent",
+"antigravity-cli": "hermes-index:builtin:NousResearch/hermes-agent",
+"apple-notes": "openclaw:bundled",
+"apple-reminders": "openclaw:bundled",
+"archify": "hermes-index:builtin:NousResearch/hermes-agent",
+"ascii-art": "hermes-index:builtin:NousResearch/hermes-agent",
+"aspnet-core": "hermes-index:trusted:openai/skills",
+"ast-grep": "hermes-index:builtin:NousResearch/hermes-agent",
+"audiocraft-audio-generation": "hermes-index:builtin:NousResearch/hermes-agent",
+"auteur": "hermes-index:builtin:NousResearch/hermes-agent",
+"axolotl": "hermes-index:builtin:NousResearch/hermes-agent",
+"baoyu-article-illustrator": "hermes-index:builtin:NousResearch/hermes-agent",
+"baoyu-comic": "hermes-index:builtin:NousResearch/hermes-agent",
+"bear-notes": "openclaw:bundled",
+"bioinformatics": "hermes-index:builtin:NousResearch/hermes-agent",
+"blackbox": "hermes-index:builtin:NousResearch/hermes-agent",
+"blogwatcher": "hermes-index:builtin:NousResearch/hermes-agent",
+"blucli": "openclaw:bundled",
+"boltz2-nim": "hermes-index:trusted:NVIDIA/skills",
+"brag": "hermes-index:builtin:NousResearch/hermes-agent",
+"brag-slim": "hermes-index:builtin:NousResearch/hermes-agent",
+"brand-guidelines": "hermes-index:trusted:anthropics/skills",
+"camsnap": "openclaw:bundled",
+"canvas": "hermes-index:builtin:NousResearch/hermes-agent",
+"canvas-design": "hermes-index:trusted:anthropics/skills",
+"cdf-anomalygen": "hermes-index:trusted:NVIDIA/skills",
+"cdf-augmentation": "hermes-index:trusted:NVIDIA/skills",
+"cdf-auto-labeling": "hermes-index:trusted:NVIDIA/skills",
+"cdf-autonomous-vehicle-dataset-generation": "hermes-index:trusted:NVIDIA/skills",
+"cdf-curation-and-retrieval": "hermes-index:trusted:NVIDIA/skills",
+"cdf-defect-image-generation": "hermes-index:trusted:NVIDIA/skills",
+"cdf-event-video-generation": "hermes-index:trusted:NVIDIA/skills",
+"cdf-image-attribute-augmentation": "hermes-index:trusted:NVIDIA/skills",
+"cdf-orchestration-preflight": "hermes-index:trusted:NVIDIA/skills",
+"cdf-orchestration-setup": "hermes-index:trusted:NVIDIA/skills",
+"cdf-orchestration-write-dag": "hermes-index:trusted:NVIDIA/skills",
+"cdf-simulation": "hermes-index:trusted:NVIDIA/skills",
+"cdf-video-data-augmentation": "hermes-index:trusted:NVIDIA/skills",
+"chatgpt-apps": "hermes-index:trusted:openai/skills",
+"chroma": "hermes-index:builtin:NousResearch/hermes-agent",
+"claude-api": "hermes-index:trusted:anthropics/skills",
+"clawhub": "openclaw:bundled",
+"cli-creator": "hermes-index:trusted:openai/skills",
+"clip": "hermes-index:builtin:NousResearch/hermes-agent",
+"cloudflare-deploy": "hermes-index:trusted:openai/skills",
+"cloudflare-temporary-deploy": "hermes-index:builtin:NousResearch/hermes-agent",
+"code-wiki": "hermes-index:builtin:NousResearch/hermes-agent",
+"coding-agent": "openclaw:bundled",
+"codonfm-embed": "hermes-index:trusted:NVIDIA/skills",
+"codonfm-finetune": "hermes-index:trusted:NVIDIA/skills",
+"codonfm-score": "hermes-index:trusted:NVIDIA/skills",
+"codonfm-setup": "hermes-index:trusted:NVIDIA/skills",
+"comfyui": "hermes-index:builtin:NousResearch/hermes-agent",
+"complexa-evaluate-pdbs": "hermes-index:trusted:NVIDIA/skills",
+"complexa-sweep": "hermes-index:trusted:NVIDIA/skills",
+"complexa-target": "hermes-index:trusted:NVIDIA/skills",
+"comps-analysis": "hermes-index:builtin:NousResearch/hermes-agent",
+"compute-sanitizer-diagnose-cuda-bugs": "hermes-index:trusted:NVIDIA/skills",
+"concept-diagrams": "hermes-index:builtin:NousResearch/hermes-agent",
+"control-ui": "openclaw:bundled",
+"create-claw": "openclaw:bundled",
+"creative-ideation": "hermes-index:builtin:NousResearch/hermes-agent",
+"cudaq-guide": "hermes-index:trusted:NVIDIA/skills",
+"cudaq-importing": "hermes-index:trusted:NVIDIA/skills",
+"cuopt-developer": "hermes-index:trusted:NVIDIA/skills",
+"cuopt-install": "hermes-index:trusted:NVIDIA/skills",
+"cuopt-multi-objective-exploration": "hermes-index:trusted:NVIDIA/skills",
+"cuopt-numerical-optimization-api": "hermes-index:trusted:NVIDIA/skills",
+"cuopt-numerical-optimization-formulation": "hermes-index:trusted:NVIDIA/skills",
+"cuopt-routing-api-python": "hermes-index:trusted:NVIDIA/skills",
+"cuopt-server-api-python": "hermes-index:trusted:NVIDIA/skills",
+"dali-dynamic-mode": "hermes-index:trusted:NVIDIA/skills",
+"darwinian-evolver": "hermes-index:builtin:NousResearch/hermes-agent",
+"data-designer": "hermes-index:trusted:NVIDIA/skills",
+"dcf-model": "hermes-index:builtin:NousResearch/hermes-agent",
+"decision-questionnaire": "hermes-index:builtin:NousResearch/hermes-agent",
+"deepstream-dev": "hermes-index:trusted:NVIDIA/skills",
+"deepstream-generate-pipeline": "hermes-index:trusted:NVIDIA/skills",
+"deepstream-import-vision-model": "hermes-index:trusted:NVIDIA/skills",
+"deepstream-profile-pipeline": "hermes-index:trusted:NVIDIA/skills",
+"deepstream-run-mv3dt": "hermes-index:trusted:NVIDIA/skills",
+"deepstream-sop": "hermes-index:trusted:NVIDIA/skills",
+"define-goal": "hermes-index:trusted:openai/skills",
+"diagram-maker": "openclaw:bundled",
+"dicom-metadata-extract": "hermes-index:trusted:NVIDIA/skills",
+"dicom-series-preflight": "hermes-index:trusted:NVIDIA/skills",
+"dicom-series-to-volume": "hermes-index:trusted:NVIDIA/skills",
+"diffdock-nim": "hermes-index:trusted:NVIDIA/skills",
+"digital-health-clinical-asr-build": "hermes-index:trusted:NVIDIA/skills",
+"digital-health-clinical-asr-eval": "hermes-index:trusted:NVIDIA/skills",
+"digital-health-clinical-asr-finetune": "hermes-index:trusted:NVIDIA/skills",
+"digital-health-clinical-asr-setup": "hermes-index:trusted:NVIDIA/skills",
+"discernment-nudge": "hermes-index:trusted:anthropics/skills",
+"doc": "hermes-index:trusted:openai/skills",
+"doc-coauthoring": "hermes-index:trusted:anthropics/skills",
+"doca-aes-gcm": "hermes-index:trusted:NVIDIA/skills",
+"doca-argp": "hermes-index:trusted:NVIDIA/skills",
+"doca-argus": "hermes-index:trusted:NVIDIA/skills",
+"doca-bare-metal-deployment": "hermes-index:trusted:NVIDIA/skills",
+"doca-bench": "hermes-index:trusted:NVIDIA/skills",
+"doca-bench-extension": "hermes-index:trusted:NVIDIA/skills",
+"doca-bf3-deployment": "hermes-index:trusted:NVIDIA/skills",
+"doca-bf4-deployment": "hermes-index:trusted:NVIDIA/skills",
+"doca-caps": "hermes-index:trusted:NVIDIA/skills",
+"doca-comch": "hermes-index:trusted:NVIDIA/skills",
+"doca-comm-channel-admin": "hermes-index:trusted:NVIDIA/skills",
+"doca-common": "hermes-index:trusted:NVIDIA/skills",
+"doca-compress": "hermes-index:trusted:NVIDIA/skills",
+"doca-container-deployment": "hermes-index:trusted:NVIDIA/skills",
+"doca-debug": "hermes-index:trusted:NVIDIA/skills",
+"doca-devemu": "hermes-index:trusted:NVIDIA/skills",
+"doca-dma": "hermes-index:trusted:NVIDIA/skills",
+"doca-dms": "hermes-index:trusted:NVIDIA/skills",
+"doca-dpa": "hermes-index:trusted:NVIDIA/skills",
+"doca-dpdk-bridge": "hermes-index:trusted:NVIDIA/skills",
+"doca-erasure-coding": "hermes-index:trusted:NVIDIA/skills",
+"doca-eth": "hermes-index:trusted:NVIDIA/skills",
+"doca-firefly": "hermes-index:trusted:NVIDIA/skills",
+"doca-flow": "hermes-index:trusted:NVIDIA/skills",
+"doca-flow-perf": "hermes-index:trusted:NVIDIA/skills",
+"doca-flow-tune": "hermes-index:trusted:NVIDIA/skills",
+"doca-gpunetio": "hermes-index:trusted:NVIDIA/skills",
+"doca-hardware-safety": "hermes-index:trusted:NVIDIA/skills",
+"doca-mgmt": "hermes-index:trusted:NVIDIA/skills",
+"doca-pcc": "hermes-index:trusted:NVIDIA/skills",
+"doca-pcc-counters": "hermes-index:trusted:NVIDIA/skills",
+"doca-pcc-ztr-rttcc-algo": "hermes-index:trusted:NVIDIA/skills",
+"doca-programming-guide": "hermes-index:trusted:NVIDIA/skills",
+"doca-public-knowledge-map": "hermes-index:trusted:NVIDIA/skills",
+"doca-rdma": "hermes-index:trusted:NVIDIA/skills",
+"doca-rmax": "hermes-index:trusted:NVIDIA/skills",
+"doca-setup": "hermes-index:trusted:NVIDIA/skills",
+"doca-sha": "hermes-index:trusted:NVIDIA/skills",
+"doca-sha-offload-engine": "hermes-index:trusted:NVIDIA/skills",
+"doca-socket-relay": "hermes-index:trusted:NVIDIA/skills",
+"doca-spcx-cc": "hermes-index:trusted:NVIDIA/skills",
+"doca-sta": "hermes-index:trusted:NVIDIA/skills",
+"doca-structured-tools-contract": "hermes-index:trusted:NVIDIA/skills",
+"doca-telemetry": "hermes-index:trusted:NVIDIA/skills",
+"doca-telemetry-exporter": "hermes-index:trusted:NVIDIA/skills",
+"doca-telemetry-utils": "hermes-index:trusted:NVIDIA/skills",
+"doca-upgrade": "hermes-index:trusted:NVIDIA/skills",
+"doca-urom": "hermes-index:trusted:NVIDIA/skills",
+"doca-urom-svc": "hermes-index:trusted:NVIDIA/skills",
+"doca-verbs": "hermes-index:trusted:NVIDIA/skills",
+"doca-version": "hermes-index:trusted:NVIDIA/skills",
+"docker-management": "hermes-index:builtin:NousResearch/hermes-agent",
+"docx": "hermes-index:trusted:anthropics/skills",
+"domain-intel": "hermes-index:builtin:NousResearch/hermes-agent",
+"draw-your-font": "hermes-index:builtin:NousResearch/hermes-agent",
+"dream-loop": "hermes-index:builtin:NousResearch/hermes-agent",
+"drug-discovery": "hermes-index:builtin:NousResearch/hermes-agent",
+"drug-discovery-pipeline": "hermes-index:trusted:NVIDIA/skills",
+"dspy": "hermes-index:builtin:NousResearch/hermes-agent",
+"duckduckgo-search": "hermes-index:builtin:NousResearch/hermes-agent",
+"dynamic-workflow": "hermes-index:builtin:NousResearch/hermes-agent",
+"dynamo-interconnect-check": "hermes-index:trusted:NVIDIA/skills",
+"dynamo-recipe-runner": "hermes-index:trusted:NVIDIA/skills",
+"dynamo-router-starter": "hermes-index:trusted:NVIDIA/skills",
+"dynamo-troubleshoot": "hermes-index:trusted:NVIDIA/skills",
+"earth2studio-create-datasource": "hermes-index:trusted:NVIDIA/skills",
+"earth2studio-create-diagnostic": "hermes-index:trusted:NVIDIA/skills",
+"earth2studio-create-prognostic": "hermes-index:trusted:NVIDIA/skills",
+"earth2studio-data-fetch": "hermes-index:trusted:NVIDIA/skills",
+"earth2studio-deterministic-forecast": "hermes-index:trusted:NVIDIA/skills",
+"earth2studio-discover": "hermes-index:trusted:NVIDIA/skills",
+"earth2studio-install": "hermes-index:trusted:NVIDIA/skills",
+"eightctl": "openclaw:bundled",
+"ethos-explore": "hermes-index:trusted:NVIDIA/skills",
+"ethos-orchestrate": "hermes-index:trusted:NVIDIA/skills",
+"ethos-write": "hermes-index:trusted:NVIDIA/skills",
+"evaluating-llms-harness": "hermes-index:builtin:NousResearch/hermes-agent",
+"evm": "hermes-index:builtin:NousResearch/hermes-agent",
+"evo2-nim": "hermes-index:trusted:NVIDIA/skills",
+"excalidraw": "hermes-index:builtin:NousResearch/hermes-agent",
+"excel-author": "hermes-index:builtin:NousResearch/hermes-agent",
+"faiss": "hermes-index:builtin:NousResearch/hermes-agent",
+"fastmcp": "hermes-index:builtin:NousResearch/hermes-agent",
+"figma": "hermes-index:trusted:openai/skills",
+"figma-code-connect-components": "hermes-index:trusted:openai/skills",
+"figma-create-design-system-rules": "hermes-index:trusted:openai/skills",
+"figma-create-new-file": "hermes-index:trusted:openai/skills",
+"figma-generate-design": "hermes-index:trusted:openai/skills",
+"figma-generate-library": "hermes-index:trusted:openai/skills",
+"figma-implement-design": "hermes-index:trusted:openai/skills",
+"figma-use": "hermes-index:trusted:openai/skills",
+"fitness-nutrition": "hermes-index:builtin:NousResearch/hermes-agent",
+"flash-attention": "hermes-index:builtin:NousResearch/hermes-agent",
+"foundationpose-pipeline": "hermes-index:trusted:NVIDIA/skills",
+"foundationpose-setup": "hermes-index:trusted:NVIDIA/skills",
+"frontend-design": "hermes-index:trusted:anthropics/skills",
+"g-assist-mcp-skill": "hermes-index:trusted:NVIDIA/skills",
+"gemini": "openclaw:bundled",
+"genmol-nim": "hermes-index:trusted:NVIDIA/skills",
+"genomics-workflow-acceleration": "hermes-index:trusted:NVIDIA/skills",
+"gh-address-comments": "hermes-index:trusted:openai/skills",
+"gh-fix-ci": "hermes-index:trusted:openai/skills",
+"gh-issues": "openclaw:bundled",
+"gifgrep": "openclaw:bundled",
+"github": "openclaw:bundled",
+"gitnexus-explorer": "hermes-index:builtin:NousResearch/hermes-agent",
+"godmode": "hermes-index:builtin:NousResearch/hermes-agent",
+"gog": "openclaw:bundled",
+"goplaces": "openclaw:bundled",
+"grill-me": "hermes-index:builtin:NousResearch/hermes-agent",
+"grok": "hermes-index:builtin:NousResearch/hermes-agent",
+"guidance": "hermes-index:builtin:NousResearch/hermes-agent",
+"har-derived-api-client": "hermes-index:builtin:NousResearch/hermes-agent",
+"hatch-pet": "hermes-index:trusted:openai/skills",
+"healthcheck": "openclaw:bundled",
+"heartmula": "hermes-index:builtin:NousResearch/hermes-agent",
+"here-now": "hermes-index:builtin:NousResearch/hermes-agent",
+"hermes-s6-container-supervision": "hermes-index:builtin:NousResearch/hermes-agent",
+"hf-cli": "hermes-index:trusted:huggingface/skills",
+"hf-cloud-aws-context-discovery": "hermes-index:trusted:huggingface/skills",
+"hf-cloud-python-env-setup": "hermes-index:trusted:huggingface/skills",
+"hf-cloud-sagemaker-deployment-planner": "hermes-index:trusted:huggingface/skills",
+"hf-cloud-sagemaker-iam-preflight": "hermes-index:trusted:huggingface/skills",
+"hf-cloud-sagemaker-production-defaults": "hermes-index:trusted:huggingface/skills",
+"hf-cloud-serving-image-selection": "hermes-index:trusted:huggingface/skills",
+"hf-mem": "hermes-index:trusted:huggingface/skills",
+"himalaya": "openclaw:bundled",
+"holoscan-app-debug-build-run": "hermes-index:trusted:NVIDIA/skills",
+"holoscan-install-conda": "hermes-index:trusted:NVIDIA/skills",
+"holoscan-install-container": "hermes-index:trusted:NVIDIA/skills",
+"holoscan-install-debian": "hermes-index:trusted:NVIDIA/skills",
+"holoscan-install-source": "hermes-index:trusted:NVIDIA/skills",
+"holoscan-install-wheel": "hermes-index:trusted:NVIDIA/skills",
+"holoscan-module-lifecycle": "hermes-index:trusted:NVIDIA/skills",
+"holoscan-setup": "hermes-index:trusted:NVIDIA/skills",
+"honcho": "hermes-index:builtin:NousResearch/hermes-agent",
+"hsb-app": "hermes-index:trusted:NVIDIA/skills",
+"hsb-flash": "hermes-index:trusted:NVIDIA/skills",
+"hsb-ip-create-top": "hermes-index:trusted:NVIDIA/skills",
+"hsb-ip-def": "hermes-index:trusted:NVIDIA/skills",
+"hsb-ip-packetizer": "hermes-index:trusted:NVIDIA/skills",
+"hsb-setup": "hermes-index:trusted:NVIDIA/skills",
+"hsb-test": "hermes-index:trusted:NVIDIA/skills",
+"huggingface-best": "hermes-index:trusted:huggingface/skills",
+"huggingface-community-evals": "hermes-index:trusted:huggingface/skills",
+"huggingface-datasets": "hermes-index:trusted:huggingface/skills",
+"huggingface-gradio": "hermes-index:trusted:huggingface/skills",
+"huggingface-hub": "hermes-index:builtin:NousResearch/hermes-agent",
+"huggingface-llm-trainer": "hermes-index:trusted:huggingface/skills",
+"huggingface-local-models": "hermes-index:trusted:huggingface/skills",
+"huggingface-lora-space-builder": "hermes-index:trusted:huggingface/skills",
+"huggingface-paper-publisher": "hermes-index:trusted:huggingface/skills",
+"huggingface-papers": "hermes-index:trusted:huggingface/skills",
+"huggingface-spaces": "hermes-index:trusted:huggingface/skills",
+"huggingface-tokenizers": "hermes-index:builtin:NousResearch/hermes-agent",
+"huggingface-tool-builder": "hermes-index:trusted:huggingface/skills",
+"huggingface-trackio": "hermes-index:trusted:huggingface/skills",
+"huggingface-vision-trainer": "hermes-index:trusted:huggingface/skills",
+"huggingface-zerogpu": "hermes-index:trusted:huggingface/skills",
+"hyperframes": "hermes-index:builtin:NousResearch/hermes-agent",
+"hyperliquid": "hermes-index:builtin:NousResearch/hermes-agent",
+"i4h-lerobot-viz": "hermes-index:trusted:NVIDIA/skills",
+"i4h-workflow": "hermes-index:trusted:NVIDIA/skills",
+"i4h-workflow-create": "hermes-index:trusted:NVIDIA/skills",
+"i4h-workflow-dataset-annotate": "hermes-index:trusted:NVIDIA/skills",
+"i4h-workflow-dataset-convert": "hermes-index:trusted:NVIDIA/skills",
+"i4h-workflow-dataset-mimic": "hermes-index:trusted:NVIDIA/skills",
+"i4h-workflow-dataset-replay": "hermes-index:trusted:NVIDIA/skills",
+"i4h-workflow-dataset-teleop": "hermes-index:trusted:NVIDIA/skills",
+"i4h-workflow-e2e": "hermes-index:trusted:NVIDIA/skills",
+"i4h-workflow-finetune": "hermes-index:trusted:NVIDIA/skills",
+"i4h-workflow-scene-edit": "hermes-index:trusted:NVIDIA/skills",
+"i4h-workflow-setup": "hermes-index:trusted:NVIDIA/skills",
+"i4h-workflow-train-rl": "hermes-index:trusted:NVIDIA/skills",
+"i4h-workflow-validate": "hermes-index:trusted:NVIDIA/skills",
+"imagegen": "hermes-index:trusted:openai/skills",
+"impeccable": "hermes-index:builtin:NousResearch/hermes-agent",
+"inference-sh-cli": "hermes-index:builtin:NousResearch/hermes-agent",
+"instructor": "hermes-index:builtin:NousResearch/hermes-agent",
+"internal-comms": "hermes-index:trusted:anthropics/skills",
+"ip-as-logo": "hermes-index:builtin:NousResearch/hermes-agent",
+"isaac-humanoid-cloud-control": "hermes-index:trusted:NVIDIA/skills",
+"isaac-mission-control-showcase": "hermes-index:trusted:NVIDIA/skills",
+"jetson-build-source": "hermes-index:trusted:NVIDIA/skills",
+"jetson-customize-camera": "hermes-index:trusted:NVIDIA/skills",
+"jetson-customize-clocks": "hermes-index:trusted:NVIDIA/skills",
+"jetson-customize-fan": "hermes-index:trusted:NVIDIA/skills",
+"jetson-customize-mgbe": "hermes-index:trusted:NVIDIA/skills",
+"jetson-customize-nvpmodel": "hermes-index:trusted:NVIDIA/skills",
+"jetson-customize-pcie": "hermes-index:trusted:NVIDIA/skills",
+"jetson-customize-pinmux": "hermes-index:trusted:NVIDIA/skills",
+"jetson-customize-uphy": "hermes-index:trusted:NVIDIA/skills",
+"jetson-customize-usb": "hermes-index:trusted:NVIDIA/skills",
+"jetson-derive-carrier": "hermes-index:trusted:NVIDIA/skills",
+"jetson-diagnostic": "hermes-index:trusted:NVIDIA/skills",
+"jetson-download-bsp": "hermes-index:trusted:NVIDIA/skills",
+"jetson-flash-image": "hermes-index:trusted:NVIDIA/skills",
+"jetson-generate-kb": "hermes-index:trusted:NVIDIA/skills",
+"jetson-headless-mode": "hermes-index:trusted:NVIDIA/skills",
+"jetson-inference-mem-tune": "hermes-index:trusted:NVIDIA/skills",
+"jetson-init-image": "hermes-index:trusted:NVIDIA/skills",
+"jetson-init-source": "hermes-index:trusted:NVIDIA/skills",
+"jetson-init-target": "hermes-index:trusted:NVIDIA/skills",
+"jetson-link-docs": "hermes-index:trusted:NVIDIA/skills",
+"jetson-llm-benchmark": "hermes-index:trusted:NVIDIA/skills",
+"jetson-llm-serve": "hermes-index:trusted:NVIDIA/skills",
+"jetson-memory-audit": "hermes-index:trusted:NVIDIA/skills",
+"jetson-optimize-memory": "hermes-index:trusted:NVIDIA/skills",
+"jetson-package": "hermes-index:trusted:NVIDIA/skills",
+"jetson-print-bsp-info": "hermes-index:trusted:NVIDIA/skills",
+"jetson-print-device-info": "hermes-index:trusted:NVIDIA/skills",
+"jetson-promote-image": "hermes-index:trusted:NVIDIA/skills",
+"jetson-quick-start": "hermes-index:trusted:NVIDIA/skills",
+"jetson-set-target": "hermes-index:trusted:NVIDIA/skills",
+"jetson-speculative-decoding": "hermes-index:trusted:NVIDIA/skills",
+"jetson-validate-image": "hermes-index:trusted:NVIDIA/skills",
+"jetson-video-benchmark": "hermes-index:trusted:NVIDIA/skills",
+"jetson-video-capability": "hermes-index:trusted:NVIDIA/skills",
+"jetson-video-pipeline": "hermes-index:trusted:NVIDIA/skills",
+"jetson-video-recipe": "hermes-index:trusted:NVIDIA/skills",
+"jetson-video-setup": "hermes-index:trusted:NVIDIA/skills",
+"jupyter-notebook": "hermes-index:builtin:NousResearch/hermes-agent",
+"kanban-video-orchestrator": "hermes-index:builtin:NousResearch/hermes-agent",
+"kermt-add-cmim-pretrain": "hermes-index:trusted:NVIDIA/skills",
+"kermt-continue-pretrain": "hermes-index:trusted:NVIDIA/skills",
+"kermt-embed": "hermes-index:trusted:NVIDIA/skills",
+"kermt-finetune": "hermes-index:trusted:NVIDIA/skills",
+"kermt-infer": "hermes-index:trusted:NVIDIA/skills",
+"kermt-monitor": "hermes-index:trusted:NVIDIA/skills",
+"kermt-pretrain-scratch": "hermes-index:trusted:NVIDIA/skills",
+"kermt-setup": "hermes-index:trusted:NVIDIA/skills",
+"lambda-labs": "hermes-index:builtin:NousResearch/hermes-agent",
+"launch-nemo-rl": "hermes-index:trusted:NVIDIA/skills",
+"lbo-model": "hermes-index:builtin:NousResearch/hermes-agent",
+"linear": "hermes-index:trusted:openai/skills",
+"live-dashboard": "hermes-index:builtin:NousResearch/hermes-agent",
+"llama-cpp": "hermes-index:builtin:NousResearch/hermes-agent",
+"llava": "hermes-index:builtin:NousResearch/hermes-agent",
+"mcore-create-issue": "hermes-index:trusted:NVIDIA/skills",
+"mcore-linting-and-formatting": "hermes-index:trusted:NVIDIA/skills",
+"mcore-run-on-slurm": "hermes-index:trusted:NVIDIA/skills",
+"mcore-split-pr": "hermes-index:trusted:NVIDIA/skills",
+"mcore-testing": "hermes-index:trusted:NVIDIA/skills",
+"mcp-builder": "hermes-index:trusted:anthropics/skills",
+"mcp-oauth-remote-gateway": "hermes-index:builtin:NousResearch/hermes-agent",
+"mcporter": "hermes-index:builtin:NousResearch/hermes-agent",
+"medtech-model-evidence-export": "hermes-index:trusted:NVIDIA/skills",
+"meme-generation": "hermes-index:builtin:NousResearch/hermes-agent",
+"meme-maker": "openclaw:bundled",
+"memento-flashcards": "hermes-index:builtin:NousResearch/hermes-agent",
+"merger-model": "hermes-index:builtin:NousResearch/hermes-agent",
+"migrate-to-codex": "hermes-index:trusted:openai/skills",
+"minecraft-modpack-server": "hermes-index:builtin:NousResearch/hermes-agent",
+"modal": "hermes-index:builtin:NousResearch/hermes-agent",
+"model-usage": "openclaw:bundled",
+"molmim-nim": "hermes-index:trusted:NVIDIA/skills",
+"mono-color": "hermes-index:builtin:NousResearch/hermes-agent",
+"mpp-agent": "hermes-index:builtin:NousResearch/hermes-agent",
+"msa-search-nim": "hermes-index:trusted:NVIDIA/skills",
+"msa-structure-prediction-pipeline": "hermes-index:trusted:NVIDIA/skills",
+"nano-pdf": "openclaw:bundled",
+"nemo-automodel-distributed-training": "hermes-index:trusted:NVIDIA/skills",
+"nemo-automodel-launcher-config": "hermes-index:trusted:NVIDIA/skills",
+"nemo-automodel-model-onboarding": "hermes-index:trusted:NVIDIA/skills",
+"nemo-automodel-recipe-development": "hermes-index:trusted:NVIDIA/skills",
+"nemo-curator": "hermes-index:builtin:NousResearch/hermes-agent",
+"nemo-fabric-build-adapter": "hermes-index:trusted:NVIDIA/skills",
+"nemo-fabric-integrate": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-mlm-bridge-training": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-multi-node-slurm": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-perf-activation-recompute": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-perf-cpu-offloading": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-perf-cuda-graphs": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-perf-expert-parallel-overlap": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-perf-hierarchical-context-parallel": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-perf-megatron-fsdp": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-perf-memory-tuning": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-perf-moe-comm-overlap": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-perf-moe-dispatcher-selection": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-perf-moe-hardware-configs": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-perf-moe-long-context": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-perf-moe-optimization-workflow": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-perf-moe-vlm-training": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-perf-parallelism-strategies": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-perf-sequence-packing": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-perf-tp-dp-comm-overlap": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-recipe-recommender": "hermes-index:trusted:NVIDIA/skills",
+"nemo-mbridge-resiliency": "hermes-index:trusted:NVIDIA/skills",
+"nemo-relay-debug-runtime-integration": "hermes-index:trusted:NVIDIA/skills",
+"nemo-relay-get-started": "hermes-index:trusted:NVIDIA/skills",
+"nemo-relay-install": "hermes-index:trusted:NVIDIA/skills",
+"nemo-relay-instrument-calls": "hermes-index:trusted:NVIDIA/skills",
+"nemo-relay-instrument-context-isolation": "hermes-index:trusted:NVIDIA/skills",
+"nemo-relay-instrument-typed-wrappers": "hermes-index:trusted:NVIDIA/skills",
+"nemo-relay-migrate-from-flow": "hermes-index:trusted:NVIDIA/skills",
+"nemo-relay-plugin-adaptive-tuning": "hermes-index:trusted:NVIDIA/skills",
+"nemo-relay-plugin-build": "hermes-index:trusted:NVIDIA/skills",
+"nemo-relay-plugin-observability": "hermes-index:trusted:NVIDIA/skills",
+"nemo-retriever": "hermes-index:trusted:NVIDIA/skills",
+"nemo-retriever-mcp": "hermes-index:trusted:NVIDIA/skills",
+"nemo-rl-auto-research": "hermes-index:trusted:NVIDIA/skills",
+"nemo-rl-brev-etiquette": "hermes-index:trusted:NVIDIA/skills",
+"nemo-rl-docs": "hermes-index:trusted:NVIDIA/skills",
+"nemo-rl-session-memory": "hermes-index:trusted:NVIDIA/skills",
+"nemoclaw-user-guide": "hermes-index:trusted:NVIDIA/skills",
+"nemotron-asr-finetune": "hermes-index:trusted:NVIDIA/skills",
+"nemotron-customize": "hermes-index:trusted:NVIDIA/skills",
+"nemotron-policy-generator": "hermes-index:trusted:NVIDIA/skills",
+"nemotron-retrieval-recipes": "hermes-index:trusted:NVIDIA/skills",
+"nemotron-speech": "hermes-index:trusted:NVIDIA/skills",
+"nemotron-voice-agent-builder": "hermes-index:trusted:NVIDIA/skills",
+"netlify-deploy": "hermes-index:trusted:openai/skills",
+"neuroskill-bci": "hermes-index:builtin:NousResearch/hermes-agent",
+"node-connect": "openclaw:bundled",
+"node-inspect-debugger": "openclaw:bundled",
+"notion": "openclaw:bundled",
+"notion-knowledge-capture": "hermes-index:trusted:openai/skills",
+"notion-meeting-intelligence": "hermes-index:trusted:openai/skills",
+"notion-research-documentation": "hermes-index:trusted:openai/skills",
+"notion-spec-to-implementation": "hermes-index:trusted:openai/skills",
+"nv-generate-ct-rflow": "hermes-index:trusted:NVIDIA/skills",
+"nv-generate-mr": "hermes-index:trusted:NVIDIA/skills",
+"nv-generate-mr-brain": "hermes-index:trusted:NVIDIA/skills",
+"nv-generate-mr-brain-finetune": "hermes-index:trusted:NVIDIA/skills",
+"nv-generate-vae-finetune": "hermes-index:trusted:NVIDIA/skills",
+"nv-reason-ct": "hermes-index:trusted:NVIDIA/skills",
+"nv-reason-cxr": "hermes-index:trusted:NVIDIA/skills",
+"nv-segment-ct": "hermes-index:trusted:NVIDIA/skills",
+"nv-segment-ct-finetune": "hermes-index:trusted:NVIDIA/skills",
+"nv-segment-ctmr": "hermes-index:trusted:NVIDIA/skills",
+"nvflare-autofl": "hermes-index:trusted:NVIDIA/skills",
+"nvflare-autofl-report": "hermes-index:trusted:NVIDIA/skills",
+"nvflare-convert-huggingface": "hermes-index:trusted:NVIDIA/skills",
+"nvflare-convert-lightning": "hermes-index:trusted:NVIDIA/skills",
+"nvflare-convert-pytorch": "hermes-index:trusted:NVIDIA/skills",
+"nvflare-diagnose-job": "hermes-index:trusted:NVIDIA/skills",
+"nvflare-fed-stats": "hermes-index:trusted:NVIDIA/skills",
+"nvflare-orient": "hermes-index:trusted:NVIDIA/skills",
+"nvflare-shared": "hermes-index:trusted:NVIDIA/skills",
+"nvidia-app": "hermes-index:trusted:NVIDIA/skills",
+"nvidia-broadcast": "hermes-index:trusted:NVIDIA/skills",
+"nvidia-ontology-management": "hermes-index:trusted:NVIDIA/skills",
+"nvidia-ontology-query": "hermes-index:trusted:NVIDIA/skills",
+"nvidia-ontology-setup": "hermes-index:trusted:NVIDIA/skills",
+"nvidia-skill-finder": "hermes-index:trusted:NVIDIA/skills",
+"nvmolkit-usage": "hermes-index:trusted:NVIDIA/skills",
+"nvshmem-collect-performance-data": "hermes-index:trusted:NVIDIA/skills",
+"nvshmem-configure-nic-pe-mapping": "hermes-index:trusted:NVIDIA/skills",
+"nvshmem-docs": "hermes-index:trusted:NVIDIA/skills",
+"nvshmem-enable-tma": "hermes-index:trusted:NVIDIA/skills",
+"nvshmem-get-started": "hermes-index:trusted:NVIDIA/skills",
+"nvshmem-install": "hermes-index:trusted:NVIDIA/skills",
+"nvshmem-select-remote-transport": "hermes-index:trusted:NVIDIA/skills",
+"nvshmem-troubleshoot-and-report-bugs": "hermes-index:trusted:NVIDIA/skills",
+"nvshmem-tune-performance": "hermes-index:trusted:NVIDIA/skills",
+"obliteratus": "hermes-index:builtin:NousResearch/hermes-agent",
+"obsidian": "openclaw:bundled",
+"omniverse-cad-to-simready": "hermes-index:trusted:NVIDIA/skills",
+"omniverse-realtime-viewer": "hermes-index:trusted:NVIDIA/skills",
+"omniverse-usd-performance-tuning": "hermes-index:trusted:NVIDIA/skills",
+"one-three-one-rule": "hermes-index:builtin:NousResearch/hermes-agent",
+"openai-docs": "hermes-index:trusted:openai/skills",
+"openai-whisper": "openclaw:bundled",
+"openai-whisper-api": "openclaw:bundled",
+"openfold2-nim": "hermes-index:trusted:NVIDIA/skills",
+"openfold3-nim": "hermes-index:trusted:NVIDIA/skills",
+"openhands": "hermes-index:builtin:NousResearch/hermes-agent",
+"openhue": "hermes-index:builtin:NousResearch/hermes-agent",
+"oracle": "openclaw:bundled",
+"ordercli": "openclaw:bundled",
+"osint-investigation": "hermes-index:builtin:NousResearch/hermes-agent",
+"oss-forensics": "hermes-index:builtin:NousResearch/hermes-agent",
+"outlines": "hermes-index:builtin:NousResearch/hermes-agent",
+"page-agent": "hermes-index:builtin:NousResearch/hermes-agent",
+"paidf-cosmos-predict": "hermes-index:trusted:NVIDIA/skills",
+"parabricks": "hermes-index:trusted:NVIDIA/skills",
+"parallel-cli": "hermes-index:builtin:NousResearch/hermes-agent",
+"pdf": "hermes-index:trusted:anthropics/skills",
+"peekaboo": "openclaw:bundled",
+"peft": "hermes-index:builtin:NousResearch/hermes-agent",
+"physical-ai-defect-image-generation": "hermes-index:trusted:NVIDIA/skills",
+"physical-ai-infrastructure-setup-and-resilient-scaling": "hermes-index:trusted:NVIDIA/skills",
+"physical-ai-neural-reconstruction": "hermes-index:trusted:NVIDIA/skills",
+"physical-ai-physics-selection": "hermes-index:trusted:NVIDIA/skills",
+"physical-ai-video-data-augmentation": "hermes-index:trusted:NVIDIA/skills",
+"physicsnemo-discover": "hermes-index:trusted:NVIDIA/skills",
+"physicsnemo-shard-tensor": "hermes-index:trusted:NVIDIA/skills",
+"pinecone": "hermes-index:builtin:NousResearch/hermes-agent",
+"pinecone-research": "hermes-index:builtin:NousResearch/hermes-agent",
+"pinggy-tunnel": "hermes-index:builtin:NousResearch/hermes-agent",
+"pixel-art": "hermes-index:builtin:NousResearch/hermes-agent",
+"playwright": "hermes-index:trusted:openai/skills",
+"playwright-interactive": "hermes-index:trusted:openai/skills",
+"plugin-creator": "hermes-index:trusted:openai/skills",
+"pokemon-player": "hermes-index:builtin:NousResearch/hermes-agent",
+"polymarket": "hermes-index:builtin:NousResearch/hermes-agent",
+"portfolio-optimization": "hermes-index:trusted:NVIDIA/skills",
+"pptx": "hermes-index:trusted:anthropics/skills",
+"pptx-author": "hermes-index:builtin:NousResearch/hermes-agent",
+"pr-lens": "hermes-index:builtin:NousResearch/hermes-agent",
+"pretext": "hermes-index:builtin:NousResearch/hermes-agent",
+"property-listings": "hermes-index:builtin:NousResearch/hermes-agent",
+"proteinmpnn-nim": "hermes-index:trusted:NVIDIA/skills",
+"publish-site": "hermes-index:builtin:NousResearch/hermes-agent",
+"python-debugpy": "openclaw:bundled",
+"pytorch-fsdp": "hermes-index:builtin:NousResearch/hermes-agent",
+"pytorch-lightning": "hermes-index:builtin:NousResearch/hermes-agent",
+"qdrant": "hermes-index:builtin:NousResearch/hermes-agent",
+"qmd": "hermes-index:builtin:NousResearch/hermes-agent",
+"rag-blueprint": "hermes-index:trusted:NVIDIA/skills",
+"rag-eval": "hermes-index:trusted:NVIDIA/skills",
+"rag-perf": "hermes-index:trusted:NVIDIA/skills",
+"reddit-reading": "hermes-index:builtin:NousResearch/hermes-agent",
+"render-deploy": "hermes-index:trusted:openai/skills",
+"research-paper-writing": "hermes-index:builtin:NousResearch/hermes-agent",
+"rest-graphql-debug": "hermes-index:builtin:NousResearch/hermes-agent",
+"rfd4-proteina-nim": "hermes-index:trusted:NVIDIA/skills",
+"rfdiffusion-nim": "hermes-index:trusted:NVIDIA/skills",
+"rss-feeds": "hermes-index:builtin:NousResearch/hermes-agent",
+"rtvi-cv-customize-model": "hermes-index:trusted:NVIDIA/skills",
+"rtvi-cv-scaffold-vss-service": "hermes-index:trusted:NVIDIA/skills",
+"rtvi-vlm-customize-model": "hermes-index:trusted:NVIDIA/skills",
+"rtx-remix-modding": "hermes-index:trusted:NVIDIA/skills",
+"runai-diagnose-failed-workload": "hermes-index:trusted:NVIDIA/skills",
+"runai-get-workload-health-summary": "hermes-index:trusted:NVIDIA/skills",
+"saelens": "hermes-index:builtin:NousResearch/hermes-agent",
+"sag": "openclaw:bundled",
+"scrapling": "hermes-index:builtin:NousResearch/hermes-agent",
+"screenshot": "hermes-index:trusted:openai/skills",
+"scrollcraft": "hermes-index:builtin:NousResearch/hermes-agent",
+"searxng-search": "hermes-index:builtin:NousResearch/hermes-agent",
+"security-best-practices": "hermes-index:trusted:openai/skills",
+"security-ownership-map": "hermes-index:trusted:openai/skills",
+"security-threat-model": "hermes-index:trusted:openai/skills",
+"segment-anything-model": "hermes-index:builtin:NousResearch/hermes-agent",
+"sentry": "hermes-index:trusted:openai/skills",
+"serving-llms-vllm": "hermes-index:builtin:NousResearch/hermes-agent",
+"setup-wizard-generator": "hermes-index:builtin:NousResearch/hermes-agent",
+"sherlock": "hermes-index:builtin:NousResearch/hermes-agent",
+"sherpa-onnx-tts": "openclaw:bundled",
+"shop": "hermes-index:builtin:NousResearch/hermes-agent",
+"shopify": "hermes-index:builtin:NousResearch/hermes-agent",
+"simple-english": "hermes-index:builtin:NousResearch/hermes-agent",
+"simpo": "hermes-index:builtin:NousResearch/hermes-agent",
+"siyuan": "hermes-index:builtin:NousResearch/hermes-agent",
+"sketch": "hermes-index:builtin:NousResearch/hermes-agent",
+"skill-card-generator": "hermes-index:trusted:NVIDIA/skills",
+"skill-creator": "hermes-index:trusted:anthropics/skills",
+"skill-installer": "hermes-index:trusted:openai/skills",
+"slack-gif-creator": "hermes-index:trusted:anthropics/skills",
+"slime": "hermes-index:builtin:NousResearch/hermes-agent",
+"social-media-content-calendar": "hermes-index:builtin:NousResearch/hermes-agent",
+"solana": "hermes-index:builtin:NousResearch/hermes-agent",
+"songsee": "openclaw:bundled",
+"sonoscli": "openclaw:bundled",
+"speech": "hermes-index:trusted:openai/skills",
+"spike": "openclaw:bundled",
+"spotify-player": "openclaw:bundled",
+"stable-diffusion": "hermes-index:builtin:NousResearch/hermes-agent",
+"stocks": "hermes-index:builtin:NousResearch/hermes-agent",
+"stripe-link-cli": "hermes-index:builtin:NousResearch/hermes-agent",
+"stripe-projects": "hermes-index:builtin:NousResearch/hermes-agent",
+"subagent-driven-development": "hermes-index:builtin:NousResearch/hermes-agent",
+"summarize": "openclaw:bundled",
+"system-atlas": "hermes-index:builtin:NousResearch/hermes-agent",
+"tao-analyze-changenet-rca": "hermes-index:trusted:NVIDIA/skills",
+"tao-analyze-detection-kpi": "hermes-index:trusted:NVIDIA/skills",
+"tao-analyze-gaps-od-map": "hermes-index:trusted:NVIDIA/skills",
+"tao-analyze-gaps-visual-changenet": "hermes-index:trusted:NVIDIA/skills",
+"tao-analyze-gaps-vlm-bcq": "hermes-index:trusted:NVIDIA/skills",
+"tao-artifacts": "hermes-index:trusted:NVIDIA/skills",
+"tao-convert-dataset-format": "hermes-index:trusted:NVIDIA/skills",
+"tao-data-io": "hermes-index:trusted:NVIDIA/skills",
+"tao-finetune-anomalygennext": "hermes-index:trusted:NVIDIA/skills",
+"tao-finetune-clip": "hermes-index:trusted:NVIDIA/skills",
+"tao-finetune-cosmos-embed": "hermes-index:trusted:NVIDIA/skills",
+"tao-finetune-cosmos-reason": "hermes-index:trusted:NVIDIA/skills",
+"tao-finetune-huggingface-model": "hermes-index:trusted:NVIDIA/skills",
+"tao-finetune-kumo-anomaly": "hermes-index:trusted:NVIDIA/skills",
+"tao-finetune-kumo-forecast": "hermes-index:trusted:NVIDIA/skills",
+"tao-finetune-video-clip": "hermes-index:trusted:NVIDIA/skills",
+"tao-generate-anomalies": "hermes-index:trusted:NVIDIA/skills",
+"tao-generate-image-embeddings": "hermes-index:trusted:NVIDIA/skills",
+"tao-generate-image-grounding": "hermes-index:trusted:NVIDIA/skills",
+"tao-generate-od-defects": "hermes-index:trusted:NVIDIA/skills",
+"tao-generate-referring-expressions": "hermes-index:trusted:NVIDIA/skills",
+"tao-generate-video-reasoning-annotations": "hermes-index:trusted:NVIDIA/skills",
+"tao-launch-workflow": "hermes-index:trusted:NVIDIA/skills",
+"tao-list-capabilities": "hermes-index:trusted:NVIDIA/skills",
+"tao-mine-aoi-images": "hermes-index:trusted:NVIDIA/skills",
+"tao-mine-nearest-neighbors": "hermes-index:trusted:NVIDIA/skills",
+"tao-mine-od-images": "hermes-index:trusted:NVIDIA/skills",
+"tao-port-huggingface-model": "hermes-index:trusted:NVIDIA/skills",
+"tao-prepare-anomalygennext-inputs": "hermes-index:trusted:NVIDIA/skills",
+"tao-route-visual-changenet-samples": "hermes-index:trusted:NVIDIA/skills",
+"tao-run-automl": "hermes-index:trusted:NVIDIA/skills",
+"tao-run-automl-deft-pipeline": "hermes-index:trusted:NVIDIA/skills",
+"tao-run-deft-aoi": "hermes-index:trusted:NVIDIA/skills",
+"tao-run-deft-aoi-cosmos3": "hermes-index:trusted:NVIDIA/skills",
+"tao-run-deft-cr-its-mining": "hermes-index:trusted:NVIDIA/skills",
+"tao-run-deft-object-detection": "hermes-index:trusted:NVIDIA/skills",
+"tao-run-deft-od-aoi": "hermes-index:trusted:NVIDIA/skills",
+"tao-run-deft-pas": "hermes-index:trusted:NVIDIA/skills",
+"tao-run-dinov3-ssl-deft": "hermes-index:trusted:NVIDIA/skills",
+"tao-run-inference-service": "hermes-index:trusted:NVIDIA/skills",
+"tao-run-on-brev": "hermes-index:trusted:NVIDIA/skills",
+"tao-run-on-docker": "hermes-index:trusted:NVIDIA/skills",
+"tao-run-on-kubernetes": "hermes-index:trusted:NVIDIA/skills",
+"tao-run-on-slurm": "hermes-index:trusted:NVIDIA/skills",
+"tao-run-on-virtualenv": "hermes-index:trusted:NVIDIA/skills",
+"tao-setup": "hermes-index:trusted:NVIDIA/skills",
+"tao-setup-nvidia-gpu-host": "hermes-index:trusted:NVIDIA/skills",
+"tao-token-efficient-execution": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-action-recognition": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-bevfusion": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-centerpose": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-codetr": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-deformable-detr": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-depth-anything-v2": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-dino": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-dinov3": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-fast-foundation-stereo": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-foundation-stereo": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-grounding-dino": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-image-classification": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-mask-auto-encoder": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-mask-auto-label": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-mask-grounding-dino": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-mask2former": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-metric-learning-recognition": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-nvdinov2": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-nvpanoptix3d": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-ocdnet": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-ocrnet": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-oneformer": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-optical-inspection": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-pointpillars": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-pose-classification": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-reid": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-rtdetr": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-segformer": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-single-step": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-sparse4d": "hermes-index:trusted:NVIDIA/skills",
+"tao-train-visual-changenet": "hermes-index:trusted:NVIDIA/skills",
+"tao-validate-dataset-format": "hermes-index:trusted:NVIDIA/skills",
+"tao-validate-recipe-transfer": "hermes-index:trusted:NVIDIA/skills",
+"telephony": "hermes-index:builtin:NousResearch/hermes-agent",
+"template-skill": "hermes-index:trusted:anthropics/skills",
+"tensorrt-llm": "hermes-index:builtin:NousResearch/hermes-agent",
+"theme-factory": "hermes-index:trusted:anthropics/skills",
+"things-mac": "openclaw:bundled",
+"tilegym-adding-cutile-kernel": "hermes-index:trusted:NVIDIA/skills",
+"tilegym-converting-cutile-to-julia": "hermes-index:trusted:NVIDIA/skills",
+"tilegym-converting-cutile-to-triton": "hermes-index:trusted:NVIDIA/skills",
+"tilegym-cutile-autotuning": "hermes-index:trusted:NVIDIA/skills",
+"tilegym-cutile-python": "hermes-index:trusted:NVIDIA/skills",
+"tilegym-improve-cutile-kernel-perf": "hermes-index:trusted:NVIDIA/skills",
+"tilegym-monkey-patch-kernels-to-transformers": "hermes-index:trusted:NVIDIA/skills",
+"tldraw-offline": "hermes-index:builtin:NousResearch/hermes-agent",
+"tmux": "openclaw:bundled",
+"torchtitan": "hermes-index:builtin:NousResearch/hermes-agent",
+"train-sentence-transformers": "hermes-index:trusted:huggingface/skills",
+"transcribe": "hermes-index:trusted:openai/skills",
+"transformers-js": "hermes-index:trusted:huggingface/skills",
+"trello": "openclaw:bundled",
+"trl-fine-tuning": "hermes-index:builtin:NousResearch/hermes-agent",
+"trl-training": "hermes-index:trusted:huggingface/skills",
+"unbroker": "hermes-index:builtin:NousResearch/hermes-agent",
+"unreal-mcp": "hermes-index:builtin:NousResearch/hermes-agent",
+"unsloth": "hermes-index:builtin:NousResearch/hermes-agent",
+"using-ovnewton": "hermes-index:trusted:NVIDIA/skills",
+"vercel-deploy": "hermes-index:trusted:openai/skills",
+"visualize": "openclaw:bundled",
+"vss-build-vision-ai": "hermes-index:trusted:NVIDIA/skills",
+"warp-compile-time-optimizer": "hermes-index:trusted:NVIDIA/skills",
+"warp-debug-gradients": "hermes-index:trusted:NVIDIA/skills",
+"warp-eval": "hermes-index:trusted:NVIDIA/skills",
+"watchers": "hermes-index:builtin:NousResearch/hermes-agent",
+"weather": "openclaw:bundled",
+"web-artifacts-builder": "hermes-index:trusted:anthropics/skills",
+"web-pentest": "hermes-index:builtin:NousResearch/hermes-agent",
+"webapp-testing": "hermes-index:trusted:anthropics/skills",
+"weights-and-biases": "hermes-index:builtin:NousResearch/hermes-agent",
+"whisper": "hermes-index:builtin:NousResearch/hermes-agent",
+"winui-app": "hermes-index:trusted:openai/skills",
+"xlsx": "hermes-index:trusted:anthropics/skills",
+"xurl": "openclaw:bundled",
+"yeet": "hermes-index:trusted:openai/skills",
+"yuanbao": "hermes-index:builtin:NousResearch/hermes-agent"
+}
+}

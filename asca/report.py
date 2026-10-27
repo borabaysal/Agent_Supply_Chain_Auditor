@@ -99,12 +99,13 @@ def _finding_block(f) -> list[str]:
 TELEGRAM_LIMIT = 4096
 
 
-def telegram_text(r: Report, *, host: str, report_path: str | None, max_items: int = 8) -> str:
+def telegram_text(r: Report, *, host: str, report_path: str | None, max_items: int = 8,
+                  title: str = "Agent supply-chain audit") -> str:
     c = r.counts()
     e = html.escape
     head = "✅ <b>PASS</b>" if r.passed else "❌ <b>FAIL</b>"
     parts = [
-        f"🛡️ <b>Agent supply-chain audit</b> — {head}",
+        f"🛡️ <b>{e(title)}</b> — {head}",
         f"Host: <code>{e(host)}</code>",
         f"🟥 {c['critical']} · 🟧 {c['high']} · 🟨 {c['medium']} · 🟦 {c['low']}"
         + (f" · suppressed {c['suppressed']}" if c["suppressed"] else ""),

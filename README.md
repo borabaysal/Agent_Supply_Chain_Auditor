@@ -16,7 +16,7 @@ asca 0.1.0: FAIL (fail-on high)
 
 ## What it checks
 
-_Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where your agents connect and alerts on new destinations, and a [fleet patch monitor](#fleet-patch-monitor-asca-fleet) that tells you how many Hermes security fixes each instance is behind._
+_Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where your agents connect and alerts on new destinations, a [fleet patch monitor](#fleet-patch-monitor-asca-fleet) that tells you how many Hermes security fixes each instance is behind, and a [fake-app & skill scanner](#fake-app--skill-scanner-asca-skills) for look-alike names and malicious skill content._
 
 | Category | Checks |
 |---|---|
@@ -258,6 +258,63 @@ The counts depend on how releases are written up, so treat them as a floor.
 
 **Exit codes:** 0 when every instance is current on security fixes; 1 when one is behind or
 unreadable, or the feed failed; 2 on errors.
+
+## Fake-app & skill scanner (`asca-skills`)
+
+Skills are markdown the model obeys and scripts it runs, so a malicious skill can steal keys
+without any exploit. In early 2026 hundreds of cloned ClawHub skills (ClawHavoc) did exactly
+that: an official-sounding name, a "prerequisite" to download, and an infostealer behind it.
+`asca-skills` looks for both halves of that playbook.
+
+```bash
+python3 -m asca.skillscan scan                       # auto-discovers Hermes, OpenClaw, Claude, Codex skill dirs
+python3 -m asca.skillscan scan ./skills ~/Downloads/new-skill --no-apps
+python3 -m asca.skillscan check-name openclaw-core   # before you install something
+python3 -m asca.skillscan update-official            # refresh the official list from live sources
+```
+
+**Look-alike names.** Skill, plugin, MCP-server, package and app names are compared with an
+official list:
+- Hermes builtin + trusted skills, the Hermes plugin and MCP catalogs (incl. the removed-plugin
+  kill list), OpenClaw's bundled skills and extensions, and the vendors' own packages
+  (`openclaw`, `@anthropic-ai/claude-code`, `@openai/codex`, `hermes-agent`, …);
+- taken from a bundled snapshot, your local Hermes install, Hermes' cached catalog, and
+  `update-official`.
+
+| Trick | Example | Severity |
+|---|---|---|
+| Homoglyphs (Cyrillic/Greek letters) | `gооgle` | critical / high |
+| Digit/letter swaps, `rn`→`m` | `g00gle` | high |
+| Brand + "core/helper/pro/…" (fake prerequisite) | `openclaw-core` | high |
+| One edit away | `summarise` vs `summarize` | medium |
+| Official name + random suffix (ClawHub clones) | `google-qx4` | medium |
+| Official name installed from a community hub | `github` from ClawHub | high |
+| Plugin under a catalog name, different repo | `homeassistant` from `evil/…` | critical |
+| Former project names | `clawdbot`, `moltbot` packages | medium |
+
+**Risky skill content** (every file in the skill folder):
+
+| Category | What it catches |
+|---|---|
+| prompt-injection | "ignore previous instructions", fake `<system>`/`[INST]` markers, "don't tell the user", "bypass the approval prompt", writing itself into AGENTS.md/MEMORY.md, asking for seed phrases or passwords |
+| hidden-content | invisible Unicode tag characters (decoded in the report), bidi overrides, zero-width runs, agent-directed text in HTML comments, base64 blobs that decode to commands |
+| credential-access | `~/.ssh`, cloud/registry creds, agent `.env`/`auth.json`, keychain dumps, browser password/cookie DBs, crypto wallets, full env dumps |
+| exfiltration | request-capture services, paste sites and chat webhooks, raw-IP URLs, file uploads |
+| malicious-install | decode-and-run, removing macOS quarantine / disabling Defender, fake password dialogs (AMOS), reverse shells, password-protected archives, `curl \| sh` from unknown hosts, executables presented as prerequisites, bundled binaries |
+
+- **Credential access plus an outbound sink in the same skill is critical** (the stealer shape).
+- **Context adjusts severity:**
+  - Prose mentions count lower than the same text in a script.
+  - Chat-template markers in quotes or code fences are documentation.
+  - Negations ("never start without the user's consent") are ignored.
+  - Hermes builtin skills and security-topic skills (which quote attacks on purpose) are
+    lowered and labelled. Hidden-content and encoded-payload findings are never lowered.
+- **Tested both ways.** Fixtures modelled on the published ClawHavoc/AMOS samples are all
+  caught. Hermes' 210 official skills, scored as if their origin were unknown, produce 0 high or
+  critical findings.
+
+Reports, baselines, exit codes and `--telegram never|fail|always|change` work exactly like `asca`.
+It never executes anything it scans.
 
 ## Limits (MVP)
 
