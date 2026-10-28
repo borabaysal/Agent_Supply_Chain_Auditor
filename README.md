@@ -316,6 +316,35 @@ official list:
 Reports, baselines, exit codes and `--telegram never|fail|always|change` work exactly like `asca`.
 It never executes anything it scans.
 
+**Warn or block: the per-rule gate.** By default `asca-skills` only reports, because pattern rules
+are tripwires. `--gate` turns chosen rules into hard stops (exit code **3**), so the same scanner
+can be a pre-install hook or CI step:
+
+```bash
+asca-skills gates                                          # list presets and their rules
+asca-skills scan ~/Downloads/new-skill --no-apps --gate default && cp -r ~/Downloads/new-skill ~/.hermes/skills/
+asca-skills scan --gate strict --gate 'skill.exfil.*:medium'   # presets + your own rule globs
+asca-skills scan --gate default --quarantine ~/.local/state/asca/quarantine   # move blocked skills out
+asca-skills restore <name> --quarantine ~/.local/state/asca/quarantine        # undo
+```
+
+| Preset | Blocks |
+|---|---|
+| `default` | near-certain signals only: hidden Unicode-tag instructions, base64 that decodes to commands, decode-and-run, credential access + outbound sink in one skill, fake password dialogs, Gatekeeper/Defender tampering, reverse shells, plugins impersonating a catalog entry |
+| `strict` | `default` plus the ClawHavoc delivery tricks (password-protected archives, "run what's in this zip", capture services), keychain dumps, browser/wallet theft, concealment and override injections, and look-alike names at high or above |
+
+- **Context still applies:** a gate rule blocks only at high severity or above unless you add a
+  suffix such as `:medium`. Quoted examples and security docs still only warn.
+- **Baselines still apply:** suppressed findings never block.
+- **Quarantine is safe to undo:** it moves the skill folder, never deletes it, records why in
+  `quarantine.json`, and skips Hermes builtin skills (Hermes would restore them anyway).
+- **Measured:** on the ClawHavoc-style fixtures, `default` blocks 3 of 6 and `strict` blocks 5
+  of 6 (the one-letter typosquat stays a warning). Hermes' 210 official skills: 0 blocked
+  with either preset.
+
+Exit codes for `asca-skills scan`: 0 PASS, 1 FAIL (warnings at or above `--fail-on`), 2 error,
+**3 BLOCKED** (a gated finding; takes precedence).
+
 ## Limits (MVP)
 
 - Hub "pinning" means an upstream **commit** is recorded. Hermes' lock currently stores only a content hash, so every community hub skill is reported until Hermes records commits or you vendor skills into a repo you control.
