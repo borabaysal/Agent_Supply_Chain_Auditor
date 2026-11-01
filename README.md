@@ -23,6 +23,8 @@ _Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where
 | **Pinning** | Hermes Skills Hub installs with no upstream commit pin · skill taps that track a branch · plugins checked out on a moving branch · MCP servers launched with `npx`/`bunx`/`uvx`/`pipx` without an exact version · `docker run` images without `@sha256:` digest · `git+https://` installs without a commit SHA · skills that tell the agent to `curl … \| sh` · remote MCP servers (reported as *info*, since they can't be pinned) |
 | **Repo config** (GitSpawn) | `core.fsmonitor` set to a program (**critical**, see [CVE-2026-71963](https://www.rapid7.com/db/vulnerabilities/cve-2026-71963/) for Hermes, CVE-2026-19592 for Codex, CVE-2026-72718 for goose), plus every other git key that names a program: `core.hooksPath`, `core.sshCommand`, `core.askPass`, `core.pager`/`pager.*`, `core.editor`, `diff.external`, `diff.*.textconv`, `filter.*.{clean,smudge,process}`, `merge.*.driver`, `credential.helper` (non-builtin), `protocol.ext.allow`, `include.path`/`includeIf`, `!` aliases, `gpg.program` · active (non-`.sample`) git hooks · linked worktrees/submodules (`.git` files) · project `.mcp.json` / `.cursor/mcp.json` that ship with a repo |
 | **Exposed keys** | Literal API keys in agent config, cron jobs, memories, skills, plugins, scripts and MCP `env`/`headers` (Anthropic, OpenAI, OpenRouter, GitHub, Slack, Telegram, AWS, Google, Stripe, HF, wallet private keys, PEM keys, generic `api_key=` assignments) · tokens embedded in git remote URLs and MCP URLs · credential files (`.env`, `auth.json`, `.git-credentials`, `config.yaml`, MCP OAuth tokens) readable by group/other |
+| **Session history** | Literal keys saved in agents' transcripts: Hermes `sessions/*.json(l)` and `cron/output/**` (incl. `profiles/*`), Claude Code `~/.claude/projects/**/*.jsonl`, Codex `~/.codex/sessions/**/*.jsonl` and `history.jsonl`, Cursor chat rows in `state.vscdb` · transcript files/dirs that group/other can actually reach and read. See [Session history](#session-history-secretsession-history). |
+| **Stray agent instructions** | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.cursor/rules/*` … left in `~/Downloads`, `~/Desktop` or the temp dir, outside any git repo; HIGH when the `asca-skills` content rules match. See [Stray agent instructions](#stray-agent-instructions-repostray-agent-instructions). |
 | **Integrity** | Hub skills whose on-disk content no longer matches the install-time hash (same algorithm as Hermes' Skills Guard) · skills installed despite a non-`safe` scanner verdict · Hermes Agent versions inside a known-vulnerable range |
 
 ### Safety properties of the auditor itself
@@ -50,6 +52,9 @@ asca --mcp-config ./some/mcp.json      # extra MCP client config
 asca --fail-on critical                # threshold: info|low|medium|high|critical (default high)
 asca -o reports/2026-10-05             # writes reports/2026-10-05.md and .json
 asca --format json                     # machine-readable on stdout
+asca --no-session-history              # skip transcript scanning (on by default)
+asca --session-budget-mb 4096          # read more history per run (default 1024 MiB, newest first)
+asca --instructions-dir ~/shared       # also look for stray AGENTS.md/CLAUDE.md here
 ```
 
 Exit codes: `0` PASS · `1` FAIL · `2` usage/config/alert-delivery error.
@@ -119,6 +124,76 @@ Persistent=true
 [Install]
 WantedBy=timers.target
 ```
+
+### Session history (`secret.session-history`)
+
+Agents save every tool result. When an agent reads `.env` or prints a config, the key ends up in a
+transcript that outlives the file, and any later skill that "summarises past sessions" can read it.
+[Backslash's research](https://www.backslash.security/blog/secrets-in-ai-agent-session-history) found
+about 3 in 4 secrets in Claude Code/Cursor/Codex history came from the agent's own tool output, and a
+"weekly report" skill pulled keys that a direct `.env`-read guard had blocked.
+
+| Source | Files |
+|---|---|
+| Hermes | `$HERMES_HOME/sessions/**/*.json`, `*.jsonl`; `$HERMES_HOME/cron/output/**`; the same under `profiles/*/` |
+| Claude Code | `~/.claude/projects/**/*.jsonl` (`$CLAUDE_CONFIG_DIR` respected) |
+| Codex CLI | `~/.codex/sessions/**/*.jsonl`, `~/.codex/history.jsonl` (`$CODEX_HOME` respected) |
+| Cursor | `User/globalStorage/state.vscdb` and `User/workspaceStorage/*/state.vscdb` (Linux, macOS, Windows paths): rows whose key mentions chat/composer/bubble/aiService/prompt only |
+
+- The same secret patterns and placeholder filters as the rest of asca. JSON string escapes (up to
+  3 levels, since tool arguments are JSON inside JSON) are undone first, so `\"api_key\": \"…\"` and
+  `\n`-joined `.env` dumps are found.
+- **One finding per distinct secret.** It shows the redacted preview, how many times and in how many
+  files it appears, which agents, and up to 5 example `file:line` locations. The fingerprint is the
+  secret's hash, so it stays stable as transcripts pile up. Private keys are identified by their body,
+  and no preview is shown.
+- Severity: HIGH, or MEDIUM for the heuristic `api_key=`/`password=` assignment rule.
+- `secret.session-history-permissions` (MEDIUM): one finding per history root that has files or dirs
+  group/other can read **and reach**, meaning every parent dir is traversable. A 0644 transcript
+  under a 0700 home isn't reported.
+- **Bounded.** Files are scanned newest first (recent keys are likelier to be live). There are three
+  limits, each with a flag: `--session-file-cap-mb` (default 32), `--session-budget-mb` (1024) and
+  `--session-max-files` (100000). Hitting a limit produces a LOW `secret.session-history-budget`
+  finding, so a partial scan never looks like a clean pass. Unreadable transcripts and corrupt
+  SQLite files produce `scanner.parse-error`.
+- Cursor databases are opened with stdlib `sqlite3` in read-only URI mode (`mode=ro`). If that
+  fails, it retries with `immutable=1`, which never writes but ignores an un-checkpointed WAL.
+- Turn it off with `--no-session-history`.
+- Measured on a real Hermes host: 45,482 files (562 MB) in ~67 s. Opening files dominates, so small
+  files are prefetched by 8 threads.
+
+Fix: **rotate the key first.** Moving it out of `.env` doesn't remove the copies already saved in
+transcripts. Then delete or redact the old transcripts, `chmod -R go-rwx` the history directory,
+and shorten the agent's history retention (or turn off persistence) where the agent has a setting.
+
+### Stray agent instructions (`repo.stray-agent-instructions`)
+
+Coding agents load instruction files from the folder they start in.
+[Forever Security](https://forever.security/blog/hijacking-ai-agents-via-downloads-folder) found a
+malicious `AGENTS.md` in a customer's `~/Downloads`. A coding agent started there read it and tried
+to install a malicious npm package.
+
+asca searches `~/Downloads`, `~/Desktop`, the temp dir (`tempfile.gettempdir()`, plus `/tmp` on
+POSIX) and any `--instructions-dir DIR` for these files:
+
+| File | Loaded by |
+|---|---|
+| `AGENTS.md` | Codex CLI and other AGENTS.md readers |
+| `CLAUDE.md`, `CLAUDE.local.md` | Claude Code |
+| `GEMINI.md` | Gemini CLI |
+| `.cursorrules`, `.cursor/rules/*` | Cursor |
+| `.windsurfrules`, `.windsurf/rules/*` | Windsurf |
+| `.clinerules` (file or dir) | Cline |
+| `.github/copilot-instructions.md` | GitHub Copilot |
+
+- It searches each folder and two levels below it. Symlinked dirs aren't followed, and directories
+  with a `.git` aren't entered: instruction files inside repos are expected.
+- Matches are MEDIUM. A file is HIGH when the `asca-skills` content rules (prompt injection, hidden
+  text, credential access, exfiltration, malicious installs) match at MEDIUM or above. The finding
+  lists the matched rules and lines.
+- Files are read as text only, at most 512 KiB. Symlinks, FIFOs and devices are never read.
+- Turn the default folders off with `--no-stray-instructions`. `--instructions-dir` still adds its
+  own folders.
 
 ### MCP clients discovered automatically
 
@@ -349,6 +424,9 @@ Exit codes for `asca-skills scan`: 0 PASS, 1 FAIL (warnings at or above `--fail-
 
 - Hub "pinning" means an upstream **commit** is recorded. Hermes' lock currently stores only a content hash, so every community hub skill is reported until Hermes records commits or you vendor skills into a repo you control.
 - Secret detection is pattern-based. It catches common providers and obvious assignments, not every possible secret.
+- Session-history scanning reads plain-text and JSON transcripts plus Cursor's SQLite chat rows. It doesn't read other binary or encrypted stores, Claude Desktop or ChatGPT app history, or transcripts from agents not listed above. Each file is scanned up to the per-file cap, and the remainder of a larger file is skipped.
+- A secret split across two JSON lines, or longer than the 256-char window overlap, can be missed.
+- Stray-instruction search covers only the folders listed (plus `--instructions-dir`), two levels deep. It can't tell a legitimate instruction file from an extracted archive. Use a baseline for ones you accept.
 - Remote (URL) MCP servers can't be pinned and are reported as `info`.
 - `global core.fsmonitor=false` is suggested as defence in depth only. A repo-local value still overrides it.
 - Version advisories cover Hermes Agent only (extend `asca/advisories.py: PACKAGES` for other agents). For other agents, check vendor advisories; contributions are welcome.

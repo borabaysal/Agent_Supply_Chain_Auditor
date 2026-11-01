@@ -30,7 +30,7 @@ PATTERNS: list[tuple[str, re.Pattern, Severity, str]] = [
      Severity.CRITICAL, "Wallet private key"),
     ("secret.generic-assignment", re.compile(
         r"(?i)\b(?:api[_-]?key|api[_-]?secret|secret[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|password)"
-        r"\b\s*[:=]\s*['\"]?([A-Za-z0-9_\-/+=.]{24,})"),
+        r"\b['\"]?\s*[:=]\s*['\"]?([A-Za-z0-9_\-/+=.]{24,})"),  # also JSON: "api_key": "…"
      Severity.MEDIUM, "Hard-coded credential assignment"),
 ]
 
@@ -42,41 +42,50 @@ TEXT_SUFFIX_SKIP = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".
 MAX_FILE_BYTES = 512 * 1024
 
 
+def iter_line_secrets(line: str, seen: set[str]):
+    """Yield ``(rule, severity, label, value, end)`` for each distinct secret on one line.
+
+    ``seen`` holds values already reported by the caller; overlapping values are skipped
+    (``sk-or-v1-…`` also satisfies the broader OpenAI pattern and the more specific rule,
+    listed first, wins). The generic assignment rule is a fallback for lines no specific
+    rule explained. Callers must redact ``value`` before it reaches a Finding.
+    """
+    specific_hit = False
+    for rule, rx, sev, label in PATTERNS:
+        if rule == "secret.generic-assignment" and specific_hit:
+            continue
+        for m in rx.finditer(line):
+            value = m.group(1) if m.groups() else m.group(0)
+            if rule != "secret.private-key" and _PLACEHOLDER.search(value):
+                continue
+            if rule == "secret.generic-assignment" and _looks_low_entropy(value):
+                continue
+            if rule != "secret.private-key" and _looks_like_words(value):
+                continue
+            if any(value in s or s in value for s in seen):
+                specific_hit = True
+                continue
+            seen.add(value)
+            specific_hit = True
+            yield rule, sev, label, value, m.end()
+
+
 def scan_text(text: str, location: str, *, context: str) -> list[Finding]:
     found: list[Finding] = []
     seen: set[str] = set()
     for lineno, line in enumerate(text.splitlines(), 1):
         if len(line) > 4000:
             line = line[:4000]
-        specific_hit = False
-        for rule, rx, sev, label in PATTERNS:
-            # the generic rule is a fallback: skip it when a specific rule already explained the line
-            if rule == "secret.generic-assignment" and specific_hit:
-                continue
-            for m in rx.finditer(line):
-                value = m.group(1) if m.groups() else m.group(0)
-                if rule != "secret.private-key" and _PLACEHOLDER.search(value):
-                    continue
-                if rule == "secret.generic-assignment" and _looks_low_entropy(value):
-                    continue
-                if rule != "secret.private-key" and _looks_like_words(value):
-                    continue
-                # one finding per secret value: "sk-or-v1-…" also satisfies the broader
-                # OpenAI pattern, and the more specific rule (listed first) wins.
-                if any(value in s or s in value for s in seen):
-                    specific_hit = True
-                    continue
-                seen.add(value)
-                preview = "" if rule == "secret.private-key" else f" ({redact(value)})"
-                found.append(Finding(
-                    rule=rule, category="secrets", severity=sev,
-                    title=f"{label} in {context}", location=f"{location}:{lineno}", subject=label,
-                    detail=f"Literal secret material{preview}. Anything that reads this file — backups, "
-                           f"git history, an agent's context — gets the credential.",
-                    remediation="Rotate the credential, move it to an env file with 0600 permissions "
-                                "(or a secrets manager), and reference it by variable name.",
-                ))
-                specific_hit = True
+        for rule, sev, label, value, _end in iter_line_secrets(line, seen):
+            preview = "" if rule == "secret.private-key" else f" ({redact(value)})"
+            found.append(Finding(
+                rule=rule, category="secrets", severity=sev,
+                title=f"{label} in {context}", location=f"{location}:{lineno}", subject=label,
+                detail=f"Literal secret material{preview}. Anything that reads this file — backups, "
+                       f"git history, an agent's context — gets the credential.",
+                remediation="Rotate the credential, move it to an env file with 0600 permissions "
+                            "(or a secrets manager), and reference it by variable name.",
+            ))
     return found
 
 

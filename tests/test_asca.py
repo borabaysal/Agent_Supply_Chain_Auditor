@@ -367,7 +367,8 @@ def test_hermes_cve_version_window(tmp_path, version, hit):
 
 def run_cli(tmp_path, *extra, home=None):
     out = tmp_path / "out" / "rep"
-    args = ["--no-client-configs", "--no-global-git", "-o", str(out), "--format", "none", *extra]
+    args = ["--no-client-configs", "--no-global-git", "--no-session-history", "--no-stray-instructions",
+            "-o", str(out), "--format", "none", *extra]
     args += ["--hermes-home", str(home)] if home else ["--no-hermes"]
     rc = cli.run(args)
     return rc, out.with_suffix(".md"), out.with_suffix(".json")
@@ -391,7 +392,8 @@ def test_cli_fail_and_baseline_suppression(tmp_path):
     rc, md, js = run_cli(tmp_path, "--repos", str(tmp_path))
     assert rc == 1 and "FAIL" in md.read_text() and "git.fsmonitor" in md.read_text()
     base = tmp_path / "baseline.json"
-    assert cli.run(["--no-hermes", "--no-client-configs", "--no-global-git", "--repos", str(tmp_path),
+    assert cli.run(["--no-hermes", "--no-client-configs", "--no-global-git", "--no-session-history",
+                    "--no-stray-instructions", "--repos", str(tmp_path),
                     "--write-baseline", str(base)]) == 0
     rc, md, js = run_cli(tmp_path, "--repos", str(tmp_path), "--baseline", str(base))
     assert rc == 0 and json.loads(js.read_text())["counts"]["suppressed"] == 1
