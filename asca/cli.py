@@ -12,7 +12,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__, advisories, discover, hermes, report
+from . import __version__, advisories, discover, hermes, report, sessions, stray
 from .model import Finding, Report, Severity
 
 
@@ -52,6 +52,19 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-client-configs", action="store_true",
                    help="don't auto-discover ~/.claude.json, Cursor, Claude Desktop, Windsurf configs")
     p.add_argument("--no-global-git", action="store_true", help="skip ~/.gitconfig and /etc/gitconfig")
+    p.add_argument("--no-session-history", action="store_true",
+                   help="don't scan agent session/transcript history (Hermes sessions + cron output, Claude Code, "
+                        "Codex, Cursor) for saved secrets")
+    p.add_argument("--session-budget-mb", type=int, default=sessions.DEFAULT_BUDGET // sessions.MiB, metavar="MB",
+                   help="max MiB of history read per run, newest files first (default: %(default)s)")
+    p.add_argument("--session-file-cap-mb", type=int, default=sessions.DEFAULT_FILE_CAP // sessions.MiB,
+                   metavar="MB", help="max MiB read from any one history file (default: %(default)s)")
+    p.add_argument("--session-max-files", type=int, default=sessions.DEFAULT_MAX_FILES, metavar="N",
+                   help="max history files read per run (default: %(default)s)")
+    p.add_argument("--no-stray-instructions", action="store_true",
+                   help="don't look for AGENTS.md / CLAUDE.md / .cursorrules … in ~/Downloads, ~/Desktop and temp")
+    p.add_argument("--instructions-dir", type=Path, action="append", default=[], metavar="DIR",
+                   help="extra folder to check for stray agent instruction files (repeatable)")
     p.add_argument("--advisories", type=Path, metavar="FILE",
                    help="extra Hermes version advisories (JSON list; see README)")
     p.add_argument("--online-advisories", action="store_true",
@@ -136,6 +149,22 @@ def run(argv: list[str] | None = None) -> int:
     stats["git_repos"] = len(repos)
     for r in repos:
         findings += discover.audit_repo(r)
+
+    if not args.no_session_history:
+        if min(args.session_budget_mb, args.session_file_cap_mb, args.session_max_files) < 1:
+            print("asca: session budgets must be >= 1", file=sys.stderr)
+            return 2
+        roots = sessions.default_roots(Path.home(), home)
+        targets["session_history"] = [str(r.path) for r in roots if r.path.exists()]
+        findings += sessions.audit(roots, stats, sessions.Budget(
+            total_bytes=args.session_budget_mb * sessions.MiB, file_bytes=args.session_file_cap_mb * sessions.MiB,
+            max_files=args.session_max_files))
+
+    if not args.no_stray_instructions or args.instructions_dir:
+        dirs = [] if args.no_stray_instructions else stray.default_dirs(Path.home())
+        dirs += [d for d in args.instructions_dir if d not in dirs]
+        targets["instruction_dirs"] = [str(d) for d in dirs]
+        findings += stray.audit(dirs, stats)
 
     if not args.no_global_git:
         targets["global_git_configs"] = [str(p) for p in discover.global_git_configs()]
