@@ -16,7 +16,7 @@ asca 0.1.0: FAIL (fail-on high)
 
 ## What it checks
 
-_Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where your agents connect and alerts on new destinations, a [fleet patch monitor](#fleet-patch-monitor-asca-fleet) that tells you how many Hermes security fixes each instance is behind, and a [fake-app & skill scanner](#fake-app--skill-scanner-asca-skills) for look-alike names and malicious skill content._
+_Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where your agents connect and alerts on new destinations, a [fleet patch monitor](#fleet-patch-monitor-asca-fleet) that tells you how many Hermes security fixes each instance is behind, a [fake-app & skill scanner](#fake-app--skill-scanner-asca-skills) for look-alike names and malicious skill content, and an [IDE & agent inventory](#ide--agent-inventory-asca-inventory) that records installed extensions, MCP servers, plugins and skills and alerts when they change._
 
 | Category | Checks |
 |---|---|
@@ -419,6 +419,79 @@ asca-skills restore <name> --quarantine ~/.local/state/asca/quarantine        # 
 
 Exit codes for `asca-skills scan`: 0 PASS, 1 FAIL (warnings at or above `--fail-on`), 2 error,
 **3 BLOCKED** (a gated finding; takes precedence).
+
+## IDE & agent inventory (`asca inventory`)
+
+Coding agents increasingly arrive as IDE extensions, and extensions auto-update. On 29 Oct 2026
+the Cursor extension marketplace served a tampered **Anthropic.claude-code 2.1.312/2.1.313** that
+added an attacker SSH key, persistence and a reverse SSH tunnel
+([Cursor's notice](https://cursor.com/blog/claude-code-extension-security-notice)). The first
+questions after a notice like that are "did I have it, since when, and what else changed?" To
+answer them you need a record from *before* the incident. `asca inventory` keeps that record.
+
+```bash
+python3 -m asca inventory                         # first run learns silently; later runs diff
+python3 -m asca inventory --telegram change --env-file ~/.config/asca/telegram.env
+python3 -m asca inventory --write-approved ~/.config/asca/inventory-baseline.json   # approve today's publishers
+python3 -m asca inventory --baseline ~/.config/asca/inventory-baseline.json
+```
+
+**What it inventories** (read-only; it never runs `code`, `npm`, `git` or anything it finds):
+
+| Source | Where | Identity / version / publisher |
+|---|---|---|
+| VS Code, Insiders, Cursor, Windsurf, VSCodium (+ their `-server` remotes) | `~/.vscode*/extensions`, `~/.cursor/extensions`, … (`--ide-dir LABEL=PATH` for others) | `extensions.json` + each `package.json`: id, version, publisher, marketplace publisher ID, gallery vs VSIX |
+| MCP servers | Claude Code, Cursor, Windsurf, Gemini, VS Code, Codex, goose, Claude Desktop configs, Hermes `config.yaml` | package scope / image owner / URL host; pinned version; hash of command, args, URL and env/header **names** (values are never read into the inventory) |
+| Hermes plugins | `$HERMES_HOME/plugins` | catalog repo owner or git remote; version + catalog/HEAD commit (read from `.git` as text) |
+| Claude Code plugins | `~/.claude/plugins/installed_plugins.json` | marketplace, version |
+| OpenClaw extensions | `~/.openclaw/extensions` | npm scope/author, version |
+| Agent skills | Hermes, OpenClaw, Claude Code, Codex skill folders | Hermes provenance: bundled (manifest hash), hub (lock content hash), local |
+
+Each extension and plugin is hashed over its **code and manifests** (JS/TS, Python, shell,
+native binaries, `package.json`, `plugin.yaml`…), not docs or images. Skills are hashed over all
+files. Budgets keep runs cheap and comparable: `--item-cap-mb` (64), `--node-modules-cap-mb`
+(16) and `--total-mb` per run (1024). Files are cut in a fixed order, so a partly hashed item is
+still compared like for like, and it's listed as a LOW `hash-budget` finding.
+
+**What changes mean:**
+
+| Change | Severity |
+|---|---|
+| Installed build is on the known-bad list (built in: the two Cursor builds above; add your own with `--known-bad`) | 🟥 critical, every run until removed |
+| Files changed but the version didn't (third-party extension, plugin, hub skill) | 🟧 high (tamper) |
+| Same item, different publisher or marketplace publisher ID; or the same name reappears from another publisher | 🟧 high |
+| New item | 🟨 medium |
+| First item from a publisher that isn't approved | 🟨 medium |
+| MCP server launch definition changed | 🟨 medium |
+| Extension switched from marketplace to side-loaded VSIX | 🟨 medium |
+| Bundled Hermes skill edited locally | 🟦 low |
+| Version updated, your own skill edited, item removed | digest only, no alert |
+
+- **Approving publishers:** `approved_publishers` in the `--baseline` file stops the
+  new-publisher finding for publishers you trust. The new item itself is still reported.
+- **Suppressing a finding:** `suppress` entries work exactly as in `asca`.
+- **Alerts:** `--telegram change` alerts when a finding at or above `--alert-on` (default medium)
+  appears that wasn't alerted before. The first run learns silently, unless it already finds a
+  known-bad build. If delivery fails, state isn't saved, so the alert is retried next run.
+- **Exit codes:** 0 = nothing at or above `--fail-on` (high), 1 = something is, 2 = error
+  (including unreadable `extensions.json` or agent config, which also show as HIGH parse errors).
+
+**Limits:**
+- **Version-number tampering:** a malicious build that ships as a *new version* (as the
+  Cursor one did) shows as a routine version update until it's on the known-bad list. The
+  inventory's job there is the record: which version you had and when it arrived.
+- **Offline only:** no marketplace lookups, so it can't tell you a version is bad before
+  someone publishes that.
+- **Hashing:** files outside the hashed set (docs, images, beyond the caps) aren't watched.
+- **Local edits:** a change to your own or agent-edited skills is reported as an edit, not
+  tamper, because those change legitimately all the time.
+- **Platforms:** Linux/macOS/Windows paths are covered; extension dirs on other drives need
+  `--ide-dir`.
+
+**Running it daily:**
+- **macOS (launchd):** see [docs/launchd-inventory.md](docs/launchd-inventory.md).
+- **Linux:** `scripts/asca-daily.sh`, or a cron line such as
+  `15 8 * * * cd ~/Projects/Agent_Supply_Chain_Auditor && python3 -m asca inventory --format none --telegram change --env-file ~/.config/asca/telegram.env`.
 
 ## Limits (MVP)
 

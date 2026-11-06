@@ -100,6 +100,10 @@ def apply_baseline(findings: list[Finding], path: Path) -> None:
 
 
 def run(argv: list[str] | None = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["inventory"]:   # `asca inventory …`: IDE/agent inventory + drift (own options)
+        from .inventory.cli import run as inventory_run
+        return inventory_run(argv[1:])
     args = build_parser().parse_args(argv)
     try:
         fail_on = Severity.parse(args.fail_on)

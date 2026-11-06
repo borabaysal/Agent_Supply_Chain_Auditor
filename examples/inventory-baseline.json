@@ -1,0 +1,6 @@
+{
+  "approved_publishers": ["anthropic", "openai", "ms-python", "github", "nousresearch"],
+  "suppress": [
+    {"fingerprint": "0123456789abcdef", "rule": "inventory.tamper", "reason": "I patched this extension myself"}
+  ]
+}
