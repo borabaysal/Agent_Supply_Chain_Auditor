@@ -128,6 +128,12 @@ def test_unparseable_agent_config_fails_closed(tmp_path):
     assert ("scanner.parse-error", Severity.HIGH) in _rules(agentcfg.audit(tmp_path, None, {}, env={}))
 
 
+def test_codex_on_python_without_tomllib_is_low_not_parse_error(tmp_path, monkeypatch):
+    _codex(tmp_path, 'sandbox_mode = "danger-full-access"\n')
+    monkeypatch.setitem(sys.modules, "tomllib", None)                             # import -> ModuleNotFoundError
+    assert _rules(agentcfg.audit(tmp_path, None, {}, env={})) == {("scanner.unsupported", Severity.LOW)}
+
+
 # ================================================================== python startup hooks
 
 def _site(tmp_path: Path, name="venv") -> Path:

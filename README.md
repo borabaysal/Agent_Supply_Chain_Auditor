@@ -93,6 +93,15 @@ export ASCA_ARGS="--repos $HOME/Projects --baseline $HOME/.config/asca/baseline.
 scripts/asca-daily.sh
 ```
 
+**macOS (launchd)**: full guide in [docs/macos.md](docs/macos.md). Short version:
+
+```bash
+mkdir -p ~/.config/asca && cp examples/macos/asca.conf ~/.config/asca/   # set repos, times, host label
+printf 'TELEGRAM_BOT_TOKEN=\nTELEGRAM_CHAT_ID=\n' > ~/.config/asca/telegram.env && chmod 600 ~/.config/asca/telegram.env
+ASCA_TELEGRAM=never scripts/macos/asca-run.sh audit   # first run by hand; review ~/.local/state/asca/audit/latest.md
+scripts/macos/install-launchd.sh                      # daily audit 08:00, skills 08:10, inventory 08:15
+```
+
 **cron**
 
 ```cron
@@ -489,7 +498,7 @@ still compared like for like, and it's listed as a LOW `hash-budget` finding.
   `--ide-dir`.
 
 **Running it daily:**
-- **macOS (launchd):** see [docs/launchd-inventory.md](docs/launchd-inventory.md).
+- **macOS (launchd):** see [docs/macos.md](docs/macos.md). It sets up the inventory together with the full audit and the skills scan.
 - **Linux:** `scripts/asca-daily.sh`, or a cron line such as
   `15 8 * * * cd ~/Projects/Agent_Supply_Chain_Auditor && python3 -m asca inventory --format none --telegram change --env-file ~/.config/asca/telegram.env`.
 

@@ -187,8 +187,17 @@ def _codex(home: Path, env: dict, agent: _Agent, errors: list[Finding]) -> None:
         return
     try:
         import tomllib
+    except ModuleNotFoundError:   # Python 3.10: no TOML parser in the stdlib, and asca has no dependencies
+        errors.append(Finding(
+            rule="scanner.unsupported", category="scanner", severity=Severity.LOW,
+            title="Codex config not checked: reading config.toml needs Python 3.11+", location=str(p),
+            subject=f"{p}:tomllib",
+            detail="This Python has no tomllib, so the Codex sandbox and endpoint settings weren't read.",
+            remediation="Run asca with Python 3.11 or newer (e.g. `brew install python`)."))
+        return
+    try:
         doc = tomllib.loads(p.read_text(encoding="utf-8"))
-    except Exception as exc:   # includes ModuleNotFoundError on 3.10
+    except (OSError, ValueError) as exc:   # TOMLDecodeError is a ValueError
         errors.append(_parse_error(p, exc))
         return
     scopes = [("", doc)] + [(f"profiles.{k}.", v) for k, v in (doc.get("profiles") or {}).items() if isinstance(v, dict)]
