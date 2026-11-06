@@ -493,6 +493,67 @@ still compared like for like, and it's listed as a LOW `hash-budget` finding.
 - **Linux:** `scripts/asca-daily.sh`, or a cron line such as
   `15 8 * * * cd ~/Projects/Agent_Supply_Chain_Auditor && python3 -m asca inventory --format none --telegram change --env-file ~/.config/asca/telegram.env`.
 
+## Agent config tamper and Python startup hooks (part of `asca`)
+
+Two checks in the main audit, both on by default (`--no-agent-config`, `--no-python-startup` to skip).
+
+### Agent configuration tamper
+
+In Oct 2026 Symantec described an unauthorized relay service that installs the *genuine*
+Codex and Claude Code CLIs, then rewrites their config: it sets
+`sandbox_mode = "danger-full-access"`, allows network access from the write sandbox, points
+`base_url` / `ANTHROPIC_BASE_URL` at its own servers, installs its own token as a user
+environment variable, and switches off telemetry and error reporting
+([report](https://www.security.com/threat-intelligence/openai-claude-unauthorized-relays)).
+HiddenLayer's "Man-in-the-Model" research shows why the endpoint matters: whoever answers the
+model calls can steer what a coding agent runs.
+
+**Where it looks:** `~/.codex/config.toml` (incl. profiles and `model_providers`), Claude Code
+`settings.json` / `settings.local.json` / managed settings (`env`, `permissions`), Hermes
+`config.yaml` (every `base_url`, `approvals.mode`), shell profiles (`.zshrc`, `.bashrc`, …) and
+the process environment.
+
+| Finding | Severity |
+|---|---|
+| Model endpoint on a known relay domain (Symantec's published list) | 🟥 critical |
+| Endpoint override **plus** a disabled sandbox/approvals, telemetry off or a token in config (the relay combination) | 🟧 high |
+| Codex `danger-full-access`, write-sandbox network access, `approval_policy = "never"` with full access; Claude Code `bypassPermissions`; Hermes approvals off | 🟧 high |
+| Endpoint on an unknown host | 🟨 medium |
+| `ANTHROPIC_AUTH_TOKEN` / `CODEX_API_KEY` set in a settings or shell file (the value is never read into the report) | 🟨 medium |
+| Telemetry / error reporting off | 🟦 low |
+| Endpoint on a well-known provider (OpenRouter, Together, Groq, …) | ⬜ info |
+
+Each signal alone is often a deliberate choice: a company gateway, a sandbox-less container,
+privacy settings. Accept those in your baseline. Official, local and private-network endpoints
+(Ollama, LiteLLM on your LAN) are never flagged.
+
+### Python startup hooks
+
+Python runs every `import …` line in any `*.pth` file in site-packages, and imports
+`sitecustomize`/`usercustomize`, at **every** start, pip included. Both LiteLLM compromises
+used this: 1.82.8 shipped `litellm_init.pth` (Mar 2026), 1.107.0 shipped `cook.pth` +
+`sitecustomize.py` in every wheel (Oct 2026).
+
+**Where it looks:** the Hermes venv and bundled Pythons, user site-packages, pipx and uv tool
+environments, every virtualenv under `--repos` (4 levels deep), system site-packages, and
+`--python-site DIR`.
+
+| Finding | Severity |
+|---|---|
+| Known-bad distribution installed (litellm 1.82.7, 1.82.8, 1.107.0) or known-bad hook file (`litellm_init.pth`, `cook.pth`) | 🟥 critical |
+| Executable `.pth` or `sitecustomize` that no installed package owns (not in any `RECORD`), or that uses exec/eval/base64/subprocess/sockets/URLs | 🟧 high |
+| Executable `.pth` or `sitecustomize` owned by an installed package | 🟨 medium, naming the package |
+
+Standard hooks stay quiet when **both** name and content match: virtualenv, setuptools'
+distutils shim, editable installs (setuptools, hatch, pdm), namespace packages, pywin32,
+coverage. Path-only `.pth` files are ignored. A standard *name* with extra code is flagged.
+Files are read as text; no interpreter is started and nothing is imported.
+
+**Limits:** the relay domain and bad-package lists are as published (Oct 2026). Windows
+user-scope environment variables in the registry aren't read. A malicious hook installed by a
+package you trust and named after a standard tool's file, with standard-looking content,
+would pass.
+
 ## Limits (MVP)
 
 - Hub "pinning" means an upstream **commit** is recorded. Hermes' lock currently stores only a content hash, so every community hub skill is reported until Hermes records commits or you vendor skills into a repo you control.
