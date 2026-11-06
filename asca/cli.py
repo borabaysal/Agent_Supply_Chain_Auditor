@@ -12,7 +12,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__, advisories, discover, hermes, report, sessions, stray
+from . import __version__, advisories, agentcfg, discover, hermes, pystartup, report, sessions, stray
 from .model import Finding, Report, Severity
 
 
@@ -52,6 +52,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-client-configs", action="store_true",
                    help="don't auto-discover ~/.claude.json, Cursor, Claude Desktop, Windsurf configs")
     p.add_argument("--no-global-git", action="store_true", help="skip ~/.gitconfig and /etc/gitconfig")
+    p.add_argument("--no-agent-config", action="store_true",
+                   help="skip agent config tamper checks (Codex sandbox, endpoint overrides, approvals, telemetry)")
+    p.add_argument("--claude-settings", type=Path, action="append", default=[], metavar="FILE",
+                   help="extra Claude Code settings.json to check (repeatable)")
+    p.add_argument("--no-python-startup", action="store_true",
+                   help="skip Python startup-hook checks (.pth, sitecustomize) in agent/system environments")
+    p.add_argument("--python-site", type=Path, action="append", default=[], metavar="DIR",
+                   help="extra site-packages dir to check for startup hooks (repeatable)")
     p.add_argument("--no-session-history", action="store_true",
                    help="don't scan agent session/transcript history (Hermes sessions + cron output, Claude Code, "
                         "Codex, Cursor) for saved secrets")
@@ -100,6 +108,10 @@ def apply_baseline(findings: list[Finding], path: Path) -> None:
 
 
 def run(argv: list[str] | None = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["inventory"]:   # `asca inventory …`: IDE/agent inventory + drift (own options)
+        from .inventory.cli import run as inventory_run
+        return inventory_run(argv[1:])
     args = build_parser().parse_args(argv)
     try:
         fail_on = Severity.parse(args.fail_on)
@@ -165,6 +177,15 @@ def run(argv: list[str] | None = None) -> int:
         dirs += [d for d in args.instructions_dir if d not in dirs]
         targets["instruction_dirs"] = [str(d) for d in dirs]
         findings += stray.audit(dirs, stats)
+
+    if not args.no_agent_config:
+        findings += agentcfg.audit(Path.home(), home, stats, extra_claude=args.claude_settings)
+
+    if not args.no_python_startup:
+        sites = pystartup.discover(Path.home(), hermes_install=args.hermes_install or _default_install(),
+                                   repo_roots=list(args.repos), extra=list(args.python_site))
+        targets["python_sites"] = [str(s.path) for s in sites]
+        findings += pystartup.audit(sites, stats)
 
     if not args.no_global_git:
         targets["global_git_configs"] = [str(p) for p in discover.global_git_configs()]
