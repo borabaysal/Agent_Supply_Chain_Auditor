@@ -12,7 +12,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__, advisories, agentcfg, discover, hermes, pystartup, report, sessions, stray
+from . import __version__, advisories, agentcfg, discover, ghtoken, hermes, pystartup, repohooks, report, sessions, stray
 from .model import Finding, Report, Severity
 
 
@@ -52,6 +52,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-client-configs", action="store_true",
                    help="don't auto-discover ~/.claude.json, Cursor, Claude Desktop, Windsurf configs")
     p.add_argument("--no-global-git", action="store_true", help="skip ~/.gitconfig and /etc/gitconfig")
+    p.add_argument("--no-repo-hooks", action="store_true",
+                   help="skip repo-supplied agent hooks (.claude/settings.json, .cursor/hooks.json, folder-open tasks)")
+    p.add_argument("--github-token-scopes", action="store_true",
+                   help="ONLINE: look up the scopes of GitHub tokens found locally (one HTTPS request per token, "
+                        "sent only to that token's own GitHub host)")
     p.add_argument("--no-agent-config", action="store_true",
                    help="skip agent config tamper checks (Codex sandbox, endpoint overrides, approvals, telemetry)")
     p.add_argument("--claude-settings", type=Path, action="append", default=[], metavar="FILE",
@@ -161,6 +166,8 @@ def run(argv: list[str] | None = None) -> int:
     stats["git_repos"] = len(repos)
     for r in repos:
         findings += discover.audit_repo(r)
+        if not args.no_repo_hooks:
+            findings += repohooks.audit_repo(r, discover.resolve_git_dir(r))
 
     if not args.no_session_history:
         if min(args.session_budget_mb, args.session_file_cap_mb, args.session_max_files) < 1:
@@ -177,6 +184,11 @@ def run(argv: list[str] | None = None) -> int:
         dirs += [d for d in args.instructions_dir if d not in dirs]
         targets["instruction_dirs"] = [str(d) for d in dirs]
         findings += stray.audit(dirs, stats)
+
+    if args.github_token_scopes:
+        tokens = ghtoken.discover(Path.home(), home)
+        targets["github_token_sources"] = sorted({s for t in tokens for s in t.sources})
+        findings += ghtoken.audit(tokens, stats)
 
     if not args.no_agent_config:
         findings += agentcfg.audit(Path.home(), home, stats, extra_claude=args.claude_settings)

@@ -4,7 +4,7 @@ A zero-dependency CLI for people who **self-host AI agents**: Hermes Agent, Clau
 
 ```
 $ asca --repos ~/Projects --telegram fail --env-file ~/.hermes/.env
-asca 0.1.0: FAIL (fail-on high)
+asca 0.2.0: FAIL (fail-on high)
   critical=1  high=2  medium=1  low=5  info=2  suppressed=0
   [CRITICAL] core.fsmonitor names a program git runs on every index refresh
       ~/Projects/downloaded-repo/.git/config:3
@@ -562,6 +562,58 @@ Files are read as text; no interpreter is started and nothing is imported.
 user-scope environment variables in the registry aren't read. A malicious hook installed by a
 package you trust and named after a standard tool's file, with standard-looking content,
 would pass.
+
+## Repo hooks and GitHub token scopes (part of `asca`)
+
+### Repo-supplied agent hooks (on by default; `--no-repo-hooks` to skip)
+
+A cloned repository can make your agent or editor run commands nobody typed. asca reads these
+files in every repo under `--repos`:
+
+| File | What can run |
+|---|---|
+| `.claude/settings.json`, `.claude/settings.local.json` | Claude Code `hooks` (SessionStart, PreToolUse, …), `statusLine`, `apiKeyHelper`; plus `env` endpoint overrides, `permissions`, `enableAllProjectMcpServers` |
+| `.cursor/hooks.json` | Cursor hooks (beforeShellExecution, afterFileEdit, …) |
+| `.vscode/tasks.json` | Tasks with `"runOn": "folderOpen"` (VS Code, Cursor, Windsurf) |
+
+A file **committed** to the repo travels with every clone, so it's rated higher than your own
+uncommitted `settings.local.json`. asca checks this by reading `.git/index` as bytes; it never
+runs `git`. If the index is in v4 format, which asca can't read, files are treated as committed.
+
+| Finding | Severity |
+|---|---|
+| Repo settings point the model endpoint at a known relay domain | 🟥 critical |
+| Hook, status line or folder-open task whose command fetches or sends data (curl, wget, `\| sh`, base64, `/dev/tcp`, URLs, `python -c` …) | 🟧 high |
+| Committed `apiKeyHelper`, `bypassPermissions`, or an endpoint override to an unknown host | 🟧 high |
+| Any other committed hook or folder-open task; `Bash(*)` pre-approved; `enableAllProjectMcpServers` | 🟨 medium |
+| An uncommitted plain hook (your own local settings) | 🟦 low |
+
+Local and private endpoints in repo settings are never flagged. A changed command gets a new
+fingerprint, so a hook you accepted in the baseline is reported again if it changes.
+
+### GitHub token scopes (opt-in, online: `--github-token-scopes`)
+
+Agents and the tools they call reuse any GitHub credentials they can find: the `gh` login in
+`hosts.yml`, `GH_TOKEN`/`GITHUB_TOKEN`, and `~/.git-credentials` (including Hermes'
+`$HERMES_HOME/home/.git-credentials`). A prompt injection gets the token's full rights.
+
+GitHub only reveals a classic token's scopes in the `X-OAuth-Scopes` response header. So this
+check makes **one HTTPS request per distinct token**, sent only to that token's own host
+(`api.github.com`, or `https://<host>/api/v3` for GitHub Enterprise Server). That's why it's
+off unless you ask for it. Tokens are never printed; findings show a 4-character prefix, the
+length and a short hash.
+
+| Finding | Severity |
+|---|---|
+| Scopes `delete_repo`, `admin:org`, `admin:enterprise`, `site_admin`, `admin:org_hook`, `admin:public_key` | 🟧 high |
+| Scopes `workflow`, `write:packages`, `delete:packages`, `admin:repo_hook`, `user`, `codespace`, signing-key admin | 🟨 medium |
+| Classic token with no expiry; stored token that no longer works (401); check failed | 🟦 low |
+| Fine-grained token: GitHub doesn't expose its permissions, so asca lists it and tells you where to review it | ⬜ info |
+
+**Limits:**
+- **Keyring storage:** `gh`'s default store (macOS Keychain, OS keyring) isn't read, so on a
+  Mac the `gh` login is usually invisible to asca unless `GH_TOKEN` is set.
+- **Fine-grained and GitHub App tokens:** their permissions can't be checked.
 
 ## Limits (MVP)
 
