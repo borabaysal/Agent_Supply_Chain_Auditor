@@ -12,7 +12,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__, advisories, agentcfg, discover, ghtoken, hermes, pystartup, repohooks, report, sessions, stray
+from . import __version__, advisories, agentcfg, allowlist, discover, ghtoken, hermes, pystartup, repohooks, report, sessions, stray
 from .model import Finding, Report, Severity
 
 
@@ -52,6 +52,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-client-configs", action="store_true",
                    help="don't auto-discover ~/.claude.json, Cursor, Claude Desktop, Windsurf configs")
     p.add_argument("--no-global-git", action="store_true", help="skip ~/.gitconfig and /etc/gitconfig")
+    p.add_argument("--no-agent-allowlist", action="store_true",
+                   help="skip secret scanning of agent allow rules (Claude Code permissions, VS Code auto-approve) and "
+                        "the committed .claude/settings.local.json check")
     p.add_argument("--no-repo-hooks", action="store_true",
                    help="skip repo-supplied agent hooks (.claude/settings.json, .cursor/hooks.json, folder-open tasks)")
     p.add_argument("--github-token-scopes", action="store_true",
@@ -168,6 +171,8 @@ def run(argv: list[str] | None = None) -> int:
         findings += discover.audit_repo(r)
         if not args.no_repo_hooks:
             findings += repohooks.audit_repo(r, discover.resolve_git_dir(r))
+        if not args.no_agent_allowlist:
+            findings += allowlist.audit_repo(r, discover.resolve_git_dir(r), stats)
 
     if not args.no_session_history:
         if min(args.session_budget_mb, args.session_file_cap_mb, args.session_max_files) < 1:
@@ -184,6 +189,9 @@ def run(argv: list[str] | None = None) -> int:
         dirs += [d for d in args.instructions_dir if d not in dirs]
         targets["instruction_dirs"] = [str(d) for d in dirs]
         findings += stray.audit(dirs, stats)
+
+    if not args.no_agent_allowlist:
+        findings += allowlist.audit_home(Path.home(), stats)
 
     if args.github_token_scopes:
         tokens = ghtoken.discover(Path.home(), home)

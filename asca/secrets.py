@@ -47,13 +47,29 @@ def iter_line_secrets(line: str, seen: set[str]):
 
     ``seen`` holds values already reported by the caller; overlapping values are skipped
     (``sk-or-v1-…`` also satisfies the broader OpenAI pattern and the more specific rule,
-    listed first, wins). The generic assignment rule is a fallback for lines no specific
-    rule explained. Callers must redact ``value`` before it reaches a Finding.
+    listed first, wins). Provider-key patterns run first, then passwords typed into commands
+    (PGPASSWORD=, sshpass -p, user:pass@host, Bearer …), and the generic assignment rule is a
+    fallback for lines nothing else explained. Callers must redact ``value`` before it
+    reaches a Finding.
     """
     specific_hit = False
+
+    def fresh(value: str) -> bool:
+        nonlocal specific_hit
+        if any(value in s or s in value for s in seen):
+            specific_hit = True
+            return False
+        seen.add(value)
+        specific_hit = True
+        return True
+
     for rule, rx, sev, label in PATTERNS:
-        if rule == "secret.generic-assignment" and specific_hit:
-            continue
+        if rule == "secret.generic-assignment":
+            for hit in iter_command_secrets(line):
+                if fresh(hit[3]):
+                    yield hit
+            if specific_hit:
+                continue
         for m in rx.finditer(line):
             value = m.group(1) if m.groups() else m.group(0)
             if rule != "secret.private-key" and _PLACEHOLDER.search(value):
@@ -62,12 +78,8 @@ def iter_line_secrets(line: str, seen: set[str]):
                 continue
             if rule != "secret.private-key" and _looks_like_words(value):
                 continue
-            if any(value in s or s in value for s in seen):
-                specific_hit = True
-                continue
-            seen.add(value)
-            specific_hit = True
-            yield rule, sev, label, value, m.end()
+            if fresh(value):
+                yield rule, sev, label, value, m.end()
 
 
 def scan_text(text: str, location: str, *, context: str) -> list[Finding]:
@@ -108,6 +120,110 @@ def _looks_low_entropy(v: str) -> bool:
         return True
     # identifiers like "some_function_name_here" are not secrets
     return bool(re.fullmatch(r"[a-z_]+", v)) or bool(re.fullmatch(r"[A-Z_]+", v))
+
+
+# ---------------------------------------------------------------- passwords typed into commands
+# Coding agents save the literal command they were allowed to run ("don't ask again"), and
+# transcripts keep every command. Provider keys are caught by PATTERNS above; these catch the
+# passwords and tokens that have no recognisable prefix (Apiiro, Nov 2026: 743 of 1,379 leaked
+# secrets in Claude Code allow rules were passwords/tokens next to a host, mostly DB logins).
+_V = r"""(['"]?)([^\s'"`;|&<>]{3,128})\1"""          # optional quotes, then the value (group 2 of the pair)
+CMD_PATTERNS: list[tuple[str, re.Pattern, str]] = [
+    ("env", re.compile(r"\b(?:PGPASSWORD|MYSQL_PWD|REDISCLI_AUTH|SSHPASS|MONGO(?:DB)?_PASSWORD)\s*=\s*" + _V),
+     "Database password in a command"),
+    ("mysql", re.compile(r"\b(?:mysql|mysqldump|mysqladmin|mariadb|mariadb-dump)\b[^\n|;&]*?\s-p(?!\s)" + _V),
+     "MySQL password in a command (-p)"),
+    ("opt", re.compile(r"(?<![\w-])--password[= ](?!-)" + _V), "Password option in a command (--password)"),
+    ("sshpass", re.compile(r"\bsshpass\s+-p\s*" + _V), "SSH password in a command (sshpass -p)"),
+    ("curl", re.compile(r"\bcurl\b[^\n|;&]*?\s(?:-u|--user)\s*(['\"]?)[^\s:'\"]{1,64}:([^\s'\"`;|&<>]{3,128})\1"),
+     "HTTP basic-auth password in a command (curl -u)"),
+    ("url", re.compile(r"\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|rediss?|amqps?|https?|ftps?|smtps?|ldaps?)"
+                       r"://[^\s:/@'\"<>]{1,64}:()([^\s@/'\"<>]{3,128})@"), "Password in a connection URL"),
+    ("bearer", re.compile(r"(?i)\bbearer\s+()([A-Za-z0-9._~+/-]{20,}=*)"), "Bearer token in a command"),
+]
+_CMD_FAKE = {"password", "passwd", "pass", "pwd", "secret", "changeme", "mypassword", "yourpassword", "your_password",
+             "password123", "pass123", "secret123", "mysecretpassword", "foo", "bar", "foobar", "test", "testing",
+             "example", "admin", "root", "postgres", "mysql", "user", "username", "guest", "token", "hunter2",
+             "xxx", "xxxx", "abc123", "123456", "12345678", "qwerty", "letmein", "pa55word", "p@ssw0rd", "dbpass",
+             "db_password", "db_pass", "mypass", "yourpass", "apikey", "api_key", "your_token", "mytoken", "access_token",
+             "tok", "pat", "key", "pw", "pwd123", "s3cret", "secret!", "passw0rd", "pa$$word"}
+_HOST_RXS = (re.compile(r"(?:^|\s)(?:-h|--host[= ]|-H(?=\s+\d))\s*['\"]?([A-Za-z0-9.\-]+|\[[0-9a-f:]+\])"),
+             re.compile(r"\bhost\s*=\s*['\"]?([A-Za-z0-9.\-]+)"),
+             re.compile(r"[@/]([A-Za-z0-9][A-Za-z0-9.\-]*\.[A-Za-z]{2,}|\d{1,3}(?:\.\d{1,3}){3}|localhost)\b"))
+PRIVATE_SUFFIXES = (".local", ".internal", ".lan", ".home", ".localdomain", ".test", ".example", ".invalid",
+                    ".localhost", ".svc", ".cluster.local")
+DOC_HOSTS = ("example.com", "example.org", "example.net")
+
+
+def classify_host(host: str | None) -> str:
+    """public | private (loopback, RFC1918, link-local, *.local, docker names, documentation hosts) | none"""
+    if not host:
+        return "none"
+    h = host.strip("[]").lower().rstrip(".")
+    if h in ("localhost", "host.docker.internal") or h.endswith(PRIVATE_SUFFIXES) or "." not in h and ":" not in h:
+        return "private"            # bare names (db, postgres, redis) are compose/k8s service names
+    if any(h == d or h.endswith("." + d) for d in DOC_HOSTS):
+        return "private"
+    try:
+        import ipaddress
+        ip = ipaddress.ip_address(h)
+        return "private" if (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_unspecified) else "public"
+    except ValueError:
+        return "public"
+
+
+def _cmd_host(line: str, kind: str, m: re.Match) -> str | None:
+    if kind == "url":
+        hm = re.match(r"([A-Za-z0-9.\-]+|\[[0-9a-fA-F:]+\])", line[m.end():])
+        return hm.group(1) if hm else None
+    for rx in _HOST_RXS:
+        hm = rx.search(line)
+        if hm:
+            return hm.group(1)
+    return None
+
+
+def _fake_value(v: str) -> bool:
+    """Placeholders, variables and benchmarked look-alikes that aren't real passwords."""
+    from urllib.parse import unquote
+    lv = v.lower()
+    if lv in _CMD_FAKE or _PLACEHOLDER.search(v) or v[0] in "$%{(*<[" or "$(" in v:
+        return True
+    if "\\" in v or "[^" in v or "," in v:                      # regex/sed fragments, port lists
+        return True
+    if any(c.isspace() for c in unquote(v)):                    # a%20secret: a phrase, not a password
+        return True
+    if re.fullmatch(r"[*x.\-_]+|[A-Z][A-Z0-9_]*", v):          # ****, xxx, DB_PASSWORD (a variable name)
+        return True
+    return bool(re.fullmatch(r"(?i)(my|your|the|some)?_?(db|database|mysql|pg|redis|ssh|root|admin|user)?_?"
+                             r"(pass(word|wd)?|pwd|secret|token)s?_?(here|123)?", v))
+
+
+def iter_command_secrets(line: str):
+    """Yield ``(rule, severity, label, value, end)`` for passwords/tokens typed into commands."""
+    for kind, rx, label in CMD_PATTERNS:
+        for m in rx.finditer(line):
+            value = m.group(2)
+            # bearer values have no prefix: require some randomness (JWTs look like a.b.c, so not _looks_low_entropy)
+            if _fake_value(value) or (kind == "bearer" and (len(set(value)) < 10 or _looks_like_words(value)
+                                                             or not re.search(r"\d", value))):
+                continue
+            if kind == "url" and value.lower() in ("x-oauth-basic", ""):
+                continue
+            host = _cmd_host(line, kind, m)
+            if kind == "url" and not host:
+                continue                # "https://user:tok@" in prose: no host, nothing to log in to
+            where = classify_host(host)
+            if kind in ("env", "mysql", "opt") and where == "none":
+                where = "private"       # no host given: local socket
+            if where == "private":
+                yield "secret.command-password-private", Severity.LOW, label + " (local or private host)", value, m.end()
+            else:
+                yield "secret.command-password", Severity.HIGH, label, value, m.end()
+
+
+RULE_SEVERITY = {"secret.command-password": Severity.HIGH, "secret.command-password-private": Severity.LOW,
+                 "secret.generic-assignment": Severity.MEDIUM}
 
 
 def scan_file(path: Path, *, context: str, display: str | None = None) -> list[Finding]:

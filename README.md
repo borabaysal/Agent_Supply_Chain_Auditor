@@ -615,6 +615,85 @@ length and a short hash.
   Mac the `gh` login is usually invisible to asca unless `GH_TOKEN` is set.
 - **Fine-grained and GitHub App tokens:** their permissions can't be checked.
 
+## Secrets in agent allow lists ("don't ask again") (part of `asca`)
+
+When you approve a command with **"Yes, and don't ask again"**, Claude Code saves the *literal*
+command as a permission rule, e.g. `Bash(PGPASSWORD=… psql -h db.prod…)`, in
+`<project>/.claude/settings.local.json`. Claude Code excludes that file only in your **global**
+git config, never in the repo's `.gitignore`, so it's easy to commit. Apiiro found 104,185
+public copies and 1,122 with a real secret; many were passwords next to a host that neither
+gitleaks nor TruffleHog flagged
+([Apiiro, Nov 2026](https://apiiro.com/blog/coding-agents-leaking-secrets-github-dont-ask-again)).
+
+On by default; `--no-agent-allowlist` to skip.
+
+**What it reads** (as text; nothing is executed and `git` is never run):
+
+| Where | What |
+|---|---|
+| `~/.claude/settings.json`, `settings.local.json`, managed settings, every repo's `.claude/settings*.json` | Claude Code `permissions.allow` / `ask` / `deny` rules |
+| `~/.claude.json` | older Claude Code's per-project `allowedTools` |
+| VS Code, Insiders, Cursor, Windsurf, VSCodium user settings; every repo's `.vscode/settings.json` | `chat.tools.terminal.autoApprove` and `chat.tools.urls.autoApprove` ([VS Code docs](https://code.visualstudio.com/docs/agents/run/approvals)), plus the older `chat.agent.terminal.allowList` / `denyList` |
+| Every repo under `--repos` | whether `.claude/settings.local.json` is committed (`.git/index`) or not excluded by the repo's own `.gitignore`; committed `.specstory/` transcripts |
+
+| Finding | Severity |
+|---|---|
+| Provider key, or a password/token for a public host, in an allow rule (`secret.agent-allowlist`) | 🟧 high |
+| `.claude/settings.local.json` committed and holding a secret | 🟧 high |
+| Password for a local/private host in an allow rule; committed `settings.local.json` without a secret; committed `.specstory/` transcripts | 🟨 medium |
+| `.claude/` exists but the repo's `.gitignore` doesn't exclude `settings.local.json` (fix: `echo '.claude/settings.local.json' >> .gitignore`) | 🟦 low |
+
+Findings show the rule with the secret redacted (4-character prefix, length and short hash).
+The remediation is ordered:
+1. Rotate first: removal doesn't clear history, forks or clones.
+2. `git rm --cached` and the repo `.gitignore`.
+3. Delete the rule.
+4. Use `$VAR` in commands.
+5. Approve patterns like `Bash(npm run:*)` instead of literal commands.
+
+### Passwords typed into commands (all secret scans)
+
+Provider keys have recognisable prefixes; passwords don't. asca now also detects these in every
+secret scan (allow rules, `.env`/config files, MCP definitions and agent session history):
+
+- **Environment variables:** `PGPASSWORD=`, `MYSQL_PWD=`, `REDISCLI_AUTH=`, `SSHPASS=`.
+- **Command options:** `mysql -p<pw>`, `--password=`, `sshpass -p`.
+- **Credentials in URLs:** `user:pass@host` (postgres, mysql, mongodb, redis, amqp, http(s), ftp, smtp, ldap).
+- **HTTP auth:** `curl -u user:pass`, `Authorization: Bearer <token>` (JWTs included).
+
+**Severity follows the host:** public host is 🟧 high (`secret.command-password`). Loopback,
+private ranges, `*.local`/`*.internal`, bare compose service names (`db`, `postgres`) and
+documentation hosts (`example.com`, `*.test`, TEST-NET) are 🟦 low
+(`secret.command-password-private`); in an allow rule that becomes medium. A database command
+with no host counts as local (it uses the socket).
+
+**Not reported:**
+- Variables (`$PGPASSWORD`, `${DB_PASS}`, `$(…)`) and placeholders (`<password>`, `***`,
+  `YOUR_TOKEN`).
+- Common example passwords (`password`, `changeme`, `postgres:postgres`) and URLs without a host.
+- Regex and `sed` fragments, and phrases (`a%20secret`).
+
+**False-positive benchmark (0 hits):** 15,685 benign files, 5.2 million lines, covering
+1,068 official Hermes skill files, 1,011 host skill/plugin files, 1,991 repo files and the
+11,615-file Hermes `site-packages`. The first run had 13 hits, all fixed and kept as
+regression tests.
+
+**Real host:** on the maintainer's Hermes host it found one genuine leak the old patterns
+missed. An OpenRouter token sent as `Authorization: Bearer` in a `curl` command was saved 8
+times in a session transcript (since revoked: HTTP 401).
+
+**Limits:**
+- Only the Claude Code and VS Code stores above. Codex, Cursor's own allow lists, aider and
+  other transcript formats aren't read; shared notes such as `MEMORY.md` go through the normal
+  secret scan only.
+- Passwords for a host on another line, and passwords split across lines, aren't connected.
+- The `.gitignore` check implements the common subset of git's rules. A file re-included
+  under an excluded directory is reported as not ignored.
+- Global excludes and `.git/info/exclude` are deliberately not counted: they protect only
+  this machine.
+- A hand-made key with an impossible shape (e.g. `sk-or-v1-` followed by 64 letters a–f with
+  no digit) is treated as a placeholder.
+
 ## Limits (MVP)
 
 - Hub "pinning" means an upstream **commit** is recorded. Hermes' lock currently stores only a content hash, so every community hub skill is reported until Hermes records commits or you vendor skills into a repo you control.
