@@ -1,6 +1,6 @@
 [project]
 name = "agent-supply-chain-auditor"
-version = "0.2.0"
+version = "0.2.1"
 description = "Audit self-hosted AI agents (Hermes, MCP clients) for unpinned skills/servers, command-executing git config, and exposed keys."
 readme = "README.md"
 requires-python = ">=3.10"
