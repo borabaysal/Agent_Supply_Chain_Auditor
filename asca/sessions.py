@@ -51,6 +51,8 @@ WINDOW, OVERLAP = 4000, 256        # long (unescaped) lines are scanned in overl
 TRIGGER_TOKENS = (
     "-----begin", "akia", "asia", "ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_", "sk-", "xox", ":aa",
     "aiza", "_live_", "hf_", "priv", "wallet", "password",
+    # passwords typed into commands (secrets.CMD_PATTERNS); URL credentials are checked separately below
+    "mysql_pwd", "rediscli_auth", "sshpass", "bearer", "mysql", "mariadb", "curl -u", "--user",
     *(a + sep + b for a, b in (("api", "key"), ("api", "secret"), ("secret", "key"), ("access", "token"),
                                ("auth", "token"), ("client", "secret")) for sep in ("_", "-", "")),
 )
@@ -58,7 +60,7 @@ TRIGGER_TOKENS = (
 
 def triggered(text: str) -> bool:
     low = text.lower()
-    return any(t in low for t in TRIGGER_TOKENS)
+    return any(t in low for t in TRIGGER_TOKENS) or ("://" in low and "@" in low)
 
 
 CURSOR_KEYS = ("%chat%", "%composer%", "%bubble%", "%aiService%", "%prompt%")
@@ -492,7 +494,7 @@ def audit(roots: list[Root], stats: dict, budget: Budget | None = None) -> list[
             remediation="Run the audit as the user that owns the agent's history, or fix the file permissions."))
 
     for h, s in sorted(found.items(), key=lambda kv: (kv[1].root.agent, kv[1].label, kv[0])):
-        sev = Severity.MEDIUM if s.rule == "secret.generic-assignment" else Severity.HIGH
+        sev = secrets.RULE_SEVERITY.get(s.rule, Severity.HIGH)
         out.append(Finding(
             rule=RULE, category="secrets", severity=sev,
             title=f"{s.label} saved in agent session history",

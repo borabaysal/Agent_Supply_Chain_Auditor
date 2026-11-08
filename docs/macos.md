@@ -126,6 +126,29 @@ no longer fail or alert:
 ASCA_TELEGRAM=always scripts/macos/asca-run.sh inventory
 ```
 
+## 4b. One-command check: secrets in "don't ask again" allow rules
+
+Claude Code saves every "Yes, and don't ask again" approval as the literal command, passwords
+included, in `~/.claude/settings*.json` and each project's `.claude/settings.local.json`. That
+file is easy to commit by accident. This checks those files, VS Code / Cursor auto-approve
+settings, every repo under `~/Projects`, and your agent session history, and prints only what
+it finds (secrets redacted):
+
+```bash
+cd ~/Projects/Agent_Supply_Chain_Auditor && git pull --ff-only && SSL_CERT_FILE=/etc/ssl/cert.pem /opt/homebrew/bin/python3 -m asca --repos ~/Projects --no-hermes --no-client-configs --no-global-git --no-stray-instructions --no-python-startup --no-agent-config --no-repo-hooks -o /tmp/asca-allowlist --format text --telegram never
+```
+
+- **Exit 0:** nothing at high or above. **Exit 1:** read the `[HIGH]` lines, and the full
+  report with `open /tmp/asca-allowlist.md`.
+- **For each `secret.agent-allowlist` or `repo.claude-local-settings-committed` finding:**
+  1. Rotate that password or key first.
+  2. If the file is committed: `git rm --cached .claude/settings.local.json`, add it to the
+     repo's `.gitignore`, then commit.
+  3. Delete the rule (Claude Code: `/permissions`).
+- **Faster check:** add `--no-session-history` to skip transcripts (about a minute on a busy
+  laptop).
+- **Every day:** the scheduled `audit` job (section 5) includes this check.
+
 ## 5. Schedule the jobs
 
 ```bash
