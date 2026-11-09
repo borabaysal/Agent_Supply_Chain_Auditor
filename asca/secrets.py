@@ -42,7 +42,35 @@ TEXT_SUFFIX_SKIP = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".
 MAX_FILE_BYTES = 512 * 1024
 
 
-def iter_line_secrets(line: str, seen: set[str]):
+# Text that may sit between a PEM header and its body: newlines (real or JSON-escaped), quotes and
+# string concatenation in source code ("MIIE..."\n "..."), whitespace.
+_PEM_GLUE = re.compile(r"""(?:\\[nr]|[\s"'+,;\\])+""")
+_PEM_BODY = re.compile(r"[A-Za-z0-9+/=]{40,}")
+
+
+def has_key_body(after: str) -> bool:
+    """True when real key material follows a ``-----BEGIN … PRIVATE KEY-----`` header.
+
+    A header alone is how documentation, secret-scanner regexes and checklists *mention* keys
+    (e.g. ``(RSA|OPENSSH|EC|DSA) PRIVATE KEY``); only a base64 body is a key.
+    """
+    m = _PEM_GLUE.match(after)
+    rest = after[m.end():] if m else after
+    # encrypted legacy PEM: "Proc-Type: …" / "DEK-Info: …" header lines, then the body
+    while rest.startswith(("Proc-Type:", "DEK-Info:")):
+        nl = re.search(r"\\[nr]|\n", rest)
+        if not nl:
+            return False
+        rest = rest[nl.end():]
+        g = _PEM_GLUE.match(rest)
+        rest = rest[g.end():] if g else rest
+    return bool(_PEM_BODY.match(rest))
+
+
+_PRESIGNED = re.compile(r"(?:AWSAccessKeyId=|X-Amz-Credential=|Credential=)$", re.I)
+
+
+def iter_line_secrets(line: str, seen: set[str], after: str | None = None):
     """Yield ``(rule, severity, label, value, end)`` for each distinct secret on one line.
 
     ``seen`` holds values already reported by the caller; overlapping values are skipped
@@ -50,7 +78,8 @@ def iter_line_secrets(line: str, seen: set[str]):
     listed first, wins). Provider-key patterns run first, then passwords typed into commands
     (PGPASSWORD=, sshpass -p, user:pass@host, Bearer …), and the generic assignment rule is a
     fallback for lines nothing else explained. Callers must redact ``value`` before it
-    reaches a Finding.
+    reaches a Finding. ``after`` is the text following this line (the next lines of a file);
+    it lets a PEM header on its own line be checked for a key body.
     """
     specific_hit = False
 
@@ -72,6 +101,10 @@ def iter_line_secrets(line: str, seen: set[str]):
                 continue
         for m in rx.finditer(line):
             value = m.group(1) if m.groups() else m.group(0)
+            if rule == "secret.private-key" and not has_key_body(line[m.end():] + "\n" + (after or "")):
+                continue
+            if rule == "secret.aws-access-key" and _PRESIGNED.search(line[max(0, m.start() - 20):m.start()]):
+                continue        # key *ID* inside a pre-signed URL: public by design, the URL's signature expires
             if rule != "secret.private-key" and _PLACEHOLDER.search(value):
                 continue
             if rule == "secret.generic-assignment" and _looks_low_entropy(value):
@@ -85,10 +118,12 @@ def iter_line_secrets(line: str, seen: set[str]):
 def scan_text(text: str, location: str, *, context: str) -> list[Finding]:
     found: list[Finding] = []
     seen: set[str] = set()
-    for lineno, line in enumerate(text.splitlines(), 1):
+    lines = text.splitlines()
+    for lineno, line in enumerate(lines, 1):
         if len(line) > 4000:
             line = line[:4000]
-        for rule, sev, label, value, _end in iter_line_secrets(line, seen):
+        after = "\n".join(lines[lineno:lineno + 6]) if "PRIVATE KEY" in line else None   # encrypted PEM: 3 header lines
+        for rule, sev, label, value, _end in iter_line_secrets(line, seen, after):
             preview = "" if rule == "secret.private-key" else f" ({redact(value)})"
             found.append(Finding(
                 rule=rule, category="secrets", severity=sev,

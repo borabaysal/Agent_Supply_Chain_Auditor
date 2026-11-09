@@ -245,7 +245,7 @@ def test_session_permissions_respect_parent_reachability(tmp_path):
 
 
 def test_trigger_tokens_cover_every_secret_pattern():
-    samples = [PEM, fake("AK" + "IA", 16, string.ascii_uppercase + string.digits), GH,
+    samples = [f"{PEM}\n{fake('', 70, seed=9)}", fake("AK" + "IA", 16, string.ascii_uppercase + string.digits), GH,
                fake("github_" + "pat_", 70), ANT, fake("sk-" + "or-v1-", 64, "0123456789abcdef"),
                fake("sk-", 40), fake("xo" + "xb-", 30), "123456789:AA" + fake("", 33),
                fake("AI" + "za", 35), fake("sk_" + "live_", 30), fake("h" + "f_", 36),

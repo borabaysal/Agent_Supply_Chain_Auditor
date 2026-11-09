@@ -224,14 +224,20 @@ def candidate_lines(text: str):
         yield lineno, text[start: end if end != -1 else len(text)]
 
 
-def scan_line(raw: str):
-    """Yield (rule, label, identity, value) for each secret in one transcript line."""
+def scan_line(raw: str, following: str = ""):
+    """Yield (rule, label, identity, value) for each secret in one transcript line.
+
+    ``following`` is the raw text after this line (plain-text transcripts keep a PEM body on
+    the next lines); it's only used to confirm that a private-key header has a key body.
+    """
     text = unescape(raw)
+    full = text + "\n" + following if following else text
     seen: set[str] = set()
     for off, seg in _segments(text):
         if not triggered(seg):
             continue
-        for rule, _sev, label, value, end in secrets.iter_line_secrets(seg, seen):
+        after = full[off + len(seg): off + len(seg) + 600] if "PRIVATE KEY" in seg else None
+        for rule, _sev, label, value, end in secrets.iter_line_secrets(seg, seen, after):
             if rule == "secret.private-key":
                 # the header is identical for every key; identify the key by the body that follows
                 body = re.sub(r"\s+", "", text[off + end: off + end + 200])[:120]
@@ -258,7 +264,11 @@ def _record(found: dict, root: Root, where: str, rule: str, label: str, identity
 def _scan_blob(block: bytes, first_line: int, path: Path, root: Root, found: dict) -> None:
     text = block.decode("utf-8", "replace")
     for ln_off, ln in candidate_lines(text):
-        for rule, label, ident, value in scan_line(ln):
+        following = ""
+        if "PRIVATE KEY" in ln:
+            i = text.find(ln)
+            following = text[i + len(ln): i + len(ln) + 600] if i >= 0 else ""
+        for rule, label, ident, value in scan_line(ln, following):
             _record(found, root, f"{path}:{first_line + ln_off}", rule, label, ident, value, str(path))
 
 
@@ -333,8 +343,10 @@ def _scan_sqlite(path: Path, root: Root, budget: Budget, found: dict) -> None:
                 data = data[: max(0, cap - read)]
                 read += len(data)
                 text = data.decode("utf-8", "replace")
-                for i, ln in enumerate(text.split("\n"), 1):
-                    for rule, label, ident, val in scan_line(ln):
+                rows = text.split("\n")
+                for i, ln in enumerate(rows, 1):
+                    following = "\n".join(rows[i:i + 6]) if "PRIVATE KEY" in ln else ""
+                    for rule, label, ident, val in scan_line(ln, following):
                         _record(found, root, f"{path}#{key}:{i}", rule, label, ident, val, str(path))
                 if read >= cap:
                     budget.truncated_files += 1
