@@ -150,7 +150,8 @@ def test_secret_placeholders_and_word_fixtures_ignored():
 
 def test_private_key_block_no_preview():
     header = "-----BEGIN OPENSSH " + "PRIVATE KEY-----"
-    f = secrets.scan_text(header + "\nabc\n", "k", context="t")
+    body = "".join(random.choice(string.ascii_letters + string.digits + "+/") for _ in range(70))
+    f = secrets.scan_text(header + "\n" + body + "\n", "k", context="t")   # a header alone isn't a key
     assert f[0].severity == Severity.CRITICAL and "len=" not in f[0].detail
 
 

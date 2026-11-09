@@ -4,7 +4,7 @@ A zero-dependency CLI for people who **self-host AI agents**: Hermes Agent, Clau
 
 ```
 $ asca --repos ~/Projects --telegram fail --env-file ~/.hermes/.env
-asca 0.2.1: FAIL (fail-on high)
+asca 0.2.2: FAIL (fail-on high)
   critical=1  high=2  medium=1  low=5  info=2  suppressed=0
   [CRITICAL] core.fsmonitor names a program git runs on every index refresh
       ~/Projects/downloaded-repo/.git/config:3
@@ -698,6 +698,8 @@ times in a session transcript (since revoked: HTTP 401).
 
 - Hub "pinning" means an upstream **commit** is recorded. Hermes' lock currently stores only a content hash, so every community hub skill is reported until Hermes records commits or you vendor skills into a repo you control.
 - Secret detection is pattern-based. It catches common providers and obvious assignments, not every possible secret.
+- A private-key header on its own (`-----BEGIN … PRIVATE KEY-----` in docs, checklists or secret-scanner regexes) isn't reported: asca needs base64 key material after the header (same line, the next lines of a file, or a quoted string in source code; encrypted PEMs included). A truncated key that shows only its header is therefore missed.
+- AWS access key IDs inside pre-signed URLs (`AWSAccessKeyId=`, `X-Amz-Credential=`) aren't reported: the ID is public by design and the URL's signature expires.
 - Session-history scanning reads plain-text and JSON transcripts plus Cursor's SQLite chat rows. It doesn't read other binary or encrypted stores, Claude Desktop or ChatGPT app history, or transcripts from agents not listed above. Each file is scanned up to the per-file cap, and the remainder of a larger file is skipped.
 - A secret split across two JSON lines, or longer than the 256-char window overlap, can be missed.
 - Stray-instruction search covers only the folders listed (plus `--instructions-dir`), two levels deep. It can't tell a legitimate instruction file from an extracted archive. Use a baseline for ones you accept.

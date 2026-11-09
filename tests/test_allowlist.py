@@ -312,3 +312,44 @@ def test_hand_made_toy_key_is_treated_as_placeholder():
     real = fake_openrouter()
     assert [r for r, _s, _v in _hits(f"Bash(curl -H 'Authorization: Bearer {real}' https://openrouter.ai)")] == \
         ["secret.openrouter-key"]
+
+
+# ================================================================== private-key headers vs keys; pre-signed URLs
+
+def _pem(kind: str = "RSA ") -> tuple[str, str]:
+    import base64
+    body = base64.b64encode(pysecrets.token_bytes(600)).decode()
+    lines = "\n".join(body[i:i + 64] for i in range(0, len(body), 64))
+    return f"-----BEGIN {kind}PRIVATE KEY-----\n{lines}\n-----END {kind}PRIVATE KEY-----", body
+
+
+@pytest.mark.parametrize("line", [   # Bora's Codex transcript: a secret-scanner regex, not a key
+    r"rg -n '(-----BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9_-]{20,})'",
+    "Never commit -----BEGIN PRIVATE KEY----- blocks.", "-----BEGIN OPENSSH PRIVATE KEY-----", "-----BEGIN RSA PRIVATE KEY----- (redacted)",
+])
+def test_private_key_header_without_body_is_not_a_key(line):
+    assert [h for h in _hits(line) if h[0] == "secret.private-key"] == []
+    assert list(sessions.scan_line(json.dumps({"output": line}))) == []
+
+
+def test_real_private_keys_still_found_everywhere(tmp_path):
+    pem, body = _pem()
+    assert [f.rule for f in secrets.scan_text(pem, "k.pem", context="t")] == ["secret.private-key"]   # file
+    assert [r for r, *_ in sessions.scan_line(json.dumps({"output": pem}))] == ["secret.private-key"]  # JSONL
+    c_src = 'static const char *k = "-----BEGIN RSA PRIVATE KEY-----\\n"\n  "' + body[:64] + '\\n"'
+    assert [h[0] for h in _hits(c_src)] == ["secret.private-key"]                                       # C string
+    enc = "-----BEGIN RSA PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED\nDEK-Info: AES-128-CBC,AB12\n\n" + body[:64]
+    assert [f.rule for f in secrets.scan_text(enc, "e.pem", context="t")] == ["secret.private-key"]   # encrypted PEM
+    plain = tmp_path / "transcript.md"                                                                   # plain-text history
+    plain.write_text("user: show me the key\n" + pem + "\n")
+    found: dict = {}
+    sessions._scan_blob(plain.read_bytes(), 1, plain, sessions.Root("t", tmp_path), found)
+    assert [s.rule for s in found.values()] == ["secret.private-key"]
+
+
+def test_aws_key_id_in_presigned_url_is_not_a_secret():
+    kid = "ASIA" + rnd(16, string.ascii_uppercase + string.digits)
+    for line in (f"https://b.s3.amazonaws.com/preview.pdf?AWSAccessKeyId={kid}&Expires=1773421830&Signature=x",
+                 f"?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential={kid}%2F20260313%2Fus-east-1%2Fs3"):
+        assert [h for h in _hits(line) if h[0] == "secret.aws-access-key"] == []
+    assert [h[0] for h in _hits(f"aws_access_key_id = {kid}")] == ["secret.aws-access-key"]
