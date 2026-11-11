@@ -15,6 +15,13 @@ set -euo pipefail
 ASCA_DIR="${ASCA_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 ASCA_STATE_DIR="${ASCA_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/asca}"
 ASCA_TELEGRAM="${ASCA_TELEGRAM:-change}"
+#   ASCA_DASHBOARD_FILE  dashboard page rebuilt after each run (default: $ASCA_STATE_DIR/dashboard.html)
+#   ASCA_DASHBOARD       where reports say the page is (default: ASCA_DASHBOARD_FILE; set it when you
+#                        open the page from another machine or path, e.g. "myhost:~/.hermes/state/asca/
+#                        dashboard.html"); "off" disables both the page and the report line
+ASCA_DASHBOARD_FILE="${ASCA_DASHBOARD_FILE:-$ASCA_STATE_DIR/dashboard.html}"
+ASCA_DASHBOARD="${ASCA_DASHBOARD:-$ASCA_DASHBOARD_FILE}"
+if [[ "$ASCA_DASHBOARD" == "off" ]]; then unset ASCA_DASHBOARD; else export ASCA_DASHBOARD; fi
 PYTHON="${PYTHON:-python3}"
 
 mkdir -p "$ASCA_STATE_DIR"
@@ -38,4 +45,9 @@ stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 cp -p "$ASCA_STATE_DIR/latest.json" "$ASCA_STATE_DIR/history-$stamp.json" 2>/dev/null || true
 # retain the last 60 history files
 ls -1t "$ASCA_STATE_DIR"/history-*.json 2>/dev/null | tail -n +61 | xargs -r rm -f
+if [[ -n "${ASCA_DASHBOARD:-}" ]]; then
+  # never changes the audit's exit code; a failure is only reported
+  "$PYTHON" -m asca dashboard --state-dir "$ASCA_STATE_DIR" -o "$ASCA_DASHBOARD_FILE" --quiet \
+    || echo "asca: dashboard rebuild failed (audit result unaffected)" >&2
+fi
 exit "$rc"

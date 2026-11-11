@@ -247,6 +247,8 @@ def to_markdown(d: Diff, host_label: str = "") -> str:
         out += [f"_{d.corrupt_lines} corrupt log line(s) skipped._", ""]
     if not d.has_changes and not d.first_run:
         out += ["No new destinations. ✅", ""]
+    from ..report import dashboard_md
+    out += dashboard_md()
     return "\n".join(out)
 
 
@@ -280,4 +282,5 @@ def to_telegram(d: Diff, host_label: str, report_path: str | None, max_items: in
     if report_path:
         parts += ["", f"Report: <code>{e(report_path)}</code>"]
     text = "\n".join(parts)
-    return text if len(text) <= 4096 else text[:4076] + "\n…(truncated)"
+    from ..report import with_dashboard_tg
+    return with_dashboard_tg(text if len(text) <= 4096 else text[:4076] + "\n…(truncated)")

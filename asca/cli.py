@@ -117,6 +117,9 @@ def apply_baseline(findings: list[Finding], path: Path) -> None:
 
 def run(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["dashboard"]:   # `asca dashboard …`: static HTML status page from the reports
+        from .dashboard import run as dashboard_run
+        return dashboard_run(argv[1:])
     if argv[:1] == ["inventory"]:   # `asca inventory …`: IDE/agent inventory + drift (own options)
         from .inventory.cli import run as inventory_run
         return inventory_run(argv[1:])

@@ -31,6 +31,9 @@ TG_ENV="${ASCA_TELEGRAM_ENV:-$CONF_DIR/telegram.env}"
 MODE="${ASCA_TELEGRAM:-change}"
 LOG_DIR="${ASCA_LOG_DIR:-$HOME/Library/Logs/asca}"
 LABEL="${ASCA_HOST_LABEL:-}"
+# Dashboard page rebuilt after every job; its path is printed at the end of every report and alert.
+# ASCA_DASHBOARD=off in asca.conf turns both off.
+DASH="${ASCA_DASHBOARD:-$STATE/dashboard.html}"
 if [ -z "$LABEL" ]; then
   LABEL="$(scutil --get ComputerName 2>/dev/null || hostname)"
 fi
@@ -80,6 +83,12 @@ if [ ! -d "$ASCA_DIR/asca" ]; then
   exit 2
 fi
 cd "$ASCA_DIR" || exit 2
+
+if [ "$DASH" != "off" ]; then
+  export ASCA_DASHBOARD="$DASH"
+else
+  unset ASCA_DASHBOARD
+fi
 
 tg=(--telegram "$MODE")
 [ -f "$TG_ENV" ] && tg+=(--env-file "$TG_ENV")
@@ -132,6 +141,11 @@ case "$job" in
     ;;
 esac
 
+if [ "$DASH" != "off" ]; then
+  # a broken dashboard never changes the job's result; it's only logged
+  "$PY" -m asca dashboard --state-dir "$STATE" -o "$DASH" --host-label "$LABEL" --quiet \
+    || echo "dashboard rebuild failed (job result unaffected)"
+fi
 echo "=== exit $rc"
 if [ "$rc" -ge 2 ] && ! { [ "$job" = "skills" ] && [ "$rc" -eq 3 ]; }; then
   notify_error "asca $job on $LABEL failed (exit $rc). Log: $log"

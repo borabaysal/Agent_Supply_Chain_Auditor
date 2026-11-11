@@ -23,6 +23,31 @@ def to_json(r: Report) -> str:
     }, indent=2, ensure_ascii=False) + "\n"
 
 
+# ------------------------------------------------------------------- dashboard pointer
+
+def dashboard_location() -> str | None:
+    """Where this host's asca dashboard is (``ASCA_DASHBOARD``), shown at the end of every report so
+    nobody has to remember it. Set by the scheduled wrappers; it is a path, never page content."""
+    v = " ".join(os.environ.get("ASCA_DASHBOARD", "").split())
+    return v[:300] or None
+
+
+def dashboard_md() -> list[str]:
+    loc = dashboard_location()
+    return ["", "---", f"Dashboard: `{loc}`", ""] if loc else []
+
+
+def with_dashboard_tg(text: str, limit: int = 4096) -> str:
+    """Append the dashboard line to a Telegram message, trimming the body (not the footer) to fit."""
+    loc = dashboard_location()
+    if not loc:
+        return text
+    footer = f"\nDashboard: <code>{html.escape(loc)}</code>"
+    if len(text) + len(footer) > limit:
+        text = text[: limit - len(footer) - 16] + "\n…(truncated)"
+    return text + footer
+
+
 def _md_cell(s: str) -> str:
     return s.replace("|", "\\|").replace("\n", " ")
 
@@ -78,6 +103,7 @@ def to_markdown(r: Report) -> str:
     if not active:
         lines += ["No findings. 🎉", ""]
     lines += ["---", "_Secrets are never written to this report: only a 4-char prefix, length and a short hash._", ""]
+    lines += dashboard_md()
     return "\n".join(lines)
 
 
@@ -125,7 +151,7 @@ def telegram_text(r: Report, *, host: str, report_path: str | None, max_items: i
     text = "\n".join(parts)
     if len(text) > TELEGRAM_LIMIT:
         text = text[: TELEGRAM_LIMIT - 20] + "\n…(truncated)"
-    return text
+    return with_dashboard_tg(text, TELEGRAM_LIMIT)
 
 
 def _tail(s: str, n: int) -> str:

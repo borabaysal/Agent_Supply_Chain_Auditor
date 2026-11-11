@@ -174,6 +174,26 @@ launchctl print gui/$(id -u)/com.asca.audit | grep -E "state|last exit code|runs
   change once, then learns it.
 - **Errors:** if a job fails (exit 2), the runner sends a short ⚠️ note with the log path, so
   a broken job isn't mistaken for a quiet one.
+- **Every report and alert ends with the dashboard's location** (`Dashboard: …/dashboard.html`).
+
+## 6b. The dashboard
+
+After every job the runner rebuilds one page with the status of all jobs and the fixes to act on:
+
+```bash
+open ~/.local/state/asca/dashboard.html
+```
+
+- **Cards** show each job's status, counts and last run. **STALE** means no new report for over 26
+  hours, so check that the LaunchAgent still runs (see Troubleshooting).
+- **Act on these** lists critical, high and medium findings with where, why and the fix. A click
+  on a command box selects the whole command, ready to copy. **NEW** marks findings first seen in
+  the last 36 hours.
+- **Fixed recently** confirms that a fix you applied took effect.
+- To rebuild it by hand: `cd ~/Projects/Agent_Supply_Chain_Auditor && python3 -m asca dashboard`.
+
+It's a local file: no server, no scripts, no network. Set `ASCA_DASHBOARD` in `asca.conf` to move it,
+or to `off` to disable it.
 
 ## 7. Updating and removing
 
