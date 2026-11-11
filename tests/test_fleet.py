@@ -247,7 +247,7 @@ def test_telegram_message():
     assert "Dashboard authentication hardening: Spoofed" in t and "docker pull" in t
     assert len(t) <= 4096
     ok = monitor.to_telegram(monitor.evaluate([_obs("a", "0.21.6")], RELS, now=NOW), what_changed=["a: v0.21.4 → v0.21.6"])
-    assert ok.startswith("✅ <b>Hermes fleet is patched</b>") and "docker pull" not in ok
+    assert ok.startswith("✅ <b>Hermes fleet is up to date</b>") and "docker pull" not in ok
 
 
 # ------------------------------------------------------------------ CLI
@@ -272,7 +272,7 @@ def test_cli_alerts_on_change_only(tmp_path, monkeypatch):
     assert cli.run(args) == 1 and len(sent) == 1 and "3 security fixes behind" in sent[0]
     assert cli.run(args) == 1 and len(sent) == 1      # still behind, but no change -> silent
     ver.write_text('__version__ = "0.21.6"\n')        # upgraded
-    assert cli.run(args) == 0 and len(sent) == 2 and "patched" in sent[1]
+    assert cli.run(args) == 0 and len(sent) == 2 and "up to date" in sent[1]
     assert (tmp_path / "st" / "fleet-latest.md").exists()
 
 

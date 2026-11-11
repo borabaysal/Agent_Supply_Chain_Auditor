@@ -13,6 +13,7 @@ import json
 import os
 import socket
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .. import hermes as asca_hermes
@@ -41,6 +42,9 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("-o", "--output", type=Path, help="report prefix (default <dir>/fleet-latest)")
     c.add_argument("--format", choices=("text", "json", "none"), default="text")
     c.add_argument("--timeout", type=float, default=15.0)
+    c.add_argument("--remind-days", type=int, default=0, metavar="N",
+                   help="with --telegram change: repeat the alert every N days while an instance stays behind "
+                        "(even with no security fixes), instead of staying quiet until something changes. 0 = off")
     return p
 
 
@@ -95,19 +99,26 @@ def run(argv: list[str] | None = None) -> int:
 
     send = args.telegram == "always" or (args.telegram == "change" and bool(what) and
                                          (what != ["first run"] or not status.ok))
+    now = datetime.now(timezone.utc)
+    stamp = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    remind = (not send and args.telegram == "change" and not what
+              and monitor.reminder_due(prev, status, args.remind_days, now))
+    last_alert = prev.get("last_alert_at") or stamp   # older state: start the reminder clock today
     rc = 0 if status.ok else 1
-    if send:
+    if send or remind:
         token, chat = asca_report.resolve_telegram(args.telegram_chat, args.env_file)
         if not token or not chat:
             print("asca-fleet: telegram: missing bot token or chat id", file=sys.stderr)
             return 2
         ok, desc = asca_report.send_telegram(
-            monitor.to_telegram(status, what_changed=what, report_path=str(out.with_suffix(".md").resolve())),
+            monitor.to_telegram(status, what_changed=what, report_path=str(out.with_suffix(".md").resolve()),
+                                reminder_days=args.remind_days if remind else 0),
             token=token, chat_id=chat)
         print(f"asca-fleet: telegram: {desc}", file=sys.stderr)
         if not ok:
             return 2   # don't save state: retry the alert next run
-    monitor.save_state(state_path, status)
+        last_alert = stamp
+    monitor.save_state(state_path, status, last_alert_at=last_alert)
     return rc
 
 

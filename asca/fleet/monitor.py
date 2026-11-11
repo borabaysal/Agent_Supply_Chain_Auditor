@@ -118,13 +118,37 @@ def load_state(path: Path) -> dict:
         return {}
 
 
-def save_state(path: Path, status: FleetStatus) -> None:
+def save_state(path: Path, status: FleetStatus, *, last_alert_at: str | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    data = status.to_dict()
+    if last_alert_at:
+        data["last_alert_at"] = last_alert_at
     with os.fdopen(fd, "w", encoding="utf-8") as f:
-        json.dump(status.to_dict(), f, indent=1)
+        json.dump(data, f, indent=1)
     os.replace(tmp, path)
+
+
+def needs_attention(s: FleetStatus) -> bool:
+    """Anything a reminder should repeat: behind (with or without security fixes), unreadable, feed down."""
+    return bool(s.feed_error) or any(i.behind or i.unknown_version or i.advisories for i in s.instances)
+
+
+REMIND_SLACK_S = 2 * 3600   # daily jobs drift by minutes; don't let "3 days" slip to 4
+
+
+def reminder_due(prev: dict, cur: FleetStatus, days: int, now: datetime) -> bool:
+    if days <= 0 or not needs_attention(cur):
+        return False
+    last = prev.get("last_alert_at")
+    if not last:
+        return False   # no record yet (state from an older asca): start the clock instead of alerting now
+    try:
+        t = datetime.strptime(last, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return False
+    return (now - t).total_seconds() >= days * 86400 - REMIND_SLACK_S
 
 
 def changes(prev: dict, cur: FleetStatus) -> list[str]:
@@ -193,6 +217,12 @@ def to_markdown(s: FleetStatus) -> str:
                    f"{len(i.hardening)} | {status} |")
     out.append("")
     for i in s.instances:
+        if i.behind and not i.needs_patch and not i.unknown_version:
+            out += [f"## {i.obs.name}", "", headline(i) + ".", "",
+                    "Newer: " + ", ".join(f"[v{r.vstr}]({r.url}) ({r.published})" for r in reversed(i.behind)), "",
+                    "Upgrade when convenient: `docker pull nousresearch/hermes-agent:stable` and recreate the "
+                    "container, or `hermes update` for git installs.", ""]
+            continue
         if not (i.needs_patch or i.unknown_version):
             continue
         out += [f"## {i.obs.name}", "", headline(i), ""]
@@ -209,13 +239,17 @@ def to_markdown(s: FleetStatus) -> str:
                 out.append(f"  - {('_' + it.group + ':_ ') if it.group else ''}{it.text}")
         out += ["", "Upgrade: `docker pull nousresearch/hermes-agent:stable` and recreate the container, "
                     "or `hermes update` for git installs.", ""]
+    from ..report import dashboard_md
+    out += dashboard_md()
     return "\n".join(out)
 
 
 def to_telegram(s: FleetStatus, *, what_changed: list[str], report_path: str | None = None,
-                max_fixes: int = 6) -> str:
+                max_fixes: int = 6, reminder_days: int = 0) -> str:
+    """reminder_days > 0: this is a periodic "still behind" reminder, not a change alert."""
     e = escape
     behind = [i for i in s.instances if i.needs_patch]
+    lagging = [i for i in s.instances if i.behind and not i.needs_patch]
     if s.feed_error and not s.instances:
         title = "⚠️ <b>Hermes patch monitor: release feed failing</b>"
     elif behind:
@@ -225,8 +259,17 @@ def to_telegram(s: FleetStatus, *, what_changed: list[str], report_path: str | N
             title += f" (+{len(behind) - 1} more instance{'s' if len(behind) > 2 else ''})"
     elif s.any_unreachable:
         title = "❔ <b>Hermes patch monitor: an instance's version is unreadable</b>"
+    elif lagging:
+        # behind, but no listed security fixes: not "patched" — say what it is
+        worst = max(lagging, key=lambda i: len(i.behind))
+        title = (f"🟨 <b>{e(worst.obs.name)}: {_plural(len(worst.behind), 'release')} behind</b> "
+                 f"(no security fixes)")
+        if len(lagging) > 1:
+            title += f" (+{len(lagging) - 1} more instance{'s' if len(lagging) > 2 else ''})"
     else:
-        title = "✅ <b>Hermes fleet is patched</b>"
+        title = "✅ <b>Hermes fleet is up to date</b>"
+    if reminder_days:
+        title = "⏰ Reminder · " + title
     parts = [title]
     if s.latest:
         parts.append(f"Latest: <b>v{e(s.latest.vstr)}</b> ({e(s.latest.published)})")
@@ -254,12 +297,16 @@ def to_telegram(s: FleetStatus, *, what_changed: list[str], report_path: str | N
             shown += 1
     if s.feed_error:
         parts += ["", f"⚠️ Feed error: <code>{e(s.feed_error[:150])}</code>"]
-    if what_changed and what_changed != ["first run"]:
+    if reminder_days:
+        parts += ["", f"Nothing changed since the last alert; this repeats every {_plural(reminder_days, 'day')} "
+                      f"while an instance is behind (<code>--remind-days</code>)."]
+    elif what_changed and what_changed != ["first run"]:
         parts += ["", "Changed: " + e("; ".join(what_changed))]
-    if behind:
+    if behind or lagging:
         parts += ["", "Upgrade: <code>docker pull nousresearch/hermes-agent:stable</code> + recreate, "
                       "or <code>hermes update</code>."]
     if report_path:
         parts.append(f"Report: <code>{e(report_path)}</code>")
     text = "\n".join(parts)
-    return text if len(text) <= 4096 else text[:4076] + "\n…(truncated)"
+    from ..report import with_dashboard_tg
+    return with_dashboard_tg(text if len(text) <= 4096 else text[:4076] + "\n…(truncated)")

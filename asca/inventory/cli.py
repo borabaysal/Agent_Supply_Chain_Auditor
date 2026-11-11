@@ -115,6 +115,7 @@ def to_markdown(items, findings, *, first_run: bool, generated: str, host: str, 
     sup = [f for f in findings if f.suppressed]
     if sup:
         out += ["## Suppressed", ""] + [f"- `{f.fingerprint}` {f.title} ({f.suppress_reason})" for f in sup] + [""]
+    out += report.dashboard_md()
     return "\n".join(out)
 
 
@@ -134,7 +135,7 @@ def to_telegram(findings, *, host: str, alert_on: Severity, items: int, report_p
         parts += ["", "Digest: " + ", ".join(f"{n} {k.replace('-', ' ')}" for k, n in sorted(digest.items()))]
     parts += ["", f"Report: <code>{e(report_path)}</code>"]
     text = "\n".join(parts)
-    return text if len(text) <= 4096 else text[:4076] + "\n…(truncated)"
+    return report.with_dashboard_tg(text if len(text) <= 4096 else text[:4076] + "\n…(truncated)")
 
 
 def run(argv: list[str] | None = None) -> int:

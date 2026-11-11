@@ -333,8 +333,12 @@ Remote checks only `cat` a version file. Names and paths are validated, and noth
 The counts depend on how releases are written up, so treat them as a floor.
 
 **Alerts** (`--telegram change`):
-- **When:** on a new release with security fixes, when an instance is upgraded or becomes
-  unreadable, or when the feed starts or stops failing.
+- **When:** on any new Hermes release, when an instance is upgraded or becomes unreadable, or
+  when the feed starts or stops failing. The headline says what it is: "N security fixes behind",
+  "N releases behind (no security fixes)", or "up to date".
+- **Reminders** (`--remind-days N`, off by default): while an instance stays behind (with or
+  without security fixes), the alert repeats every N days instead of going quiet until the next
+  change. A reminder restarts the count, and any change alert does too.
 - **First run:** sends one message if anything is already behind, so a fleet that's behind on
   day one doesn't go unannounced.
 - **Failed delivery:** if a Telegram message can't be delivered, the state isn't saved, so it's
@@ -706,6 +710,47 @@ times in a session transcript (since revoked: HTTP 401).
   this machine.
 - A hand-made key with an impossible shape (e.g. `sk-or-v1-` followed by 64 letters a–f with
   no digit) is treated as a placeholder.
+
+## Dashboard (`asca dashboard`)
+
+One page per host with every asca job's status and the fixes to act on, so you don't have to dig
+through `.md` reports.
+
+```bash
+python3 -m asca dashboard                      # reads ~/.local/state/asca, writes dashboard.html there
+open ~/.local/state/asca/dashboard.html        # macOS; xdg-open on Linux
+```
+
+**What's on it:**
+- **One card per job** (audit, skills, inventory, fleet, egress) with its status, counts, last run
+  time and report file. A job with no new report for over 26 hours is marked **STALE**
+  (`--stale-hours`), so a scheduled job that silently stopped is visible.
+- **Act on these:** every critical, high and medium finding, with *where*, *why* and *fix*.
+  Commands in a fix are in boxes that select with one click. New findings (first seen within the
+  last 36 hours) get a **NEW** badge. Lower-priority and baseline-accepted findings are folded away.
+- **Fixed recently:** audit and skill findings that disappeared in the last 7 days. A report that's
+  missing or unreadable never counts as a fix.
+- **Audit trend** (from `history-*.json`), Hermes patch level, and the egress summary.
+
+**Where the reports come from:** both layouts in use are found automatically: one folder per job
+(`audit/latest.json`, `skills/skills-latest.json`, …, as `scripts/macos/asca-run.sh` writes them) or
+the audit report at the state root (as `scripts/asca-daily.sh` writes it). Use `--state-dir` and
+`-o` for other places, and `--host-label` for the page title.
+
+**Its location at the end of every report.** When `ASCA_DASHBOARD` is set, every Markdown report and
+Telegram alert ends with `Dashboard: <path>`, so you never have to remember where the page is. The
+macOS runner and `scripts/asca-daily.sh` set it to the page they rebuild. Set it yourself when you open
+the page from another machine, e.g. `ASCA_DASHBOARD="myhost:~/.hermes/state/asca/dashboard.html"`.
+It's only a path: no report content or secret is added.
+
+**Safe by construction:**
+- **A file, not a server.** No listening port, nothing to log in to, no network access.
+- **Nothing in it can run.** No JavaScript at all, and a strict `Content-Security-Policy`
+  (`default-src 'none'`) blocks scripts, external images, fonts and frames.
+- **Scanned content is shown as text.** Findings quote things an attacker can choose (skill names,
+  paths, commands), so every value is HTML-escaped; the tests include a hostile skill name.
+- **No secrets, private file.** Reports never contain secret values, and the page is written
+  atomically with mode `0600`, next to `dashboard-state.json` (first-seen dates, also `0600`).
 
 ## Limits (MVP)
 
