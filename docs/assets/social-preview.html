@@ -1,0 +1,46 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+  html,body{margin:0;padding:0;width:1280px;height:640px;overflow:hidden}
+  body{font-family:-apple-system,"Segoe UI",Inter,Helvetica,Arial,sans-serif;color:#e6edf3;
+       background:radial-gradient(900px 520px at 50% 42%,#15365a 0%,#0b1626 55%,#070d17 100%)}
+  .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(120,170,255,.06) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(120,170,255,.06) 1px,transparent 1px);background-size:40px 40px}
+  .center{position:absolute;left:0;right:0;top:72px;display:flex;flex-direction:column;align-items:center;text-align:center}
+  .brand{display:flex;align-items:center;gap:34px}
+  .brand svg{width:190px;height:218px}
+  h1{margin:0;font-size:170px;line-height:.9;font-weight:800;letter-spacing:-.03em}
+  h2{margin:26px 0 0;font-size:50px;font-weight:700;color:#d3dfeb}
+  .tag{margin-top:16px;font-size:27px;color:#9fb3c8}
+  .chips{margin-top:30px;display:flex;gap:12px;justify-content:center}
+  .chip{font-size:22px;padding:7px 16px;border-radius:999px;background:rgba(126,224,167,.12);
+        border:1px solid rgba(126,224,167,.45);color:#d6f5e3;font-weight:600}
+  .foot{position:absolute;left:0;right:0;bottom:26px;text-align:center;font-size:21px;color:#7d93aa}
+  .foot b{color:#c9d6e3;font-weight:600}
+  .side{position:absolute;top:50%;transform:translateY(-50%);font-size:19px;letter-spacing:.2em;text-transform:uppercase;
+        color:#7ee0a7;font-weight:700;writing-mode:vertical-rl}
+  .l{left:70px;transform:translateY(-50%) rotate(180deg)} .r{right:70px}
+</style></head><body>
+<div class="grid"></div>
+<div class="side l">Open source</div><div class="side r">Zero dependencies</div>
+<div class="center">
+  <div class="brand">
+    <svg viewBox="0 0 200 230" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#2f81f7"/><stop offset="1" stop-color="#1a4f9c"/></linearGradient></defs>
+      <path d="M100 8 L186 40 V110 C186 165 150 202 100 222 C50 202 14 165 14 110 V40 Z" fill="url(#g)"
+            stroke="#7cb7ff" stroke-width="5"/>
+      <g fill="none" stroke="#e6edf3" stroke-width="10" stroke-linecap="round">
+        <rect x="42" y="88" width="62" height="36" rx="18"/><rect x="96" y="88" width="62" height="36" rx="18"/>
+      </g>
+      <circle cx="100" cy="164" r="26" fill="#7ee0a7"/>
+      <path d="M87 164 l9 10 l18 -21" fill="none" stroke="#0b1626" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <h1>asca</h1>
+  </div>
+  <h2>Agent Supply-Chain Auditor</h2>
+  <div class="tag">Leaked secrets · tampered extensions · risky agent configs</div>
+  <div class="chips"><span class="chip">Claude Code</span><span class="chip">Codex</span><span class="chip">Cursor</span>
+    <span class="chip">VS Code</span><span class="chip">Hermes</span><span class="chip">MCP</span></div>
+</div>
+<div class="foot"><b>github.com/borabaysal/Agent_Supply_Chain_Auditor</b></div>
+</body></html>

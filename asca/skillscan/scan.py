@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 
 from .. import yamlmini
 from ..model import Finding, Severity
+from . import bytecode
 from . import rules as R
 from .lookalike import Matcher
 from .official import Official
@@ -238,6 +239,19 @@ def _negated(text: str, pos: int) -> bool:
                           before))
 
 
+_HEADING = re.compile(r"^\s{0,3}(#{1,6}\s+.+|\*\*[^*\n]{2,80}\*\*:?\s*)$", re.M)
+_PROHIBITION = re.compile(r"\b(never|don'?t|do\s+not|avoid|red\s+flags?|anti-?patterns?|pitfalls?|mistakes?|"
+                          r"forbidden|prohibited|bad\s+practices?|what\s+not\s+to)\b", re.I)
+
+
+def _under_prohibition_heading(text: str, pos: int) -> bool:
+    """A list under '## Red Flags: Never Do These' states what *not* to do."""
+    last = None
+    for m in _HEADING.finditer(text, 0, pos):
+        last = m
+    return bool(last and _PROHIBITION.search(last.group(0)))
+
+
 def _url_host(url: str) -> str:
     try:
         return (urlparse(url).hostname or "").lower()
@@ -357,6 +371,16 @@ def scan_file(path: Path, official: Official) -> list[_Hit]:
                     sev, note = Severity.HIGH, " (presented as a required prerequisite)"
             if rule.id in ("inject.conceal", "inject.approval-bypass") and _negated(text, m.start()):
                 continue
+            # "never use --no-verify" / "do not proceed without approval" tighten oversight; the
+            # "don't ask / don't check in" branch is negative by construction and isn't re-checked
+            if rule.id == "inject.oversight-loosening" and not re.match(r"(?i)(do|never|no\s+need)", m.group(0)) \
+                    and (_negated(text, m.start()) or (kind == "prose" and _under_prohibition_heading(text, m.start()))):
+                continue
+            if rule.id == "inject.oversight-loosening":
+                if R.CI_CONTEXT.search(line):
+                    sev, note = Severity.LOW, " (scoped to CI/automation)"
+                elif kind == "prose" and line.lstrip().startswith("|"):
+                    sev, note = Severity.LOW, " (in a documentation table)"
             if rule.id == "inject.role-tag" and _quoted_example(text, m.start(), fences):
                 sev, note = Severity.LOW, " (quoted as a chat-template example)"
             if comments and _in_html_comment(text, m.start(), comments):
@@ -387,8 +411,20 @@ def _skill_files(skill: Skill):
 def scan_skill(skill: Skill, official: Official, skills_matcher: Matcher) -> list[Finding]:
     findings: list[Finding] = []
     hits: list[_Hit] = []
+    runs_things = False
     for p in _skill_files(skill):
         hits.extend(scan_file(p, official))
+        if not runs_things:
+            try:
+                runs_things = bool(R.EXEC_SIGNAL.search(p.read_bytes()[:MAX_FILE_BYTES].decode("utf-8", "replace")))
+            except OSError:
+                pass
+    if runs_things:   # loosening + shell/sudo/installs in the same skill removes a checkpoint that matters
+        for h in hits:   # only concrete flags or script code escalate; prose wording stays a warning
+            concrete = re.search(r"--no-verify|--no-gpg-sign|gpgsign|HUSKY=0", h.text) or _kind(h.file) == "code"
+            if h.rule == "inject.oversight-loosening" and h.severity == Severity.MEDIUM and concrete:
+                h.severity = Severity.HIGH
+                h.note += " (the skill also runs shell, sudo or package installs)"
 
     # context: reviewed official skills and security-education skills quote attacks on purpose
     downgrade, why = 0, ""
@@ -425,6 +461,12 @@ def scan_skill(skill: Skill, official: Official, skills_matcher: Matcher) -> lis
                     f"({sink[0].file.name}:{sink[0].line}) in the same skill is the shape of a stealer."
                     + (f" Severity lowered ({why})." if downgrade else "")),
             remediation=REMEDIATE_MALWARE))
+    # bytecode Python would run instead of the visible source (PyCache Trap)
+    for f in bytecode.audit_dir(skill.path, skill.name):
+        if downgrade and f.severity > Severity.LOW and skill.official_provenance:
+            f.severity = _lower(f.severity, 1)
+            f.detail += f" Severity lowered ({why})."
+        findings.append(f)
     findings += name_findings(skill, skills_matcher, official)
     return findings
 
