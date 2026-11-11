@@ -25,17 +25,18 @@ from ..model import Finding
 
 PRESETS: dict[str, list[str]] = {
     # hidden instructions, decode-and-run, credential theft with an outbound sink, AMOS-style
-    # password dialogs, Gatekeeper/Defender tampering, reverse shells, catalog impersonation
+    # password dialogs, Gatekeeper/Defender tampering, reverse shells, catalog impersonation,
+    # bytecode that runs different code than its source (no legitimate skill ships that)
     "default": [
         "skill.hidden-unicode-tags", "skill.encoded-payload", "skill.exec.obfuscated", "skill.cred-plus-exfil",
         "skill.exec.password-prompt", "skill.exec.gatekeeper", "skill.exec.reverse-shell",
-        "lookalike.plugin-repo-mismatch",
+        "lookalike.plugin-repo-mismatch", "skill.bytecode-mismatch",
     ],
     # plus the ClawHavoc delivery tricks and look-alike names at high or above
     "strict": [
         "@default", "skill.exec.password-archive", "skill.exec.download-archive", "skill.exfil.capture-host",
         "skill.cred.os-store", "skill.cred.browser-wallet", "skill.inject.conceal", "skill.inject.override",
-        "lookalike.*",
+        "skill.bytecode-sourceless", "lookalike.*",
     ],
 }
 

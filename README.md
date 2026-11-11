@@ -4,7 +4,7 @@ A zero-dependency CLI for people who **self-host AI agents**: Hermes Agent, Clau
 
 ```
 $ asca --repos ~/Projects --telegram fail --env-file ~/.hermes/.env
-asca 0.2.2: FAIL (fail-on high)
+asca 0.3.0: FAIL (fail-on high)
   critical=1  high=2  medium=1  low=5  info=2  suppressed=0
   [CRITICAL] core.fsmonitor names a program git runs on every index refresh
       ~/Projects/downloaded-repo/.git/config:3
@@ -21,7 +21,7 @@ _Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where
 | Category | Checks |
 |---|---|
 | **Pinning** | Hermes Skills Hub installs with no upstream commit pin · skill taps that track a branch · plugins checked out on a moving branch · MCP servers launched with `npx`/`bunx`/`uvx`/`pipx` without an exact version · `docker run` images without `@sha256:` digest · `git+https://` installs without a commit SHA · skills that tell the agent to `curl … \| sh` · remote MCP servers (reported as *info*, since they can't be pinned) |
-| **Repo config** (GitSpawn) | `core.fsmonitor` set to a program (**critical**, see [CVE-2026-71963](https://www.rapid7.com/db/vulnerabilities/cve-2026-71963/) for Hermes, CVE-2026-19592 for Codex, CVE-2026-72718 for goose), plus every other git key that names a program: `core.hooksPath`, `core.sshCommand`, `core.askPass`, `core.pager`/`pager.*`, `core.editor`, `diff.external`, `diff.*.textconv`, `filter.*.{clean,smudge,process}`, `merge.*.driver`, `credential.helper` (non-builtin), `protocol.ext.allow`, `include.path`/`includeIf`, `!` aliases, `gpg.program` · active (non-`.sample`) git hooks · linked worktrees/submodules (`.git` files) · project `.mcp.json` / `.cursor/mcp.json` that ship with a repo |
+| **Repo config** (GitSpawn) | `core.fsmonitor` set to a program (**critical**, see [CVE-2026-71963](https://www.rapid7.com/db/vulnerabilities/cve-2026-71963/) for Hermes, CVE-2026-19592 for Codex, CVE-2026-72718 for goose), plus every other git key that names a program: `core.hooksPath`, `core.sshCommand`, `core.askPass`, `core.pager`/`pager.*`, `core.editor`, `diff.external`, `diff.*.textconv`, `filter.*.{clean,smudge,process}`, `merge.*.driver`, `credential.helper` (non-builtin), `protocol.ext.allow`, `include.path`/`includeIf`, `!` aliases, `gpg.program` · active (non-`.sample`) git hooks · linked worktrees/submodules (`.git` files) · project `.mcp.json` / `.cursor/mcp.json` / `.vscode/mcp.json` / `.gemini/settings.json` MCP servers that ship with a repo |
 | **Exposed keys** | Literal API keys in agent config, cron jobs, memories, skills, plugins, scripts and MCP `env`/`headers` (Anthropic, OpenAI, OpenRouter, GitHub, Slack, Telegram, AWS, Google, Stripe, HF, wallet private keys, PEM keys, generic `api_key=` assignments) · tokens embedded in git remote URLs and MCP URLs · credential files (`.env`, `auth.json`, `.git-credentials`, `config.yaml`, MCP OAuth tokens) readable by group/other |
 | **Session history** | Literal keys saved in agents' transcripts: Hermes `sessions/*.json(l)` and `cron/output/**` (incl. `profiles/*`), Claude Code `~/.claude/projects/**/*.jsonl`, Codex `~/.codex/sessions/**/*.jsonl` and `history.jsonl`, Cursor chat rows in `state.vscdb` · transcript files/dirs that group/other can actually reach and read. See [Session history](#session-history-secretsession-history). |
 | **Stray agent instructions** | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.cursor/rules/*` … left in `~/Downloads`, `~/Desktop` or the temp dir, outside any git repo; HIGH when the `asca-skills` content rules match. See [Stray agent instructions](#stray-agent-instructions-repostray-agent-instructions). |
@@ -380,13 +380,24 @@ official list:
 
 | Category | What it catches |
 |---|---|
-| prompt-injection | "ignore previous instructions", fake `<system>`/`[INST]` markers, "don't tell the user", "bypass the approval prompt", writing itself into AGENTS.md/MEMORY.md, asking for seed phrases or passwords |
+| prompt-injection | "ignore previous instructions", fake `<system>`/`[INST]` markers, "don't tell the user", "bypass the approval prompt", writing itself into AGENTS.md/MEMORY.md, asking for seed phrases or passwords · **oversight-loosening** (`skill.inject.oversight-loosening`): `--no-verify`, `--no-gpg-sign`, `HUSKY=0`, "proceed without approval", "don't check in", "don't ask before pushing", "skip code review / hooks / verification" |
 | hidden-content | invisible Unicode tag characters (decoded in the report), bidi overrides, zero-width runs, agent-directed text in HTML comments, base64 blobs that decode to commands |
 | credential-access | `~/.ssh`, cloud/registry creds, agent `.env`/`auth.json`, keychain dumps, browser password/cookie DBs, crypto wallets, full env dumps |
 | exfiltration | request-capture services, paste sites and chat webhooks, raw-IP URLs, file uploads |
 | malicious-install | decode-and-run, removing macOS quarantine / disabling Defender, fake password dialogs (AMOS), reverse shells, password-protected archives, `curl \| sh` from unknown hosts, executables presented as prerequisites, bundled binaries |
+| bytecode (PyCache Trap) | `__pycache__/*.pyc` that Python would run instead of the visible source: a cache whose header matches the `.py` (or an unchecked hash-based cache) but whose code differs (`skill.bytecode-mismatch`, high) · a `.pyc` with no `.py` beside it, which `import` runs directly (`skill.bytecode-sourceless`, high) · orphan, foreign-version or malformed caches (`skill.bundled-bytecode`, low/medium) |
 
 - **Credential access plus an outbound sink in the same skill is critical** (the stealer shape).
+- **Oversight-loosening** ([arXiv 2610.37734](https://arxiv.org/abs/2610.37734): about 1 in 17 skills carry such a directive, and open-source scanners catch at most 46%):
+  - Medium by default.
+  - High when it's a concrete flag (`--no-verify` and the others) or sits in a script, *and* the skill also runs shell, `sudo` or package installs.
+  - Low when scoped to CI/automation, or in a documentation table.
+  - Tightening ("never use `--no-verify`", "never ask the user for their password", items under a "Never do these" heading) is ignored, as is UX guidance about clarifying questions.
+- **Bytecode** ([PyCache Trap, arXiv 2610.10612](https://arxiv.org/abs/2610.10612): a swapped cache got past seven skill scanners in 94–100% of cases):
+  - asca reads each `.pyc` header and decides what CPython would do with it.
+  - It compares code objects only for caches Python would actually load: it compiles the visible source and loads the cache body in a separate `python -I -S` helper (isolated mode, no `site`/`.pth`), never running either.
+  - Caches Python generated itself match their source and stay quiet. Stale caches are ignored, because Python recompiles them.
+  - Limit: caches for another Python version can't be compared and are reported low. With `PYTHONPYCACHEPREFIX` set, Python ignores in-tree `__pycache__` folders, but asca still reports a planted one.
 - **Context adjusts severity:**
   - Prose mentions count lower than the same text in a script.
   - Chat-template markers in quotes or code fences are documentation.
@@ -394,8 +405,9 @@ official list:
   - Hermes builtin skills and security-topic skills (which quote attacks on purpose) are
     lowered and labelled. Hidden-content and encoded-payload findings are never lowered.
 - **Tested both ways.** Fixtures modelled on the published ClawHavoc/AMOS samples are all
-  caught. Hermes' 210 official skills, scored as if their origin were unknown, produce 0 high or
-  critical findings.
+  caught. Hermes' official skills, scored as if their origin were unknown, produce 0 high or
+  critical findings (re-checked for v0.3.0 on 186 skills from Hermes 0.23.0). Forged PyCache
+  Trap caches (timestamp and unchecked-hash variants) are caught without being executed.
 
 Reports, baselines, exit codes and `--telegram never|fail|always|change` work exactly like `asca`.
 It never executes anything it scans.
@@ -414,8 +426,8 @@ asca-skills restore <name> --quarantine ~/.local/state/asca/quarantine        # 
 
 | Preset | Blocks |
 |---|---|
-| `default` | near-certain signals only: hidden Unicode-tag instructions, base64 that decodes to commands, decode-and-run, credential access + outbound sink in one skill, fake password dialogs, Gatekeeper/Defender tampering, reverse shells, plugins impersonating a catalog entry |
-| `strict` | `default` plus the ClawHavoc delivery tricks (password-protected archives, "run what's in this zip", capture services), keychain dumps, browser/wallet theft, concealment and override injections, and look-alike names at high or above |
+| `default` | near-certain signals only: hidden Unicode-tag instructions, base64 that decodes to commands, decode-and-run, credential access + outbound sink in one skill, fake password dialogs, Gatekeeper/Defender tampering, reverse shells, plugins impersonating a catalog entry, bytecode that runs different code than its source |
+| `strict` | `default` plus the ClawHavoc delivery tricks (password-protected archives, "run what's in this zip", capture services), keychain dumps, browser/wallet theft, concealment and override injections, bytecode with no source, and look-alike names at high or above |
 
 - **Context still applies:** a gate rule blocks only at high severity or above unless you add a
   suffix such as `:medium`. Quoted examples and security docs still only warn.
@@ -575,6 +587,7 @@ files in every repo under `--repos`:
 | `.claude/settings.json`, `.claude/settings.local.json` | Claude Code `hooks` (SessionStart, PreToolUse, …), `statusLine`, `apiKeyHelper`; plus `env` endpoint overrides, `permissions`, `enableAllProjectMcpServers` |
 | `.cursor/hooks.json` | Cursor hooks (beforeShellExecution, afterFileEdit, …) |
 | `.vscode/tasks.json` | Tasks with `"runOn": "folderOpen"` (VS Code, Cursor, Windsurf) |
+| `.gemini/settings.json` | Gemini CLI `hooks` (SessionStart, BeforeTool, …; [docs](https://geminicli.com/docs/hooks/)). Project settings override the user's. JFrog lists it among the AI/IDE hook files (with `.claude/settings.json`, `.cursor/mcp.json` and `.vscode/tasks.json`) in 42 GitHub repos hijacked by the testmetest campaign ([JFrog, Oct 2026](https://research.jfrog.com/post/beyond-testmetest-42-hijacked-github-repos/)). Its `mcpServers` are audited like a repo's `.mcp.json`. |
 
 A file **committed** to the repo travels with every clone, so it's rated higher than your own
 uncommitted `settings.local.json`. asca checks this by reading `.git/index` as bytes; it never

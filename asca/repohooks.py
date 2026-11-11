@@ -5,6 +5,9 @@ A repository can ship settings that execute commands without anyone typing them:
   ``statusLine``, ``apiKeyHelper``, plus ``env`` (e.g. ``ANTHROPIC_BASE_URL``),
   ``permissions`` and ``enableAllProjectMcpServers``;
 - Cursor ``.cursor/hooks.json`` (beforeShellExecution, afterFileEdit, …);
+- Gemini CLI ``.gemini/settings.json`` ``hooks`` (SessionStart, BeforeTool, …). Project settings
+  take precedence over the user's (https://geminicli.com/docs/hooks/); JFrog lists it among the
+  AI/IDE hook files in 42 GitHub repos hijacked by the testmetest campaign (Oct 2026);
 - VS Code / Cursor / Windsurf ``.vscode/tasks.json`` tasks with ``"runOn": "folderOpen"``.
 
 A file committed to the repo travels with every clone, so the same command is worse there
@@ -25,7 +28,8 @@ MAX_READ = 1024 * 1024
 SUSPICIOUS = re.compile(
     r"(\b(curl|wget|nc|ncat|socat|telnet|ssh|scp|osascript|base64|eval|xattr|certutil|powershell|iex)\b|/dev/tcp|"
     r"https?://|\|\s*(ba|z|da)?sh\b|\bpython3?\s+-c\b|\bnode\s+-e\b|\bperl\s+-e\b|\bbash\s+-c\b|\bsh\s+-c\b)", re.I)
-FILES = (".claude/settings.json", ".claude/settings.local.json", ".cursor/hooks.json", ".vscode/tasks.json")
+FILES = (".claude/settings.json", ".claude/settings.local.json", ".cursor/hooks.json", ".vscode/tasks.json",
+         ".gemini/settings.json")
 
 
 def _h(s: str) -> str:
@@ -111,7 +115,8 @@ def _cmd_finding(rel_loc: str, path: Path, what: str, cmd: str, committed: bool,
                     "changed command gets a new fingerprint and is reported again.")
 
 
-def _claude(path: Path, doc: dict, committed: bool) -> list[Finding]:
+def _hook_groups(path: Path, doc: dict, committed: bool, client: str) -> list[Finding]:
+    """``hooks.<Event>[].hooks[].command``: the shape Claude Code and Gemini CLI share."""
     out: list[Finding] = []
     hooks = doc.get("hooks")
     if isinstance(hooks, dict):
@@ -120,7 +125,20 @@ def _claude(path: Path, doc: dict, committed: bool) -> list[Finding]:
                 for hi, h in enumerate((g.get("hooks") if isinstance(g, dict) else None) or []):
                     if isinstance(h, dict) and isinstance(h.get("command"), str) and h["command"].strip():
                         out.append(_cmd_finding(f"hooks.{event}[{gi}].hooks[{hi}]", path, f"{event} hook",
-                                                h["command"], committed, "Claude Code"))
+                                                h["command"], committed, client))
+    return out
+
+
+def _gemini(path: Path, doc: dict, committed: bool) -> list[Finding]:
+    out = _hook_groups(path, doc, committed, "Gemini CLI")
+    for f in out:
+        f.detail += (" Gemini CLI fingerprints project hooks and warns before running a new or changed one, so "
+                     "this is the command you'd be asked to approve.")
+    return out
+
+
+def _claude(path: Path, doc: dict, committed: bool) -> list[Finding]:
+    out: list[Finding] = _hook_groups(path, doc, committed, "Claude Code")
     sl = doc.get("statusLine")
     if isinstance(sl, dict) and isinstance(sl.get("command"), str) and sl["command"].strip():
         out.append(_cmd_finding("statusLine", path, "status line", sl["command"], committed, "Claude Code"))
@@ -226,7 +244,7 @@ def audit_repo(worktree: Path, git_dir: Path | None) -> list[Finding]:
             if p.stat().st_size > MAX_READ:
                 continue
             text = p.read_text(encoding="utf-8", errors="replace")
-            doc = _jsonc(text) if rel.endswith("tasks.json") else json.loads(text)
+            doc = _jsonc(text) if rel.endswith(("tasks.json", ".gemini/settings.json")) else json.loads(text)
         except (OSError, ValueError) as exc:
             out.append(Finding(rule="scanner.parse-error", category="scanner", severity=Severity.HIGH,
                                title=f"Couldn't parse {rel}", location=str(p), subject=rel,
@@ -240,6 +258,8 @@ def audit_repo(worktree: Path, git_dir: Path | None) -> list[Finding]:
             out += _claude(p, doc, committed)
         elif rel == ".cursor/hooks.json":
             out += _cursor_hooks(p, doc, committed)
+        elif rel == ".gemini/settings.json":
+            out += _gemini(p, doc, committed)
         else:
             out += _vscode_tasks(p, doc, committed)
     return out

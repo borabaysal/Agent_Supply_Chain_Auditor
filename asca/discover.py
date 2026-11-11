@@ -71,7 +71,7 @@ def audit_repo(worktree: Path) -> list[Finding]:
         except OSError:
             pass
     # project-level MCP configs travel with the repo, so they are attacker-influenced too
-    for name in (".mcp.json", ".cursor/mcp.json", ".vscode/mcp.json"):
+    for name in (".mcp.json", ".cursor/mcp.json", ".vscode/mcp.json", ".gemini/settings.json"):
         p = worktree / name
         if p.is_file():
             out += audit_json_mcp(p)

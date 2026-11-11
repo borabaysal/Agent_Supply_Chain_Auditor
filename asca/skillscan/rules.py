@@ -16,6 +16,15 @@ from ..model import Severity
 
 C, H, M, L = Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW
 
+# Oversight-loosening is legitimate when scoped to CI/automation (paper: 70% apply unconditionally).
+CI_CONTEXT = re.compile(r"\b(CI|CI/CD|continuous\s+integration|GitHub\s+Actions?|GitLab\s+CI|pipelines?|"
+                        r"workflows?|cron|headless|non-interactive|unattended|automated\s+runs?)\b", re.I)
+# A skill that also runs shell, installs packages or uses sudo: loosening there removes a real checkpoint
+# (paper: 1.7-1.8x the odds of a loosening directive).
+EXEC_SIGNAL = re.compile(r"(\bsudo\s+\w|\b(pip3?|uv\s+pip|pipx|npm|pnpm|yarn|gem|cargo)\s+(install|add|i)\b|"
+                         r"\b(apt(-get)?|brew|dnf|yum|apk|pacman)\s+(install|add|-S)\b|\bcurl\b[^\n|]*\|\s*(ba|z)?sh\b)",
+                         re.I)
+
 
 @dataclass(frozen=True)
 class Rule:
@@ -69,6 +78,22 @@ RULES: list[Rule] = [
       "Runs an agent with approvals switched off",
       "A skill script that launches an agent with every approval disabled can do anything without asking.",
       prose=L),
+    R("inject.oversight-loosening", "prompt-injection", M,
+      r"(?<![\w-])--no-verify(?![\w-])|(?<![\w-])--no-gpg-sign(?![\w-])|\bcommit\.gpgsign\s*=\s*false\b|\bHUSKY=0\b|"
+      r"\b(proceed|continue|go\s+ahead|run|execute|apply|commit|push|merge|deploy|install|delete|remove|act|"
+      r"keep\s+(going|working))\b[^.\n]{0,40}?\bwithout\s+(asking|approval|confirmation|confirming|permission|"
+      r"prompting|checking\s+(in|with\s+(me|the\s+user|anyone))|waiting\s+for\s+(approval|confirmation|permission|"
+      r"the\s+user|input|a\s+response))\b|"
+      r"\b(do\s*n[o'’]?t|never|no\s+need\s+to)\s+(ask|request|seek|wait)\s+(for\s+)?((the\s+)?(user'?s?|human'?s?|"
+      r"operator'?s?|owner'?s?)\s+)?(approval|permission|confirmation|consent|sign-?off)\b|"
+      r"\b(do\s*n[o'’]?t|never|no\s+need\s+to)\s+check\s+in\b|"
+      r"\b(do\s*n[o'’]?t|never)\s+(ask|check|confirm)\s+((with\s+)?(the\s+)?(user|human|operator|owner)\s+)?before\s+"
+      r"(running|executing|committing|pushing|merging|deploying|deleting|installing|making\s+changes|acting)\b|"
+      r"\bskip\s+(the\s+|all\s+|any\s+)?(code\s+review|review|pre-commit(\s+hooks?)?|git\s+hooks?|hooks|verification|"
+      r"safety\s+checks?|security\s+checks?|signature\s+checks?|approvals?(\s+prompts?)?)\b",
+      "Tells the agent to skip its own checks",
+      "Oversight-loosening: flags like --no-verify, or 'proceed without approval / don't check in', remove a "
+      "checkpoint from every agent that loads the skill. About 1 in 17 skills carry one (arXiv 2610.37734)."),
     R("inject.persistence", "prompt-injection", M,
       r"\b(add|write|append|save|insert|put|inject)\b[^\n]{0,40}\b(to|into|in)\s+(your\s+|the\s+)?"
       r"(MEMORY\.md|USER\.md|AGENTS\.md|CLAUDE\.md|SOUL\.md|GEMINI\.md|\.cursorrules|system\s+prompt|"
