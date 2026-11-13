@@ -234,9 +234,9 @@ def _rel(v):
 
 def test_headline_says_behind_not_patched():
     st = monitor.evaluate([Observation(name="homelab/hermes", spec="local:/x", version="0.23.0", source="t")],
-                          [_rel("0.23.0"), _rel("0.23.1")])
+                          [_rel("0.23.0"), _rel("0.23.1")], now=datetime(2026, 11, 13, 7, 20, tzinfo=timezone.utc))
     t = monitor.to_telegram(st, what_changed=["new release v0.23.1"])
-    assert t.startswith("🟨 <b>homelab/hermes: 1 release behind</b> (no security fixes)")
+    assert t.startswith("🟨 <b>homelab/hermes: 1 release behind for 3 days</b> (v0.23.1 released 10 Nov, no security fixes)")
     assert "patched" not in t and "docker pull" in t and "Changed: new release v0.23.1" in t
     md = monitor.to_markdown(st)
     assert "## homelab/hermes" in md and "Upgrade when convenient" in md and "[v0.23.1](" in md
@@ -293,3 +293,86 @@ def test_reminder_off_by_default_and_old_state_starts_clock(tmp_path, monkeypatc
     assert sent == []          # starts the clock instead of alerting immediately
     _fleet_run(tmp_path, monkeypatch, "0.23.0", NOW + timedelta(days=23))
     assert len(sent) == 1 and "Reminder" in sent[0]
+
+
+# ================================================================== fleet: how long behind
+
+def _rel_on(v, published):
+    return Release(version=tuple(int(x) for x in v.split(".")), tag=f"v{v}", name=f"Hermes Agent v{v}",
+                   published=published, url=f"https://github.com/NousResearch/hermes-agent/releases/tag/v{v}")
+
+
+def _inst(version="0.23.0"):
+    return [Observation(name="homelab/hermes", spec="local:/x", version=version, source="t")]
+
+
+AT_0720 = lambda day: datetime(2026, 11, day, 7, 20, tzinfo=timezone.utc)   # noqa: E731
+
+
+@pytest.mark.parametrize("day,phrase", [(10, "since today"), (11, "for 1 day"), (13, "for 3 days")])
+def test_days_behind_0_1_3(day, phrase):
+    st = monitor.evaluate(_inst(), [_rel_on("0.23.0", "2026-11-01"), _rel_on("0.23.1", "2026-11-10")], now=AT_0720(day))
+    i = st.instances[0]
+    assert i.behind_since == "2026-11-10" and i.days_behind == day - 10
+    t = monitor.to_telegram(st, what_changed=[], reminder_days=3)
+    assert t.startswith(f"⏰ Reminder · 🟨 <b>homelab/hermes: 1 release behind {phrase}</b> "
+                        "(v0.23.1 released 10 Nov, no security fixes)")
+    assert f"homelab/hermes (v0.23.0) is 1 release behind {phrase}, no listed security fixes" in t
+    assert f"1 release behind {phrase}" in monitor.to_markdown(st)
+    assert st.to_dict()["instances"][0]["days_behind"] == day - 10
+
+
+def test_several_releases_behind_counts_from_the_oldest_missing():
+    rels = [_rel_on("0.23.0", "2026-11-01"), _rel_on("0.23.2", "2026-11-12"), _rel_on("0.23.1", "2026-11-05")]
+    st = monitor.evaluate(_inst(), rels, now=AT_0720(13))
+    i = st.instances[0]
+    assert i.oldest_missing.vstr == "0.23.1" and i.days_behind == 8
+    t = monitor.to_telegram(st, what_changed=[])
+    assert t.startswith("🟨 <b>homelab/hermes: 2 releases behind for 8 days</b> "
+                        "(oldest missing: v0.23.1, released 5 Nov, no security fixes)")
+
+
+def test_missing_publish_date_leaves_the_count_out():
+    for bad in ("", "not-a-date", "2026-12-01"):           # empty, garbage, in the future
+        st = monitor.evaluate(_inst(), [_rel_on("0.23.0", "2026-11-01"), _rel_on("0.23.1", bad)], now=AT_0720(13))
+        i = st.instances[0]
+        assert i.days_behind is None and i.behind_since is None
+        t = monitor.to_telegram(st, what_changed=[])
+        assert t.startswith("🟨 <b>homelab/hermes: 1 release behind</b> (no security fixes)")
+        assert " day" not in t.split("\n")[0] and "since today" not in t
+        assert "is 1 release behind, no listed security fixes" in monitor.headline(i)
+
+
+def test_security_case_shows_days_too():
+    from asca.fleet.releases import SecurityItem
+    fixed = _rel_on("0.23.1", "2026-11-08")
+    fixed.items.append(SecurityItem(kind="fix", text="Sandbox escape via crafted skill", ids=["GHSA-xxxx-yyyy-zzzz"]))
+    st = monitor.evaluate(_inst(), [_rel_on("0.23.0", "2026-11-01"), fixed], now=AT_0720(13))
+    t = monitor.to_telegram(st, what_changed=[])
+    assert t.startswith("🛡️ <b>homelab/hermes: 1 security fix behind for 5 days</b> (v0.23.1 released 8 Nov)")
+    assert "across 1 release for 5 days" in monitor.headline(st.instances[0])
+
+
+def test_day_count_does_not_change_the_alert_signature():
+    rels = [_rel_on("0.23.0", "2026-11-01"), _rel_on("0.23.1", "2026-11-10")]
+    a = monitor.evaluate(_inst(), rels, now=AT_0720(11))
+    b = monitor.evaluate(_inst(), rels, now=AT_0720(13))
+    assert a.signature() == b.signature()          # a growing count must not make `change` alert daily
+
+
+def test_dashboard_patch_card_recounts_days_at_build_time(tmp_path):
+    st = monitor.evaluate(_inst(), [_rel_on("0.23.0", "2026-11-01"), _rel_on("0.23.1", "2026-11-10")], now=AT_0720(13))
+    (tmp_path / "fleet").mkdir()
+    (tmp_path / "fleet" / "fleet-latest.json").write_text(json.dumps(st.to_dict()))
+    out = tmp_path / "dashboard.html"
+    dashboard.build(tmp_path, out, host="h", now=datetime(2026, 11, 14, 9, 0, tzinfo=timezone.utc))
+    page = out.read_text()
+    assert "<th>behind for</th>" in page and "4 days (since 10 Nov)" in page
+    assert "1 release behind for 4 days, no security fixes" in page
+    # report from an older asca without behind_since: no count, no crash
+    d = st.to_dict()
+    d["instances"][0].pop("behind_since")
+    (tmp_path / "fleet" / "fleet-latest.json").write_text(json.dumps(d))
+    dashboard.build(tmp_path, out, host="h", now=datetime(2026, 11, 14, 9, 0, tzinfo=timezone.utc))
+    page = out.read_text()
+    assert "1 release behind, no security fixes" in page and "since 10 Nov" not in page

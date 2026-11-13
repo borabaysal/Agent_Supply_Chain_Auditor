@@ -339,6 +339,11 @@ The counts depend on how releases are written up, so treat them as a floor.
 - **Reminders** (`--remind-days N`, off by default): while an instance stays behind (with or
   without security fixes), the alert repeats every N days instead of going quiet until the next
   change. A reminder restarts the count, and any change alert does too.
+- **How long:** headlines, per-instance lines and the dashboard's patch card say how long an instance
+  has been behind, e.g. `⏰ Reminder · 🟨 myhost/hermes: 1 release behind for 3 days (v0.23.1 released
+  10 Nov, no security fixes)`. Days count from the publish date of the oldest release it's missing. If
+  that date is unknown, the count is left out rather than guessed. The count doesn't make `change` alert
+  daily: only reminders and real changes send a message.
 - **First run:** sends one message if anything is already behind, so a fleet that's behind on
   day one doesn't go unannounced.
 - **Failed delivery:** if a Telegram message can't be delivered, the state isn't saved, so it's

@@ -74,6 +74,7 @@ class Job:
     text: str = ""
     error: str | None = None
     stale: bool = False
+    now: datetime | None = None    # page-build time, for "behind for N days"
 
     @property
     def label(self) -> str:
@@ -110,8 +111,8 @@ def _is_audit(p: Path) -> bool:
     return d.get("tool") == "agent-supply-chain-auditor" and "skills_scanned" not in (d.get("stats") or {})
 
 
-def load(key: str, path: Path | None) -> Job:
-    j = Job(key=key, path=path)
+def load(key: str, path: Path | None, now: datetime | None = None) -> Job:
+    j = Job(key=key, path=path, now=now)
     if path is None:
         return j
     try:
@@ -159,11 +160,13 @@ def _fleet(j: Job) -> None:
             bits.append(f"{i.get('name')}: version unreadable")
         elif i.get("security_fixes_behind") or i.get("advisories"):
             worst = "fail"
-            bits.append(f"{i.get('name')} v{i.get('version')}: {i.get('security_fixes_behind', 0)} security fix(es) behind")
+            bits.append(f"{i.get('name')} v{i.get('version')}: {i.get('security_fixes_behind', 0)} security fix(es) "
+                        f"behind{_fleet_for(i, j.now)}")
         elif i.get("releases_behind"):
             worst = worst if worst in ("fail", "error") else "warn"
             n = len(i["releases_behind"])
-            bits.append(f"{i.get('name')} v{i.get('version')}: {n} release{'s' if n != 1 else ''} behind, no security fixes")
+            bits.append(f"{i.get('name')} v{i.get('version')}: {n} release{'s' if n != 1 else ''} "
+                        f"behind{_fleet_for(i, j.now)}, no security fixes")
         else:
             bits.append(f"{i.get('name')} v{i.get('version')}: up to date")
     if d.get("feed_error"):
@@ -378,13 +381,33 @@ def _trend(hist: list[dict]) -> str:
             f"<div class='trend'>{''.join(bars)}</div>")
 
 
+def _fleet_days(i: dict, now: datetime | None) -> int | None:
+    """Days behind, recounted at page-build time from the stored publish date (the fleet job runs once a day)."""
+    from .fleet.monitor import behind_for
+    if not i.get("releases_behind") or not isinstance(i.get("behind_since"), str):
+        return None
+    return behind_for(i["behind_since"], now or datetime.now(timezone.utc))[1]
+
+
+def _fleet_for(i: dict, now: datetime | None) -> str:
+    from .fleet.monitor import for_days
+    return for_days(_fleet_days(i, now))
+
+
 def _fleet_html(j: Job) -> str:
     if j.status == "missing":
         return ""
+    from .fleet.monitor import short_date
     rows = []
     for i in j.data.get("instances") or []:
+        if not isinstance(i, dict):
+            continue
+        days = _fleet_days(i, j.now)
+        since = (f"{days} day{'s' if days != 1 else ''} (since {short_date(i.get('behind_since'))})"
+                 if days is not None else "—")
         rows.append(f"<tr><td>{e(i.get('name'))}</td><td>v{e(i.get('version'))}</td>"
                     f"<td>{e(', '.join('v' + str(x) for x in i.get('releases_behind') or []) or '—')}</td>"
+                    f"<td>{e(since)}</td>"
                     f"<td>{e(i.get('security_fixes_behind', 0))}</td></tr>")
     latest = j.data.get("latest") or {}
     url = latest.get("url") if isinstance(latest.get("url"), str) else ""
@@ -397,7 +420,8 @@ def _fleet_html(j: Job) -> str:
                "then recreate the container, or run <code>hermes update</code> on a git install.</dd></dl></div>")
     return (f"<h2>Hermes patch level</h2><div class='mut'>Latest release: v{e(latest.get('version'))} "
             f"({e(latest.get('published'))}){link}</div>"
-            "<table><tr><th>instance</th><th>running</th><th>newer releases</th><th>security fixes missing</th></tr>"
+            "<table><tr><th>instance</th><th>running</th><th>newer releases</th><th>behind for</th>"
+            "<th>security fixes missing</th></tr>"
             + "".join(rows) + "</table>" + tip)
 
 
@@ -512,7 +536,7 @@ def build(state_dir: Path, out: Path, *, host: str, stale_hours: float = 26.0,
           now: datetime | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     paths = discover(state_dir)
-    jobs = {k: load(k, paths.get(k)) for k in CANDIDATES if k in paths}
+    jobs = {k: load(k, paths.get(k), now) for k in CANDIDATES if k in paths}
     for j in jobs.values():
         j.stale = j.generated is not None and (now - j.generated) > timedelta(hours=stale_hours)
     mem = update_memory(out.with_name("dashboard-state.json"), jobs, now)

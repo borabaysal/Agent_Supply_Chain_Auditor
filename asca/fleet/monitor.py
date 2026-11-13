@@ -27,6 +27,14 @@ class InstanceStatus:
     advisories: list[tuple[str, str, str]] = field(default_factory=list)   # (id, severity, fixed)
     unknown_version: bool = False
     ahead: bool = False                                       # newer than any published release
+    # How long it has been behind: counted from the publish date of the oldest release it is missing.
+    # None when that date is unknown; the count is then left out rather than guessed.
+    behind_since: str | None = None                           # YYYY-MM-DD
+    days_behind: int | None = None
+
+    @property
+    def oldest_missing(self) -> Release | None:
+        return self.behind[0] if self.behind else None
 
     @property
     def fixes(self):
@@ -48,7 +56,8 @@ class InstanceStatus:
         return {**self.obs.to_dict(), "releases_behind": [r.vstr for r in self.behind],
                 "security_fixes_behind": len(self.fixes), "hardening_behind": len(self.hardening),
                 "advisories": [{"id": a, "severity": s, "fixed": f} for a, s, f in self.advisories],
-                "unknown_version": self.unknown_version, "ahead_of_latest": self.ahead}
+                "unknown_version": self.unknown_version, "ahead_of_latest": self.ahead,
+                "behind_since": self.behind_since, "days_behind": self.days_behind}
 
 
 @dataclass
@@ -98,8 +107,10 @@ def evaluate(observations: list[Observation], releases: list[Release], *,
             st.unknown_version = True
             out.append(st)
             continue
-        st.behind = [r for r in releases if r.version > v]
+        st.behind = sorted((r for r in releases if r.version > v), key=lambda r: r.version)
         st.ahead = bool(latest) and v > latest.version
+        if st.behind:
+            st.behind_since, st.days_behind = behind_for(st.behind[0].published, now)
         seen_ids = {x for r in st.behind for i in r.fixes for x in i.ids}
         for adv, lo, hi, fixed, sev, _summary in advisories:
             if lo <= v <= hi and adv not in seen_ids:
@@ -107,6 +118,45 @@ def evaluate(observations: list[Observation], releases: list[Release], *,
         out.append(st)
     return FleetStatus(generated_at=now.strftime("%Y-%m-%dT%H:%M:%SZ"), latest=latest, instances=out,
                        feed_error=feed_error)
+
+
+def behind_for(published: str | None, now: datetime) -> tuple[str | None, int | None]:
+    """(date, whole days since it) for a release's publish date; (None, None) if missing or invalid.
+    Calendar days in UTC, so a release published yesterday at 23:00 counts as 1 day."""
+    try:
+        d = datetime.strptime((published or "")[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None, None
+    days = (now.astimezone(timezone.utc).date() - d).days
+    return (d.isoformat(), days) if days >= 0 else (None, None)
+
+
+_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def short_date(iso: str | None) -> str:
+    """'2026-11-10' -> '10 Nov' (locale-independent)."""
+    try:
+        d = datetime.strptime((iso or "")[:10], "%Y-%m-%d")
+    except ValueError:
+        return ""
+    return f"{d.day} {_MONTHS[d.month - 1]}"
+
+
+def for_days(days: int | None) -> str:
+    """' for 3 days' / ' for 1 day' / ' since today' / '' (unknown: left out, never guessed)."""
+    if days is None:
+        return ""
+    return " since today" if days == 0 else f" for {_plural(days, 'day')}"
+
+
+def since_note(i: "InstanceStatus") -> str:
+    """'v0.23.1 released 10 Nov' (or 'oldest missing: v0.22.4, released 4 Nov'); '' if the date is unknown."""
+    r = i.oldest_missing
+    if not r or i.behind_since is None:
+        return ""
+    when = short_date(i.behind_since)
+    return f"v{r.vstr} released {when}" if len(i.behind) == 1 else f"oldest missing: v{r.vstr}, released {when}"
 
 
 # ------------------------------------------------------------------ state
@@ -196,9 +246,9 @@ def headline(i: InstanceStatus) -> str:
         n = len(i.fix_keys)
         extra = f", plus {_plural(len(i.hardening), 'hardening item')}" if i.hardening else ""
         return (f"{i.obs.name} (v{v}) is {_plural(n, 'security fix', 'security fixes')} behind"
-                f" across {_plural(len(i.behind), 'release')}{extra}")
+                f" across {_plural(len(i.behind), 'release')}{for_days(i.days_behind)}{extra}")
     if i.behind:
-        return (f"{i.obs.name} (v{v}) is {_plural(len(i.behind), 'release')} behind, "
+        return (f"{i.obs.name} (v{v}) is {_plural(len(i.behind), 'release')} behind{for_days(i.days_behind)}, "
                 f"no listed security fixes" + (f" ({_plural(len(i.hardening), 'hardening item')})" if i.hardening else ""))
     return f"{i.obs.name} (v{v}) is up to date" + (" (ahead of latest release)" if i.ahead else "")
 
@@ -254,7 +304,8 @@ def to_telegram(s: FleetStatus, *, what_changed: list[str], report_path: str | N
         title = "⚠️ <b>Hermes patch monitor: release feed failing</b>"
     elif behind:
         worst = max(behind, key=lambda i: len(i.fix_keys))
-        title = f"🛡️ <b>{e(worst.obs.name)}: {_plural(len(worst.fix_keys), 'security fix', 'security fixes')} behind</b>"
+        title = (f"🛡️ <b>{e(worst.obs.name)}: {_plural(len(worst.fix_keys), 'security fix', 'security fixes')} behind"
+                 f"{for_days(worst.days_behind)}</b>" + (f" ({e(since_note(worst))})" if since_note(worst) else ""))
         if len(behind) > 1:
             title += f" (+{len(behind) - 1} more instance{'s' if len(behind) > 2 else ''})"
     elif s.any_unreachable:
@@ -262,8 +313,9 @@ def to_telegram(s: FleetStatus, *, what_changed: list[str], report_path: str | N
     elif lagging:
         # behind, but no listed security fixes: not "patched" — say what it is
         worst = max(lagging, key=lambda i: len(i.behind))
-        title = (f"🟨 <b>{e(worst.obs.name)}: {_plural(len(worst.behind), 'release')} behind</b> "
-                 f"(no security fixes)")
+        note = since_note(worst)
+        title = (f"🟨 <b>{e(worst.obs.name)}: {_plural(len(worst.behind), 'release')} behind"
+                 f"{for_days(worst.days_behind)}</b> ({e(note) + ', ' if note else ''}no security fixes)")
         if len(lagging) > 1:
             title += f" (+{len(lagging) - 1} more instance{'s' if len(lagging) > 2 else ''})"
     else:
