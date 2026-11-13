@@ -21,7 +21,7 @@ _Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where
 | Category | Checks |
 |---|---|
 | **Pinning** | Hermes Skills Hub installs with no upstream commit pin · skill taps that track a branch · plugins checked out on a moving branch · MCP servers launched with `npx`/`bunx`/`uvx`/`pipx` without an exact version · `docker run` images without `@sha256:` digest · `git+https://` installs without a commit SHA · skills that tell the agent to `curl … \| sh` · remote MCP servers (reported as *info*, since they can't be pinned) |
-| **Repo config** (GitSpawn) | `core.fsmonitor` set to a program (**critical**, see [CVE-2026-71963](https://www.rapid7.com/db/vulnerabilities/cve-2026-71963/) for Hermes, CVE-2026-19592 for Codex, CVE-2026-72718 for goose), plus every other git key that names a program: `core.hooksPath`, `core.sshCommand`, `core.askPass`, `core.pager`/`pager.*`, `core.editor`, `diff.external`, `diff.*.textconv`, `filter.*.{clean,smudge,process}`, `merge.*.driver`, `credential.helper` (non-builtin), `protocol.ext.allow`, `include.path`/`includeIf`, `!` aliases, `gpg.program` · active (non-`.sample`) git hooks · linked worktrees/submodules (`.git` files) · project `.mcp.json` / `.cursor/mcp.json` / `.vscode/mcp.json` / `.gemini/settings.json` MCP servers that ship with a repo |
+| **Repo config** (GitSpawn) | `core.fsmonitor` set to a program (**critical**, see [CVE-2026-71963](https://www.rapid7.com/db/vulnerabilities/cve-2026-71963/) for Hermes, CVE-2026-19592 for Codex, CVE-2026-72718 for goose), plus every other git key that names a program: `core.hooksPath`, `core.sshCommand`, `core.askPass`, `core.pager`/`pager.*`, `core.editor`, `diff.external`, `diff.*.textconv`, `filter.*.{clean,smudge,process}`, `merge.*.driver`, `credential.helper` (non-builtin), `protocol.ext.allow`, `include.path`/`includeIf`, `!` aliases, `gpg.program` · active (non-`.sample`) git hooks · linked worktrees/submodules (`.git` files) · project `.mcp.json` / `.cursor/mcp.json` / `.vscode/mcp.json` / `.gemini/settings.json` MCP servers that ship with a repo · [coding agents in `.github/workflows` that anyone can trigger](#coding-agents-in-github-workflows-that-anyone-can-trigger-on-by-default---no-ci-agents-to-skip) |
 | **Exposed keys** | Literal API keys in agent config, cron jobs, memories, skills, plugins, scripts and MCP `env`/`headers` (Anthropic, OpenAI, OpenRouter, GitHub, Slack, Telegram, AWS, Google, Stripe, HF, wallet private keys, PEM keys, generic `api_key=` assignments) · tokens embedded in git remote URLs and MCP URLs · credential files (`.env`, `auth.json`, `.git-credentials`, `config.yaml`, MCP OAuth tokens) readable by group/other |
 | **Session history** | Literal keys saved in agents' transcripts: Hermes `sessions/*.json(l)` and `cron/output/**` (incl. `profiles/*`), Claude Code `~/.claude/projects/**/*.jsonl`, Codex `~/.codex/sessions/**/*.jsonl` and `history.jsonl`, Cursor chat rows in `state.vscdb` · transcript files/dirs that group/other can actually reach and read. See [Session history](#session-history-secretsession-history). |
 | **Stray agent instructions** | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.cursor/rules/*` … left in `~/Downloads`, `~/Desktop` or the temp dir, outside any git repo; HIGH when the `asca-skills` content rules match. See [Stray agent instructions](#stray-agent-instructions-repostray-agent-instructions). |
@@ -608,6 +608,49 @@ runs `git`. If the index is in v4 format, which asca can't read, files are treat
 Local and private endpoints in repo settings are never flagged. A changed command gets a new
 fingerprint, so a hook you accepted in the baseline is reported again if it changes.
 
+### Coding agents in GitHub workflows that anyone can trigger (on by default; `--no-ci-agents` to skip)
+
+A workflow that runs Claude Code, Gemini CLI, Codex or GitHub's AI action on an event that anyone
+with a GitHub account can cause (`issues`, `issue_comment`, `pull_request_target`, `discussion`)
+hands a stranger's text to an agent that holds the job's token and secrets. In 2026 researchers
+used this to steal keys from Claude Code, Gemini CLI and Copilot agents through issue and PR text
+([Comment and Control](https://oddguan.com/blog/comment-and-control-prompt-injection-credential-theft-claude-code-gemini-cli-github-copilot/);
+[Aikido PromptPwnd](https://www.aikido.dev/blog/promptpwnd-github-actions-ai-agents)). The vendors
+patched related flaws in their actions
+([GHSA-8q5r-mmjf-575q](https://github.com/anthropics/claude-code-action/security/advisories/GHSA-8q5r-mmjf-575q),
+[GHSA-wpqr-6v78-jr5g](https://github.com/google-github-actions/run-gemini-cli/security/advisories/GHSA-wpqr-6v78-jr5g)),
+but the workflow itself decides who can start the agent and what it can reach.
+
+asca reads `.github/workflows/*.yml` as text. It never runs anything, and only parses files that
+use a known agent action (`anthropics/claude-code-action`, `google-github-actions/run-gemini-cli`,
+`openai/codex-action`, `actions/ai-inference`, …) or call an agent CLI (`claude -p`, `gemini`,
+`codex exec`, `copilot` …) in a `run:` step.
+
+| Finding | Severity |
+|---|---|
+| Untrusted trigger, and the agent can be steered and holds something worth stealing: issue/PR/comment text pasted into its prompt (`${{ github.event.issue.body }}` …), a `pull_request_target` job that checks out the PR's code first (so the agent reads the attacker's `CLAUDE.md` / `AGENTS.md` / `.mcp.json`), or claude-code-action's write-access check switched off (`allowed_non_write_users`, `allowed_bots: '*'`), together with a write token, extra secrets or an OIDC token | 🟧 high |
+| The same, but the job is read-only with no secrets in reach; or claude-code-action's write check is off in the vendor's documented triage setup (only `issues`/`pull-requests` write and the model key); or text is pasted into the prompt of a job that a write-access gate starts; or an ungated agent holds a write token or secrets | 🟨 medium |
+| Ungated agent in a read-only job without secrets · an agent action not pinned to a commit SHA (`repo.ci-agent-unpinned`) · an agent workflow asca couldn't parse | 🟦 low |
+
+What counts as a gate: claude-code-action's default write-access check; an `if:` that tests
+`author_association` for OWNER/MEMBER/COLLABORATOR, a specific actor or an allow list of actors, a
+same-repo PR (`head.repo.full_name == github.repository`), or an earlier job's `authorized`-style
+output; or a step that queries the collaborator permission API. These don't limit who runs it, so they
+don't count: checking the repository name, the commenter being the issue's author, `user.type != 'Bot'`,
+or a trigger phrase like `@claude` in the comment. `pull_request` from a fork gets no secrets and a
+read-only token, so it isn't flagged. codex-action keeps the OpenAI key in its own proxy, so that key
+isn't counted as reachable. Uncommitted workflows are one level lower.
+
+**Benchmark (Nov 2026, 794 real workflow files):** the vendor examples, 18 large agent/tooling repos
+and 106 repos found by GitHub code search for agent actions; 188 of the files run an agent (a few
+repos appear in two samples). HIGH went to 6 jobs,
+each read by hand: 3 paste issue or PR text into an agent holding a write token or extra secrets, 2
+switch the write check off with extra bot PATs in the job, and 1 does both on `pull_request_target`
+with a PR-head checkout. claude-code-action's own `issue-triage.yml` example is MEDIUM. asca's
+YAML reader now resolves anchors and aliases (`&steps` / `*steps`), which real workflows use to
+share steps between jobs. Over 2,069 YAML files the reader parsed 33 more than before and lost none;
+the 15 whose result changed differ only where an anchor is now resolved.
+
 ### GitHub token scopes (opt-in, online: `--github-token-scopes`)
 
 Agents and the tools they call reuse any GitHub credentials they can find: the `gh` login in
@@ -762,6 +805,7 @@ It's only a path: no report content or secret is added.
 - A secret split across two JSON lines, or longer than the 256-char window overlap, can be missed.
 - Stray-instruction search covers only the folders listed (plus `--instructions-dir`), two levels deep. It can't tell a legitimate instruction file from an extracted archive. Use a baseline for ones you accept.
 - Remote (URL) MCP servers can't be pinned and are reported as `info`.
+- The CI-agent check reads workflow files only. It doesn't see repository or organisation settings (the default token permissions, "require approval for fork PRs", branch rules), reusable workflows in other repos, or composite actions that wrap an agent under another name. A job without a `permissions:` block is reported as "doesn't restrict" because the repository default may be read-write.
 - `global core.fsmonitor=false` is suggested as defence in depth only. A repo-local value still overrides it.
 - Version advisories cover Hermes Agent only (extend `asca/advisories.py: PACKAGES` for other agents). For other agents, check vendor advisories; contributions are welcome.
 
