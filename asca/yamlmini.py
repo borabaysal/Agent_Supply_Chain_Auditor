@@ -6,13 +6,20 @@ importable we use it (safe_load only); otherwise this parser handles the block
 subset Hermes writes: nested mappings, ``- item`` lists, scalars, quoted
 strings, comments, and inline ``[]`` / ``{}`` / simple flow lists.
 
+Anchors (``&name``), aliases (``*name``) and merge keys (``<<: *name``) are supported in block
+style, as GitHub workflow files use them. Aliases are deep copies; an unknown alias is an error.
+
 Anything it cannot parse raises ``YamlError``; callers turn that into a
 finding instead of silently treating the file as empty (fail closed).
 """
 from __future__ import annotations
 
+import copy
 import json
 import re
+
+_ANCHOR = re.compile(r"^&([^\s\[\]{},]+)(?:\s+(.*))?$")
+_ALIAS = re.compile(r"^\*([^\s\[\]{},]+)$")
 
 
 class YamlError(ValueError):
@@ -135,6 +142,15 @@ class _MiniParser:
             if line.strip():
                 self.lines.append((len(line) - len(line.lstrip(" ")), line.strip(), n))
         self.i = 0
+        self.anchors: dict = {}
+
+    def _alias(self, text: str, n: int):
+        m = _ALIAS.match(text.strip())
+        if not m:
+            return False, None
+        if m.group(1) not in self.anchors:
+            raise YamlError(f"line {n}: unknown alias *{m.group(1)}")
+        return True, copy.deepcopy(self.anchors[m.group(1)])
 
     def parse(self):
         if not self.lines:
@@ -182,6 +198,23 @@ class _MiniParser:
             key = str(_scalar(m.group("key")))
             val = m.group("val")
             self.i += 1
+            anchor = None
+            if val is not None:
+                am = _ANCHOR.match(val.strip())
+                if am:
+                    anchor, val = am.group(1), am.group(2) or ""
+                is_alias, aval = self._alias(val, n)
+                if is_alias:
+                    if key == "<<":          # merge key: copy the anchored mapping, explicit keys win
+                        if not isinstance(aval, dict):
+                            raise YamlError(f"line {n}: merge key needs a mapping alias")
+                        for k, v in aval.items():
+                            out.setdefault(k, v)
+                    else:
+                        out[key] = aval
+                    if anchor:
+                        self.anchors[anchor] = copy.deepcopy(aval)
+                    continue
             if val is None or val.strip() == "":
                 out[key] = self._child(indent, allow_same_list=True)
             elif val.strip() in ("|", ">", "|-", ">-", "|+", ">+"):
@@ -204,6 +237,8 @@ class _MiniParser:
                     cont.append(self.lines[self.i][1])
                     self.i += 1
                 out[key] = _scalar(" ".join([val, *cont])) if cont else _scalar(val)
+            if anchor:
+                self.anchors[anchor] = copy.deepcopy(out[key])
         return out
 
     def _literal(self, indent: int, fold: bool) -> str:
@@ -221,7 +256,15 @@ class _MiniParser:
                 break
             rest = text[1:].strip()
             self.i += 1
-            if not rest:
+            anchor = None
+            am = _ANCHOR.match(rest)
+            if am:
+                # "- &a key: v": the mapping starts after the anchor; its column comes from `text` below
+                anchor, rest = am.group(1), (am.group(2) or "").strip()
+            is_alias, aval = self._alias(rest, n) if rest else (False, None)
+            if is_alias:
+                out.append(aval)
+            elif not rest:
                 out.append(self._child(indent))
             elif _KEY_RE.match(rest) and not rest.startswith(("'", '"', "[", "{")):
                 # "- key: value" opens an inline mapping; its sibling keys sit at the
@@ -231,4 +274,6 @@ class _MiniParser:
                 out.append(self._map(item_indent))
             else:
                 out.append(_scalar(rest))
+            if anchor:
+                self.anchors[anchor] = copy.deepcopy(out[-1])
         return out

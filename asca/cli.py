@@ -12,7 +12,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__, advisories, agentcfg, allowlist, discover, ghtoken, hermes, pystartup, repohooks, report, sessions, stray
+from . import __version__, advisories, agentcfg, allowlist, ciagent, discover, ghtoken, hermes, pystartup, repohooks, report, sessions, stray
 from .model import Finding, Report, Severity
 
 
@@ -55,6 +55,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-agent-allowlist", action="store_true",
                    help="skip secret scanning of agent allow rules (Claude Code permissions, VS Code auto-approve) and "
                         "the committed .claude/settings.local.json check")
+    p.add_argument("--no-ci-agents", action="store_true",
+                   help="skip checking .github/workflows for coding agents that anyone can trigger")
     p.add_argument("--no-repo-hooks", action="store_true",
                    help="skip repo-supplied agent hooks (.claude/settings.json, .cursor/hooks.json, folder-open tasks)")
     p.add_argument("--github-token-scopes", action="store_true",
@@ -174,6 +176,8 @@ def run(argv: list[str] | None = None) -> int:
         findings += discover.audit_repo(r)
         if not args.no_repo_hooks:
             findings += repohooks.audit_repo(r, discover.resolve_git_dir(r))
+        if not args.no_ci_agents:
+            findings += ciagent.audit_repo(r, discover.resolve_git_dir(r), stats)
         if not args.no_agent_allowlist:
             findings += allowlist.audit_repo(r, discover.resolve_git_dir(r), stats)
 
