@@ -4,7 +4,7 @@ A zero-dependency CLI for people who **self-host AI agents**: Hermes Agent, Clau
 
 ```
 $ asca --repos ~/Projects --telegram fail --env-file ~/.hermes/.env
-asca 0.3.0: FAIL (fail-on high)
+asca 0.4.0: FAIL (fail-on high)
   critical=1  high=2  medium=1  low=5  info=2  suppressed=0
   [CRITICAL] core.fsmonitor names a program git runs on every index refresh
       ~/Projects/downloaded-repo/.git/config:3
