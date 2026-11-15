@@ -232,11 +232,12 @@ def _vscode_tasks(path: Path, doc: dict, committed: bool) -> list[Finding]:
     return out
 
 
-def audit_repo(worktree: Path, git_dir: Path | None) -> list[Finding]:
+def audit_repo(worktree: Path, git_dir: Path | None, *, assume_committed: bool = False) -> list[Finding]:
+    """assume_committed: treat every file as shipped with the repo (a downloaded archive has no index)."""
     present = [r for r in FILES if (worktree / r).is_file()]
     if not present:
         return []
-    tracked = tracked_paths(git_dir, present)
+    tracked = set(present) if assume_committed else tracked_paths(git_dir, present)
     out: list[Finding] = []
     for rel in present:
         p = worktree / rel

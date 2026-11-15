@@ -6,6 +6,8 @@ as parse errors (fail closed) rather than skipped silently.
 """
 from __future__ import annotations
 
+import hashlib
+
 import json
 import re
 from dataclasses import asdict, dataclass, field
@@ -384,6 +386,32 @@ def openclaw_extensions(home: Path, budget: Budget, out: Collected) -> None:
             out.items.append(_hash(item, d, "code", budget))
 
 
+def hermes_identity(hermes_home: Path, out: Collected) -> None:
+    """Hermes persona files and who may command the agent. Carbonato changes neither code nor version:
+    it rewrites SOUL.md and opens the gateway, so these are tracked by content. Allow-list values are
+    stored only as a hash (the IDs aren't secret, but the inventory has no reason to keep them)."""
+    from .. import persona
+    for path, label in persona.targets(hermes_home):
+        if path.name != "SOUL.md":
+            continue                      # memories change every session; they're content-scanned instead
+        try:
+            data = path.read_bytes()
+        except OSError:
+            continue
+        rel = str(path.relative_to(hermes_home))
+        out.items.append(Item(kind="agent-persona", source="hermes", id=rel, name=label, publisher="local",
+                              policy="persona", path=str(path), hash=hashlib.sha256(data).hexdigest(), files=1,
+                              bytes=len(data)))
+    for envp in persona.env_files(hermes_home):
+        rel = str(envp.relative_to(hermes_home))
+        for k, v in sorted(persona.access_settings(persona._env_pairs(envp)).items()):
+            norm = ",".join(sorted(x.strip() for x in v.split(",") if x.strip()))
+            out.items.append(Item(kind="agent-access", source="hermes", id=f"{rel}:{k}", name=k, publisher="local",
+                                  policy="access", path=str(envp),
+                                  hash=hashlib.sha256(norm.encode()).hexdigest(),
+                                  note=f"{len([x for x in norm.split(',') if x])} value(s)"))
+
+
 def collect(home: Path, hermes_home: Path | None, budget: Budget, *, mcp_configs: list[Path] = (),
             ide_dirs: list[tuple[str, Path]] = (), include_skills: bool = True) -> Collected:
     out = Collected()
@@ -394,6 +422,7 @@ def collect(home: Path, hermes_home: Path | None, budget: Budget, *, mcp_configs
     mcp_servers(cfgs, (hermes_home / "config.yaml") if hermes_home else None, out)
     if hermes_home:
         hermes_plugins(hermes_home, budget, out)
+        hermes_identity(hermes_home, out)
     if include_skills:
         skills(home, hermes_home, budget, out)
     # same key twice (e.g. a skill dir reachable from two roots): keep the first

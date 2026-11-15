@@ -12,6 +12,10 @@
 | bundled skill edited locally (Hermes didn't update it) | inventory.modified-bundled | low |
 | item couldn't be fully hashed (budget) | inventory.hash-budget | low |
 | version changed (same publisher), your own skill edited, removed | inventory.version-changed / .edited / .removed | info (digest only) |
+| Hermes persona (SOUL.md) changed | inventory.persona-changed | medium |
+| who can command the agent changed (allow lists, allow-all switches, home channel) | inventory.access-changed | medium |
+
+Persona and access items are learned silently the first time they appear (upgrades don't alert).
 """
 from __future__ import annotations
 
@@ -32,6 +36,10 @@ KNOWN_BAD = [
 TAMPER_FIX = ("Don't open the IDE/agent until you know why. Compare the folder with a fresh copy of the same "
               "version from the publisher, check persistence (LaunchAgents, crontab, ~/.ssh/authorized_keys), "
               "and reinstall from the official source. If code ran, rotate credentials the user could reach.")
+
+
+ACCESS_FIX = ("If you didn't change it, an attacker may have added themselves: check the .env, revoke the bot token in "
+              "@BotFather if needed, and list only your own IDs.")
 
 
 def load_known_bad(path: Path | None) -> list[dict]:
@@ -99,8 +107,16 @@ def diff(prev: dict, items: list[Item], *, approved: set[str], same_limits: bool
                 break
     swapped_removed = {(d.get("kind"), d.get("source"), d.get("id")) for d in swapped_from.values()}
 
+    prev_kinds = {d.get("kind") for d in prev.values()}
     for k, it in sorted(cur.items()):
         p = prev.get(k)
+        if p is None and it.kind in ("agent-persona", "agent-access") and it.kind not in prev_kinds:
+            continue                     # first run with these item kinds: learn, don't alert
+        if p is None and it.kind == "agent-access":
+            out.append(_f("inventory.access-changed", Severity.MEDIUM, f"Hermes: new access setting `{it.name}`",
+                          it, f"{k}:{it.hash[:12]}", f"`{it.name}` was added in {it.path} ({it.note}). It decides "
+                          f"who can send this agent commands or where it reports.", ACCESS_FIX))
+            continue
         if p is None:
             if k in swapped_from:
                 old = swapped_from[k]
@@ -149,6 +165,18 @@ def diff(prev: dict, items: list[Item], *, approved: set[str], same_limits: bool
                               f"Content hash changed ({p['hash'][:12]} → {it.hash[:12]}) while the version stayed "
                               f"{it.version or 'unset'}. Legitimate updates change the version; edits in place are "
                               f"how injected code hides.", TAMPER_FIX))
+            elif it.policy == "persona":
+                out.append(_f("inventory.persona-changed", Severity.MEDIUM, f"Hermes {it.name} changed", it,
+                              f"{k}:{it.hash[:12]}",
+                              f"The persona file's content hash changed ({p['hash'][:12]} → {it.hash[:12]}). It's "
+                              f"loaded into every conversation; Carbonato took over Hermes agents by rewriting it.",
+                              "If you didn't edit it, compare it with your backup and treat a rewrite you can't "
+                              "explain as a compromise (see the persona.* findings in the audit)."))
+            elif it.policy == "access":
+                out.append(_f("inventory.access-changed", Severity.MEDIUM,
+                              f"Hermes: `{it.name}` changed (who can command the agent)", it, f"{k}:{it.hash[:12]}",
+                              f"The value of `{it.name}` in {it.path} changed (now {it.note}). It decides who can "
+                              f"send this agent commands or where it reports.", ACCESS_FIX))
             elif it.policy == "config":
                 out.append(_f("inventory.definition-changed", Severity.MEDIUM,
                               f"MCP server {it.name}: launch definition changed", it, f"{k}:{it.hash[:12]}",
