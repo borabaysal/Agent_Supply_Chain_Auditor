@@ -22,6 +22,73 @@ _DIGEST = re.compile(r"@sha256:[a-f0-9]{64}$")
 _SHA = re.compile(r"^[0-9a-f]{40}$")
 _LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "0.0.0.0", "host.docker.internal"}
 
+# Reference servers moved to github.com/modelcontextprotocol/servers-archived (archived 29 May 2025):
+# "no security updates or bug fixes will be provided". Package names are read from each server's
+# package.json / pyproject.toml in that repo. `mcp-server-git` is NOT here: git went back to the
+# maintained modelcontextprotocol/servers repo. Pinning one of these doesn't help: no fixed version
+# will ever be published. Glow Labs' MCPhantom research (Nov 2026) found coding agents still installing
+# them from training data, including a prompt-injection-to-command-execution bug in the Puppeteer
+# server that its maintainers declined to fix.
+ARCHIVE_URL = "https://github.com/modelcontextprotocol/servers-archived"
+MCPHANTOM_URL = ("https://www.glow.io/blogs/mcphantom-ai-coding-agents-are-installing-vulnerable-deprecated-"
+                 "mcp-servers-from-training-data")
+# package -> (severity, why, maintained replacement or "")
+ARCHIVED_SERVERS: dict[str, tuple[Severity, str, str]] = {
+    "@modelcontextprotocol/server-puppeteer": (
+        Severity.HIGH, "A prompt injection can make it start any process instead of the browser (Glow Labs, "
+        "MCPhantom); the maintainers closed the report as out of scope and won't fix it.",
+        "Microsoft's maintained Playwright server, `@playwright/mcp`"),
+    "@modelcontextprotocol/server-github": (
+        Severity.MEDIUM, "", "GitHub's own server, github.com/github/github-mcp-server"),
+    "@modelcontextprotocol/server-brave-search": (
+        Severity.MEDIUM, "", "Brave's own server, `@brave/brave-search-mcp-server`"),
+    "@modelcontextprotocol/server-redis": (Severity.MEDIUM, "", "Redis' own server, github.com/redis/mcp-redis"),
+    "mcp-server-sentry": (Severity.MEDIUM, "", "Sentry's own server, `@sentry/mcp-server`"),
+    "@modelcontextprotocol/server-postgres": (Severity.MEDIUM, "", ""),
+    "@modelcontextprotocol/server-slack": (Severity.MEDIUM, "", ""),
+    "@modelcontextprotocol/server-gitlab": (Severity.MEDIUM, "", ""),
+    "@modelcontextprotocol/server-google-maps": (Severity.MEDIUM, "", ""),
+    "@modelcontextprotocol/server-gdrive": (Severity.MEDIUM, "", ""),
+    "@modelcontextprotocol/server-aws-kb-retrieval": (Severity.MEDIUM, "", ""),
+    "@modelcontextprotocol/server-everart": (Severity.MEDIUM, "", ""),
+    "mcp-server-sqlite": (Severity.MEDIUM, "", ""),
+}
+# Local additions (`--known-archived FILE`): one package name per line, `#` comments.
+EXTRA_ARCHIVED: set[str] = set()
+
+
+def load_known_archived(path) -> set[str]:
+    names = set()
+    for line in open(path, encoding="utf-8"):
+        line = line.split("#", 1)[0].strip()
+        if line:
+            names.add(line.lower())
+    return names
+
+
+def _archived(location: str, name: str, pkg: str) -> list[Finding]:
+    key = pkg.lower()
+    if key in ARCHIVED_SERVERS:
+        sev, why, repl = ARCHIVED_SERVERS[key]
+        src = f"Listed in {ARCHIVE_URL}"
+    elif key in EXTRA_ARCHIVED:
+        sev, why, repl, src = Severity.MEDIUM, "", "", "Listed in your --known-archived file"
+    else:
+        return []
+    return [Finding(
+        rule="mcp.archived-server", category="pinning", severity=sev,
+        title=f"MCP server `{name}` runs an archived package that will never be patched",
+        location=location, subject=f"{name}:{key}",
+        detail=(f"`{pkg}` is unmaintained: no security fixes or releases will come. {src}. "
+                + (why + " " if why else "")
+                + "Pinning a version doesn't help here, because no fixed version will ever exist. Coding agents "
+                  f"still pick these names from their training data (Glow Labs, MCPhantom: {MCPHANTOM_URL})."),
+        remediation=("Remove this server from the config"
+                     + (f" and use {repl} instead." if repl else
+                        " and use the service's own maintained MCP server, if it has one.")
+                     + " Tell your agent to check a server's maintenance status before installing one."),
+    )]
+
 
 def iter_servers(doc, *, origin: str) -> list[tuple[str, str, dict]]:
     """Yield (location, name, spec) for every server in a parsed config document."""
@@ -89,6 +156,8 @@ def _audit_command(location: str, name: str, argv: list[str]) -> list[Finding]:
     if exe in _NODE_RUNNERS or (exe in ("npm", "pnpm", "yarn") and rest[:1] in (["exec"], ["dlx"])):
         pkg = _first_positional(rest[1:] if exe in ("npm", "pnpm", "yarn") else rest,
                                 takes_value={"-p", "--package", "--registry", "--cache", "--prefix"})
+        if pkg:
+            out.extend(_archived(location, name, _npm_name(pkg)))
         if pkg and not _npm_pinned(pkg):
             out.append(_unpinned(location, name, pkg, f"{exe} fetches the latest matching release from the npm "
                                  f"registry on each start; a hijacked maintainer account or typosquat ships "
@@ -106,6 +175,8 @@ def _audit_command(location: str, name: str, argv: list[str]) -> list[Finding]:
         if "--spec" in sub:
             i = sub.index("--spec")
             spec = sub[i + 1] if i + 1 < len(sub) else spec
+        if spec:
+            out.extend(_archived(location, name, re.split(r"[<>=!~@ \[]", spec)[0]))
         if spec and not _py_pinned(spec):
             out.append(_unpinned(location, name, spec, f"{exe} resolves the newest PyPI release on each start.",
                                  f"{re.split(r'[<>=!~@ ]', spec)[0]}==<exact-version>"))

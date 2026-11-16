@@ -12,7 +12,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__, advisories, agentcfg, allowlist, ciagent, discover, ghtoken, hermes, pystartup, repohooks, report, sessions, stray
+from . import (__version__, advisories, agentcfg, allowlist, ciagent, discover, dockerd, ghtoken, hermes, mcp, persona,
+               pystartup, repohooks, report, respond, secrets, sessions, stray, symlinks)
 from .model import Finding, Report, Severity
 
 
@@ -55,6 +56,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-agent-allowlist", action="store_true",
                    help="skip secret scanning of agent allow rules (Claude Code permissions, VS Code auto-approve) and "
                         "the committed .claude/settings.local.json check")
+    p.add_argument("--no-symlinks", action="store_true",
+                   help="skip listing symlinks that lead out of repos and the agent home")
+    p.add_argument("--no-docker-daemon", action="store_true",
+                   help="skip checking whether the Docker API is exposed over TCP without client certificates")
+    p.add_argument("--no-persona", action="store_true",
+                   help="skip checking Hermes SOUL.md / memories and gateway access settings for tampering")
+    p.add_argument("--known-archived", type=Path, metavar="FILE",
+                   help="extra MCP server packages to treat as archived/unmaintained (one per line)")
     p.add_argument("--no-ci-agents", action="store_true",
                    help="skip checking .github/workflows for coding agents that anyone can trigger")
     p.add_argument("--no-repo-hooks", action="store_true",
@@ -122,6 +131,9 @@ def run(argv: list[str] | None = None) -> int:
     if argv[:1] == ["dashboard"]:   # `asca dashboard …`: static HTML status page from the reports
         from .dashboard import run as dashboard_run
         return dashboard_run(argv[1:])
+    if argv[:1] == ["check-repo"]:   # `asca check-repo PATH`: is a downloaded repo safe to open?
+        from .checkrepo import run as checkrepo_run
+        return checkrepo_run(argv[1:])
     if argv[:1] == ["inventory"]:   # `asca inventory …`: IDE/agent inventory + drift (own options)
         from .inventory.cli import run as inventory_run
         return inventory_run(argv[1:])
@@ -135,6 +147,12 @@ def run(argv: list[str] | None = None) -> int:
     stats: dict = {}
     findings: list[Finding] = []
     targets: dict = {}
+    if args.known_archived:
+        try:
+            mcp.EXTRA_ARCHIVED |= mcp.load_known_archived(args.known_archived)
+        except OSError as exc:
+            print(f"asca: cannot read --known-archived: {exc}", file=sys.stderr)
+            return 2
 
     home = None if args.no_hermes else (args.hermes_home or _default_home())
     if home is not None:
@@ -159,6 +177,15 @@ def run(argv: list[str] | None = None) -> int:
             stats["online_advisories"] = len(result.advisories)
             findings += advisories.feed_findings(result, package="hermes-agent", version=version, known_ids=known,
                                                  location="osv.dev+github-advisories")
+        if not args.no_persona:
+            from .skillscan import official as _official
+            off = _official.load(hermes_home=home)
+            for path, label in persona.targets(home):
+                findings += persona.audit_file(path, label, off)
+            findings += persona.audit_env(home)
+        if not args.no_symlinks:
+            findings += symlinks.audit_tree(home, label="agent workspace", stats=stats,
+                                            skip=symlinks.AGENT_HOME_SKIP)
         findings += advisories.freshness_findings(
             local_reviewed=hermes.advisories_reviewed_at(args.advisories) if args.advisories else None,
             local_path=str(args.advisories) if args.advisories else None)
@@ -180,6 +207,8 @@ def run(argv: list[str] | None = None) -> int:
             findings += ciagent.audit_repo(r, discover.resolve_git_dir(r), stats)
         if not args.no_agent_allowlist:
             findings += allowlist.audit_repo(r, discover.resolve_git_dir(r), stats)
+        if not args.no_symlinks:
+            findings += symlinks.audit_tree(r, git_dir=discover.resolve_git_dir(r), stats=stats)
 
     if not args.no_session_history:
         if min(args.session_budget_mb, args.session_file_cap_mb, args.session_max_files) < 1:
@@ -214,6 +243,12 @@ def run(argv: list[str] | None = None) -> int:
         targets["python_sites"] = [str(s.path) for s in sites]
         findings += pystartup.audit(sites, stats)
 
+    if not args.no_docker_daemon:
+        findings += dockerd.audit(home=Path.home(), stats=stats)
+
+    # cloud credential files hold keys by design: check who can read them, not what's in them
+    findings += secrets.audit_permissions(Path.home() / ".aws" / "credentials", label="~/.aws/credentials")
+
     if not args.no_global_git:
         targets["global_git_configs"] = [str(p) for p in discover.global_git_configs()]
         findings += discover.audit_global_git()
@@ -223,6 +258,7 @@ def run(argv: list[str] | None = None) -> int:
     for f in findings:
         uniq.setdefault(f.fingerprint, f)
     findings = list(uniq.values())
+    respond.enrich(findings, Path.home())     # provider-specific steps + AWS blast-radius card (text only)
 
     if args.write_baseline:
         args.write_baseline.write_text(json.dumps({"suppress": [

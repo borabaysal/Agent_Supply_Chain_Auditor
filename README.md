@@ -26,6 +26,9 @@ _Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where
 | **Session history** | Literal keys saved in agents' transcripts: Hermes `sessions/*.json(l)` and `cron/output/**` (incl. `profiles/*`), Claude Code `~/.claude/projects/**/*.jsonl`, Codex `~/.codex/sessions/**/*.jsonl` and `history.jsonl`, Cursor chat rows in `state.vscdb` · transcript files/dirs that group/other can actually reach and read. See [Session history](#session-history-secretsession-history). |
 | **Stray agent instructions** | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.cursor/rules/*` … left in `~/Downloads`, `~/Desktop` or the temp dir, outside any git repo; HIGH when the `asca-skills` content rules match. See [Stray agent instructions](#stray-agent-instructions-repostray-agent-instructions). |
 | **Integrity** | Hub skills whose on-disk content no longer matches the install-time hash (same algorithm as Hermes' Skills Guard) · skills installed despite a non-`safe` scanner verdict · Hermes Agent versions inside a known-vulnerable range |
+| **Agent takeover** | Hermes `SOUL.md` and memories rewritten to take orders, collect keys or hide activity (Carbonato) · gateway open to anyone (`GATEWAY_ALLOW_ALL_USERS`, `*` allow lists) · Docker API reachable over TCP without client certificates · [details](#agent-takeover-workspace-and-response-checks-part-of-asca) |
+| **Workspace** | Symlinks that lead out of a repo or the agent home, high when they point at credentials (CVE-2026-103916) · MCP servers that are archived and will never be patched (MCPhantom) |
+| **Response** | Provider-specific steps on every leaked-key finding, plus a local blast-radius card for AWS keys (profile, long-lived or temporary, assumable roles) |
 
 ### Safety properties of the auditor itself
 
@@ -493,6 +496,7 @@ still compared like for like, and it's listed as a LOW `hash-budget` finding.
 | New item | 🟨 medium |
 | First item from a publisher that isn't approved | 🟨 medium |
 | MCP server launch definition changed | 🟨 medium |
+| Hermes persona (`SOUL.md`) changed, or who can command the agent changed (allow lists, allow-all switches, home channel) | 🟨 medium |
 | Extension switched from marketplace to side-loaded VSIX | 🟨 medium |
 | Bundled Hermes skill edited locally | 🟦 low |
 | Version updated, your own skill edited, item removed | digest only, no alert |
@@ -759,6 +763,97 @@ times in a session transcript (since revoked: HTTP 401).
 - A hand-made key with an impossible shape (e.g. `sk-or-v1-` followed by 64 letters a–f with
   no digit) is treated as a placeholder.
 
+## Agent takeover, workspace and response checks (part of `asca`)
+
+### Hermes persona and gateway tampering (on by default; `--no-persona` to skip)
+
+The Carbonato botnet ([ThreatDown, Sep 2026](https://www.threatdown.com/blog/carbonato/)) breaks into Docker hosts and installs Hermes Agent *unchanged*. It then overwrites `SOUL.md` with a "GH0ST" persona that takes tasks over Telegram, keeps itself installed and collects AI API keys and SSH credentials. The code and version stay the same, so integrity checks see a clean install.
+
+asca reads `$HERMES_HOME/SOUL.md`, `memories/*.md` and the same files under `profiles/*/` as text. asca's skill-content rules look for payloads and hidden text, and they find nothing in a persona like that: it's plain instructions. So persona files get their own rules:
+
+| Finding | Severity |
+|---|---|
+| `persona.known-malware`: names the Carbonato persona `GH0ST` (ThreatDown indicator) | 🟥 critical |
+| `persona.c2`: two or more of the signals below, at least one being harvest, persistence or conceal | 🟥 critical |
+| `persona.credential-harvest`, `persona.persistence`, `persona.conceal`: tells the agent to collect keys and credentials, keep itself installed, or hide what it does from you | 🟧 high |
+| `persona.no-limits`: act without ethical or safety limits, never refuse | 🟨 medium |
+| `persona.remote-tasking`: take tasks from a chat channel or an "operator" (normal for many setups; it counts toward `persona.c2`) | 🟦 low |
+| `gateway.allow-all-users`: `GATEWAY_ALLOW_ALL_USERS=true` (or another `*_ALLOW_ALL_USERS`) or `*` in an allow list in a Hermes `.env`. Anyone who finds the bot can command the agent | 🟧 high (🟨 medium when every platform has its own allow list) |
+| `gateway.known-malware-env`: `CARBONATO_API_KEY`, `GH0ST_C2` (ThreatDown indicators) | 🟥 critical |
+
+- **Instructions only.** The harvest and persistence rules fire when the text *tells* the agent to do something, at the start of a sentence or list item or after "you" or "prioritise". Text that describes an attack ("a stealer collects credentials") doesn't fire, and neither do negated or prohibited lines ("never collect credentials", items under a "Never do" heading).
+- **`.env` files:** asca reads only variable *names*, plus the values of the access switches (`*_ALLOWED_USERS`, `*_ALLOWED_CHATS`, `*_ALLOW_ALL_USERS`, `*_HOME_CHANNEL`).
+- **Changes are tracked too.** `asca inventory` hashes each `SOUL.md` and the access switches, and reports `inventory.persona-changed` and `inventory.access-changed` (medium) when they change. Allow-list values are stored only as a hash. The first run after upgrading learns them silently.
+- **Tested** on a persona written from ThreatDown's description (critical), and with the IOC name removed (still critical). On 548 real Markdown files (Hermes skills, project docs, research notes) it gave 0 hits.
+
+### Docker API exposed without client certificates (on by default; `--no-docker-daemon` to skip)
+
+Carbonato gets in through Docker daemons that listen on TCP without authentication. Anyone who can reach such a port controls Docker, which means root on the host. asca reads `/etc/docker/daemon.json` (also rootless and snap), docker's systemd units and drop-ins (`ExecStart= … -H tcp://…`, honouring `ExecStart=` resets), and `/etc/default/docker` / `/etc/sysconfig/docker`. It never contacts the daemon.
+
+| `host.docker-api-exposed` without `--tlsverify` | Severity |
+|---|---|
+| all interfaces (`tcp://0.0.0.0`, `tcp://:2375`, `[::]`) | 🟥 critical |
+| a specific non-loopback address (LAN, VPN, tailnet) | 🟧 high |
+| loopback only | 🟨 medium |
+
+`--tls` without `--tlsverify` encrypts the traffic but still lets anyone in, so it counts as unauthenticated. Docker Desktop on macOS has no TCP option (its "expose on 2375" switch exists on Windows only), so on a Mac this check finds nothing.
+
+### Symlinks that lead out of a repo or the agent home (on by default; `--no-symlinks` to skip)
+
+In [CVE-2026-103916](https://www.endorlabs.com/learn/docker-sandboxes-vulnerability-lets-ai-agents-access-sensitive-files-outside-their-sandbox-cve-2026-103916) (Endor Labs), a sandboxed agent planted a symlink in its workspace. A later copy by the operator followed it and read or wrote host files outside the sandbox. A link left behind is the trap even after the agent has gone. asca lists links with `os.readlink` in every repo under `--repos` and in the Hermes home (caches and session folders are skipped). Targets are never opened or followed.
+
+| `repo.symlink-escape` | Severity |
+|---|---|
+| target is a credential location (`~/.ssh`, `~/.aws`, `.env`, `auth.json`, `.git-credentials`, wallets, keychains, browser profiles, agent homes) or a whole home folder / `/` | 🟧 high |
+| committed to the repo and pointing outside it | 🟨 medium |
+| any other link leaving the repo or agent home | 🟦 low |
+
+Links inside `node_modules`, virtualenvs and `.git` are skipped, because package managers make them on purpose. Links into `/tmp`, `/run` and macOS `/var/folders` (sockets that get new names on every restart) are skipped unless they point at a credential.
+
+### MCP servers that are archived and will never be patched
+
+Anthropic moved 13 of its original reference MCP servers to [servers-archived](https://github.com/modelcontextprotocol/servers-archived): no security fixes will come. [Glow Labs' MCPhantom research](https://www.glow.io/blogs/mcphantom-ai-coding-agents-are-installing-vulnerable-deprecated-mcp-servers-from-training-data) (Nov 2026) found coding agents still installing them from their training data. One of them, the Puppeteer server, has a prompt-injection-to-command-execution bug its maintainers declined to fix. Before this check, pinning such a server made asca's "unpinned" finding go away, even though no fixed version will ever exist.
+
+- **`mcp.archived-server`:** high for `server-puppeteer`, medium for the rest (`server-github`, `-postgres`, `-slack`, `-brave-search`, `-google-maps`, `-gitlab`, `-gdrive`, `-redis`, `-aws-kb-retrieval`, `-everart`, PyPI `mcp-server-sentry` and `mcp-server-sqlite`).
+- **Where the list comes from:** package names are read from each server's `package.json` / `pyproject.toml` in the archive repo. `mcp-server-git` isn't on it, because it went back to the maintained repo.
+- **The fix names the vendor's own server where one exists:** GitHub's `github-mcp-server`, Microsoft's `@playwright/mcp`, `@brave/brave-search-mcp-server`, Redis' `mcp-redis`, `@sentry/mcp-server`.
+- **Add your own:** `--known-archived FILE`, one package name per line.
+
+### What to do when a key leaked: provider steps and the AWS card
+
+Every secret finding (config, transcripts, allow rules, MCP `env` …) now carries the steps for its provider, instead of a generic "rotate it": where to revoke the key (Anthropic, OpenAI, OpenRouter, GitHub, Slack, Telegram's @BotFather, Google, Stripe, Hugging Face), what to check afterwards, and for private keys and wallets what can't be revoked.
+
+For AWS access key IDs, asca reads `~/.aws/credentials` and `~/.aws/config` locally and adds a **blast-radius card** to the finding:
+- which profile the key is, and whether it's a long-lived IAM user key (`AKIA…`) or temporary (`ASIA…`, which expires on its own)
+- which roles that profile can assume through `source_profile`
+- the `aws iam` commands to deactivate, replace and delete it, and the CloudTrail lookup to see what it did
+
+AWS isn't called and the secret access key is never read into a report, so the card says what's local and leaves effective permissions to `aws iam`. A key that isn't in your credentials file is labelled as someone else's or an old one. `~/.aws/credentials` is also checked for group or world read permissions.
+
+## Check a repo before you open it (`asca check-repo`)
+
+Fake recruiters have sent developers, crypto and fintech especially, "take-home tests" that run code the moment the repo is opened in an IDE or `npm install` runs. `asca check-repo` runs asca's repo checks on one folder, offline, and prints one verdict before you open it:
+
+```bash
+python3 -m asca check-repo ~/Downloads/take-home-test
+python3 -m asca check-repo ~/Downloads/take-home-test --telegram always --env-file ~/.hermes/.env   # verdict on your phone
+```
+
+- ⛔ **Don't open it yet:** a high finding, for example a folder-open task that runs `curl … | sh`, an install script whose file runs commands and talks to the network, a link to `~/.ssh`, or an archived Puppeteer MCP server.
+- ⚠️ **Check these first:** medium findings, such as a committed IDE hook, or an install script that runs a repo file you should read first.
+- ✅ **No red flags:** low notes only, such as `prepare: husky`.
+
+**What it checks:** git config that runs programs; IDE and agent hooks that run on open; project MCP configs; saved allow rules; agent instruction files (AGENTS.md, CLAUDE.md, .cursorrules, Copilot instructions, `.claude/` commands and skills) against the skill-content rules; coding agents in `.github/workflows`; symlinks; and npm lifecycle scripts:
+- **LOW:** a build tool such as `husky` or `only-allow`.
+- **MEDIUM:** runs a file from the repo.
+- **HIGH:** fetches, decodes or `eval`s, in the script or in the file it runs.
+
+Nothing in the repo is executed and git is never run. A folder without `.git` (an unpacked zip) is treated as if every file were committed. Exit code 1 means findings at or above `--fail-on` (default medium); `--json` prints them all.
+
+**Tested** on the root `package.json` of 39 popular JS projects (React, Next.js, VS Code, Vite, Angular, Electron …): 0 high. The 13 medium findings all run a file from the repo.
+
+**Limits:** it reads only what's in the folder. It doesn't follow dependencies (a malicious package in `node_modules` after install) or run code to see what it does. Its source-code checks cover install scripts and agent files, not every `.js` file, so the safest way to try an untrusted repo is still a throwaway VM or container with no keys in it.
+
 ## Dashboard (`asca dashboard`)
 
 One page per host with every asca job's status and the fixes to act on, so you don't have to dig
@@ -810,6 +905,9 @@ It's only a path: no report content or secret is added.
 - A secret split across two JSON lines, or longer than the 256-char window overlap, can be missed.
 - Stray-instruction search covers only the folders listed (plus `--instructions-dir`), two levels deep. It can't tell a legitimate instruction file from an extracted archive. Use a baseline for ones you accept.
 - Remote (URL) MCP servers can't be pinned and are reported as `info`.
+- Persona rules read instructions in English. A rewritten persona in another language, or one that only changes the agent's goals without these phrases, is caught by the inventory's `SOUL.md` hash, not by content.
+- The symlink check finds links left on disk or committed; a link created and used within one run is gone before asca looks.
+- The Docker check reads the host's daemon configuration. Run inside a container, it can't see the host's.
 - The CI-agent check reads workflow files only. It doesn't see repository or organisation settings (the default token permissions, "require approval for fork PRs", branch rules), reusable workflows in other repos, or composite actions that wrap an agent under another name. A job without a `permissions:` block is reported as "doesn't restrict" because the repository default may be read-write.
 - `global core.fsmonitor=false` is suggested as defence in depth only. A repo-local value still overrides it.
 - Version advisories cover Hermes Agent only (extend `asca/advisories.py: PACKAGES` for other agents). For other agents, check vendor advisories; contributions are welcome.
