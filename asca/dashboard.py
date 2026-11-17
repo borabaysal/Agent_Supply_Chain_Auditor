@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from . import __version__
+from . import __version__, blastradius
 
 SEV_ORDER = ["critical", "high", "medium", "low", "info"]
 SEV_RANK = {s: i for i, s in enumerate(SEV_ORDER)}
@@ -426,7 +426,7 @@ def _fleet_html(j: Job) -> str:
 
 
 def render(jobs: dict[str, Job], *, host: str, now: datetime, mem: dict, history: list[dict],
-           state_dir: Path, stale_hours: float) -> str:
+           state_dir: Path, stale_hours: float, live: dict[str, str] | None = None) -> str:
     present = [j for j in jobs.values() if j.status != "missing"]
     rank = {"fail": 0, "error": 1, "warn": 2, "pass": 3}
     worst = min((j.status for j in present), key=lambda s: rank.get(s, 9), default="missing")
@@ -484,6 +484,8 @@ def render(jobs: dict[str, Job], *, host: str, now: datetime, mem: dict, history
         h.append(f"<details><summary>Lower-priority findings ({len(later)})</summary>"
                  + "".join(_finding_html(f, j, mem, now) for j, f in later) + "</details>")
 
+    h.append(blastradius.render(jobs, _fkey, mem, now, live or {}, e, _parse_time))
+
     resolved = []
     for k, rec in mem["seen"].items():
         r = _parse_time(rec.get("resolved"))
@@ -533,15 +535,18 @@ def default_state_dir() -> Path:
 
 
 def build(state_dir: Path, out: Path, *, host: str, stale_hours: float = 26.0,
-          now: datetime | None = None) -> dict:
+          now: datetime | None = None, env_files: list[Path] | None = None) -> dict:
+    """env_files: agent .env files whose values are hashed (in memory) to tell which leaked keys are still live.
+    None = the default locations (blastradius.default_env_files); [] = skip the check."""
     now = now or datetime.now(timezone.utc)
     paths = discover(state_dir)
     jobs = {k: load(k, paths.get(k), now) for k in CANDIDATES if k in paths}
     for j in jobs.values():
         j.stale = j.generated is not None and (now - j.generated) > timedelta(hours=stale_hours)
     mem = update_memory(out.with_name("dashboard-state.json"), jobs, now)
+    live = blastradius.live_tags(blastradius.default_env_files() if env_files is None else env_files)
     page = render(jobs, host=host, now=now, mem=mem, history=audit_history(paths.get("audit")),
-                  state_dir=state_dir, stale_hours=stale_hours)
+                  state_dir=state_dir, stale_hours=stale_hours, live=live)
     _write_private(out, page)
     return {"jobs": {k: j.status for k, j in jobs.items()}, "stale": [k for k, j in jobs.items() if j.stale]}
 
@@ -555,6 +560,10 @@ def run(argv: list[str] | None = None) -> int:
     p.add_argument("--stale-hours", type=float, default=26.0,
                    help="flag a job whose newest report is older than this (default 26, for daily jobs)")
     p.add_argument("--quiet", action="store_true", help="print nothing on success (for scheduled wrappers)")
+    p.add_argument("--env-file", action="append", type=Path, default=None, metavar="FILE",
+                   help="agent .env to compare leaked keys against (hashed in memory, never shown; repeatable; "
+                        "default: $HERMES_HOME/.env, ~/.hermes/.env, ~/.openclaw/.env, ~/.config/goose/.env)")
+    p.add_argument("--no-live-check", action="store_true", help="don't compare leaked keys with your .env files")
     args = p.parse_args(argv)
     state_dir = (args.state_dir or default_state_dir()).expanduser()
     if not state_dir.is_dir():
@@ -562,7 +571,9 @@ def run(argv: list[str] | None = None) -> int:
         return 2
     out = (args.output or state_dir / "dashboard.html").expanduser()
     try:
-        res = build(state_dir, out, host=args.host_label or socket.gethostname(), stale_hours=args.stale_hours)
+        res = build(state_dir, out, host=args.host_label or socket.gethostname(), stale_hours=args.stale_hours,
+                    env_files=[] if args.no_live_check else ([f.expanduser() for f in args.env_file]
+                                                             if args.env_file else None))
     except OSError as exc:
         print(f"asca dashboard: cannot write {out}: {exc}", file=sys.stderr)
         return 2

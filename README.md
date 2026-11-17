@@ -28,7 +28,7 @@ _Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where
 | **Integrity** | Hub skills whose on-disk content no longer matches the install-time hash (same algorithm as Hermes' Skills Guard) · skills installed despite a non-`safe` scanner verdict · Hermes Agent versions inside a known-vulnerable range |
 | **Agent takeover** | Hermes `SOUL.md` and memories rewritten to take orders, collect keys or hide activity (Carbonato) · gateway open to anyone (`GATEWAY_ALLOW_ALL_USERS`, `*` allow lists) · Docker API reachable over TCP without client certificates · [details](#agent-takeover-workspace-and-response-checks-part-of-asca) |
 | **Workspace** | Symlinks that lead out of a repo or the agent home, high when they point at credentials (CVE-2026-103916) · MCP servers that are archived and will never be patched (MCPhantom) |
-| **Response** | Provider-specific steps on every leaked-key finding, plus a local blast-radius card for AWS keys (profile, long-lived or temporary, assumable roles) |
+| **Response** | Provider-specific steps on every leaked-key finding, plus a local blast-radius card for AWS keys (profile, long-lived or temporary, assumable roles) · a dashboard card per leaked key: every copy across agents, days exposed, and whether it's still your live key · [`asca github-check`](#were-your-github-repos-hit-by-wfx-asca-github-check-opt-in-online) for wfx traces on GitHub |
 
 ### Safety properties of the auditor itself
 
@@ -879,6 +879,34 @@ Nothing in the repo is executed and git is never run. A folder without `.git` (a
 
 **Limits:** it reads only what's in the folder. It doesn't follow dependencies (a malicious package in `node_modules` after install) or run code to see what it does. Its source-code checks cover install scripts and agent files, not every `.js` file, so the safest way to try an untrusted repo is still a throwaway VM or container with no keys in it.
 
+## Were your GitHub repos hit by wfx? (`asca github-check`, opt-in, online)
+
+The wfx stealer ([SafeDep](https://safedep.io/blog/github-actions-wfx-credential-stealer), [Aikido](https://www.aikido.dev/blog/compromised-github-accounts-push-ci-secret-stealer-to-tens-of-thousands-of-repositories)) pushed with stolen tokens into the victims' own repos, ran once, then reverted within a minute and deleted the workflow run with its logs. The traces are on GitHub, not on your disk, so this command checks them through the GitHub API:
+
+```bash
+python3 -m asca github-check                          # every repo your token's user owns (incl. private)
+python3 -m asca github-check --owner my-org           # every repo of an org or user
+python3 -m asca github-check --repo me/app --json     # one repo; JSON output
+python3 -m asca github-check --telegram change        # schedule it: a message only when the result changes
+```
+
+| Finding | Severity |
+|---|---|
+| `github.wfx-probe-pr`: a `docs: dependency audit notes` PR or one from a `wfx-docs` branch, open or closed. SafeDep: "a probe pull request on its own means the account is compromised" | critical |
+| `github.wfx-payload-commit`: `chore: add ci helper` / `chore: add dependency audit workflow` (high), `ci: refresh build cache` (medium, generic wording); critical when a `ci: restore` / `ci: cleanup` commit is there too | medium to critical |
+| `github.wfx-branch`: `wfx-docs` (critical); `chore/` plus 8 random characters or `ci-check-NNNN` (medium, could be yours) | medium, critical |
+| `github.deleted-runs`: gaps in a workflow's run numbers since the campaign started. Aikido: "a missing run number … is the more reliable sign that the payload ran". High next to a probe PR or payload commit; on its own it's a low note, because maintainers of busy repos delete runs too | low, high |
+| `github.wfx-loot`: a `wfx-loot` artifact or a `wfx-` cache entry | critical |
+| The default branch's `package.json`, the file its hook runs, and its workflows, checked with the offline [wfx rules](#install-hooks-and-secret-dumping-workflow-steps-wfx-on-by-default---no-install-hooks-to-skip) | as there |
+
+Each repo gets a verdict: 🟥 payload pushed · 🟥 probed (account compromised) · 🟧/🟨 check · ✅ clean · ❔ couldn't check (a repo that can't be read is never called clean). The window starts on 10 Nov 2026, the first probe (`--since`).
+
+**Read-only.** Only GET requests, only to `api.github.com` (or your Enterprise host). Nothing is cloned and nothing is written to GitHub. The token is found the same way as `--github-token-scopes` (gh login, `GH_TOKEN`/`GITHUB_TOKEN`, `.git-credentials`) or given with `--token-env VAR`, and it's never printed. Deleted runs can only be checked where the token can read Actions (fine-grained: *Actions: read*); the output says how many repos that skipped.
+
+**Tested** on four repositories SafeDep lists as affected: it finds their probe PRs, the payload commits SafeDep cites, the cleanup commits and the deleted runs (one repo has since been deleted and is reported as "couldn't check"). On 40 busy public repos (Hermes, OpenClaw, Codex, VS Code, React, CPython …): all clean. 15 run-number gaps there are low notes only; the first version, which grouped runs by name, reported 84. On the 24 repos of a real account: clean, using 194 API calls.
+
+**Limits:** GitHub keeps only what the attacker didn't delete. A force-push that rewrote history removes the commits, and a deleted branch leaves no trace. If a probe PR is there, treat the account as compromised even when nothing else shows.
+
 ## Dashboard (`asca dashboard`)
 
 One page per host with every asca job's status and the fixes to act on, so you don't have to dig
@@ -896,6 +924,22 @@ open ~/.local/state/asca/dashboard.html        # macOS; xdg-open on Linux
 - **Act on these:** every critical, high and medium finding, with *where*, *why* and *fix*.
   Commands in a fix are in boxes that select with one click. New findings (first seen within the
   last 36 hours) get a **NEW** badge. Lower-priority and baseline-accepted findings are folded away.
+- **Leaked keys: where each one is.** One card per leaked key instead of one finding per copy, grouped
+  by the hash tag every report uses (never the value). Each card shows:
+  - The provider and the masked key (4-character prefix and length).
+  - Every place a copy was found, by agent (Hermes, Claude Code, Codex, Cursor …) and kind (config,
+    transcripts with a file count, allow rule, MCP config, cron job …).
+  - How many days it has been exposed, from the first-seen date in the dashboard's memory. A key
+    that was already there when tracking started says so, rather than guessing a date.
+  - **Whether it's still your live key:** the values in your agents' `.env` files
+    (`$HERMES_HOME/.env`, `~/.hermes/.env`, `~/.openclaw/.env`, `~/.config/goose/.env`, or
+    `--env-file`) are hashed in memory and compared with the tags; values are never written or
+    shown. A live key needs rotating; a copy of a rotated key only needs deleting.
+    `--no-live-check` skips this.
+  - The provider's revoke steps, once.
+
+  Keys accepted in a baseline ("rotated on …") are listed folded away, and flagged if a key you
+  accepted as rotated is in fact still live.
 - **Fixed recently:** audit and skill findings that disappeared in the last 7 days. A report that's
   missing or unreadable never counts as a fix.
 - **Audit trend** (from `history-*.json`), Hermes patch level, and the egress summary.

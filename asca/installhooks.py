@@ -36,8 +36,11 @@ SAFEDEP = "https://safedep.io/blog/github-actions-wfx-credential-stealer"
 _LOCAL_FILE = re.compile(r"(?:^|[;&|]\s*|\s)(?:(?:node|bun|deno\s+run|tsx|ts-node|sh|bash|zsh|python3?|ruby|perl)\s+)?"
                          r"((?:\./|[\w.-]+/)?[\w./-]*\.(?:c?js|mjs|cjs|ts|mts|sh|py|rb|pl)|\./[\w./-]+)(?=\s|$|[;&|>])")
 # in the command itself. Strong: runs fetched or decoded code / raw sockets. Weak: just downloads something.
-_CMD_RISKY = re.compile(r"\b(?:nc|ncat|socat|telnet|osascript|base64|certutil|powershell|iex)\b|/dev/tcp|"
-                        r"\|\s*(?:ba|z|da)?sh\b|\$\(\s*(?:curl|wget)\b|`\s*(?:curl|wget)\b", re.I)
+# Commands only in command form (a word inside an error message, e.g. "PowerShell", doesn't count).
+_CMD_RISKY = re.compile(r"\b(?:nc|ncat|socat|telnet)\s+\S+\s+\d+|\bosascript\s+-e|\bbase64\s+(?:-d|--decode|-D)\b|"
+                        r"\bcertutil(?:\.exe)?\s+-(?:decode|urlcache)|\bpowershell(?:\.exe)?\s+-(?:e|enc|encodedcommand|c|"
+                        r"command|nop|w)\b|\biex\s*\(|/dev/tcp|\|\s*(?:ba|z|da)?sh\b|\$\(\s*(?:curl|wget)\b|"
+                        r"`\s*(?:curl|wget)\b", re.I)
 _CMD_FETCH = re.compile(r"\b(?:curl|wget|scp)\b|https?://", re.I)
 _INLINE = re.compile(r"\b(?:node|bun)\s+-(?:e|p)\b|\bpython3?\s+-c\b|\b(?:ba|z)?sh\s+-c\b|\bperl\s+-e\b", re.I)
 OBFUSCATED = re.compile(r"\beval\s*\(|\bnew\s+Function\s*\(|\bFunction\s*\(\s*['\"]|"
@@ -98,9 +101,10 @@ def grade(cmd: str, pkg_dir: Path, root: Path, strict: bool = False) -> tuple[Se
             f"It matches the wfx credential stealer's published indicators (a `.ci-xxxxxx.sh` runner, the `exit 42` "
             f"sentinel, or its exfil settings and servers in the script) ({SAFEDEP}).")
     reasons, weak = [], []
-    if _CMD_RISKY.search(cmd) or OBFUSCATED.search(cmd) or (_INLINE.search(cmd) and (_FILE_EXEC.search(cmd)
-                                                                                    or _FILE_NET.search(cmd))):
+    if _CMD_RISKY.search(cmd) or OBFUSCATED.search(cmd) or (_INLINE.search(cmd) and _FILE_NET.search(cmd)):
         reasons.append("it runs downloaded or decoded code, or opens a raw network connection")
+    elif _INLINE.search(cmd) and (_FILE_EXEC.search(cmd) or _FILE_NET.search(cmd)):
+        weak.append("an inline script runs local commands")
     elif _CMD_FETCH.search(cmd):
         weak.append("it downloads something at install time")
     if hidden:
