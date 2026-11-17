@@ -278,7 +278,7 @@ def test_check_repo_flags_fake_take_home_without_running_it(tmp_path, monkeypatc
     assert rc == 1 and out.startswith("⛔ Don't open this repo")
     fs = checkrepo.check(root)
     rules = {(f.rule, f.severity) for f in fs}
-    assert ("repo.install-script", Severity.HIGH) in rules                 # setup.js runs commands + network
+    assert ("repo.install-hook", Severity.HIGH) in rules                   # setup.js runs commands + network
     assert ("repo.install-script", Severity.LOW) in rules                  # husky
     assert ("mcp.archived-server", Severity.HIGH) in rules
     assert any(r == "repo.symlink-escape" and s == Severity.HIGH for r, s in rules)
