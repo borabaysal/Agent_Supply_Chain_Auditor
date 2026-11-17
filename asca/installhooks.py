@@ -58,7 +58,9 @@ _CRED_READ = re.compile(r"\.aws/credentials|\.ssh/id_|\.npmrc|\.git-credentials|
                         r"Object\.(?:keys|entries)\(process\.env\)|os\.environ\)|printenv|\benv\s*\|", re.I)
 # wfx indicators published by SafeDep and Aikido (12 Nov 2026)
 WFX_FILE = re.compile(r"(?:^|/)\.ci-[a-z0-9]{6}\.sh$")
-WFX_TEXT = re.compile(r"\bWF_CALLBACK\b|\bWF_CTOKEN\b|b42d70a7aab9140ca19e8249|194\.150\.166\.244|18\.143\.168\.96")
+# indicators exactly as listed in SafeDep's IOC table (campaign tokens, exfil servers, env names)
+WFX_TEXT = re.compile(r"\bWF_CALLBACK\b|\bWF_CTOKEN\b|\bWF_TG_CHAT\b|b42d70a7aab9140ca19e8249|e6ny5telf3pht81qk5zv|"
+                      r"194\.150\.166\.244|18\.143\.168\.96")
 WFX_SENTINEL = re.compile(r"-eq\s+42\b[^\n]*exit\s+42")
 
 

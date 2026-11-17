@@ -46,6 +46,12 @@ def test_wfx_hook_is_critical_even_when_script_was_reverted(tmp_path):
     assert "SafeDep" in fs[0].remediation or "safedep" in fs[0].remediation
 
 
+@pytest.mark.parametrize("ioc", ["WF_TG_CHAT=1", "e6ny5telf3pht81qk5zv", "http://194.150.166.244:8080/exfil"])
+def test_published_iocs(tmp_path, ioc):
+    r = repo(tmp_path, {"postinstall": "bash scripts/s.sh"}, {"scripts/s.sh": ioc + "\n"})
+    assert sev(installhooks.audit(r)) == [("repo.wfx-indicator", Severity.CRITICAL)]
+
+
 def test_wfx_text_in_the_script_is_critical(tmp_path):
     r = repo(tmp_path, {"postinstall": "bash scripts/setup.sh"},
              {"scripts/setup.sh": "export WF_CALLBACK=http://192.0.2.7:8080/x\n"})
