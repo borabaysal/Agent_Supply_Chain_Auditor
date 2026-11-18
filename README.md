@@ -25,10 +25,10 @@ _Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where
 | **Exposed keys** | Literal API keys in agent config, cron jobs, memories, skills, plugins, scripts and MCP `env`/`headers` (Anthropic, OpenAI, OpenRouter, GitHub, Slack, Telegram, AWS, Google, Stripe, HF, wallet private keys, PEM keys, generic `api_key=` assignments) · tokens embedded in git remote URLs and MCP URLs · credential files (`.env`, `auth.json`, `.git-credentials`, `config.yaml`, MCP OAuth tokens) readable by group/other |
 | **Session history** | Literal keys saved in agents' transcripts: Hermes `sessions/*.json(l)` and `cron/output/**` (incl. `profiles/*`), Claude Code `~/.claude/projects/**/*.jsonl`, Codex `~/.codex/sessions/**/*.jsonl` and `history.jsonl`, Cursor chat rows in `state.vscdb` · transcript files/dirs that group/other can actually reach and read. See [Session history](#session-history-secretsession-history). |
 | **Stray agent instructions** | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.cursor/rules/*` … left in `~/Downloads`, `~/Desktop` or the temp dir, outside any git repo; HIGH when the `asca-skills` content rules match. See [Stray agent instructions](#stray-agent-instructions-repostray-agent-instructions). |
-| **Integrity** | Hub skills whose on-disk content no longer matches the install-time hash (same algorithm as Hermes' Skills Guard) · skills installed despite a non-`safe` scanner verdict · Hermes Agent versions inside a known-vulnerable range |
+| **Integrity** | Hub skills whose on-disk content no longer matches the install-time hash (same algorithm as Hermes' Skills Guard) · skills installed despite a non-`safe` scanner verdict · Hermes Agent versions inside a known-vulnerable range · [installed Claude Code, Codex, Gemini CLI, goose and Claude Desktop versions with known vulnerabilities](#other-coding-agents-claude-code-codex-gemini-cli-goose-claude-desktop), including advisories that never got a CVE or never reached OSV |
 | **Agent takeover** | Hermes `SOUL.md` and memories rewritten to take orders, collect keys or hide activity (Carbonato) · gateway open to anyone (`GATEWAY_ALLOW_ALL_USERS`, `*` allow lists) · Docker API reachable over TCP without client certificates · [details](#agent-takeover-workspace-and-response-checks-part-of-asca) |
 | **Workspace** | Symlinks that lead out of a repo or the agent home, high when they point at credentials (CVE-2026-103916) · MCP servers that are archived and will never be patched (MCPhantom) |
-| **Response** | Provider-specific steps on every leaked-key finding, plus a local blast-radius card for AWS keys (profile, long-lived or temporary, assumable roles) · a dashboard card per leaked key: every copy across agents, days exposed, and whether it's still your live key · [`asca github-check`](#were-your-github-repos-hit-by-wfx-asca-github-check-opt-in-online) for wfx traces on GitHub |
+| **Response** | [`asca spend`](#stolen-key-spend-tripwire-asca-spend-opt-in-online): hourly spend tripwire for stolen OpenRouter and Anthropic keys · Provider-specific steps on every leaked-key finding, plus a local blast-radius card for AWS keys (profile, long-lived or temporary, assumable roles) · a dashboard card per leaked key: every copy across agents, days exposed, and whether it's still your live key · [`asca github-check`](#were-your-github-repos-hit-by-wfx-asca-github-check-opt-in-online) for wfx traces on GitHub |
 
 ### Safety properties of the auditor itself
 
@@ -236,6 +236,22 @@ asca checks the installed Hermes Agent version against three sources:
 Duplicates across sources are merged by alias (CVE ↔ GHSA ↔ PYSEC), keeping the highest severity. A feed outage is reported as a LOW `scanner.feed-unavailable` finding, not a silent pass.
 
 Advisory file fields: `first` plus either `last` (inclusive) or `before` (exclusive, matching NVD's "X prior to Y" wording), and optionally `aliases`, `fixed`, `severity` and `summary`. A top-level `dismissed` list (`{"id", "reason"}`) records IDs you reviewed and chose not to track. asca ignores it, but periodic search jobs should treat it as known so they don't re-report those IDs.
+
+#### Other coding agents: Claude Code, Codex, Gemini CLI, goose, Claude Desktop
+
+On by default (`--no-agent-versions` to skip). asca reads each agent's installed version **from files only**, never running a binary:
+
+| Agent | Version read from |
+|---|---|
+| Claude Code | `@anthropic-ai/claude-code/package.json` in global npm, nvm, fnm, volta, pnpm and bun folders and `~/.claude/local`; the native installer's `~/.local/share/claude/versions/<version>`, the one `~/.local/bin/claude` links to |
+| Codex | `@openai/codex/package.json`; Homebrew `codex/<version>` |
+| Gemini CLI | `@google/gemini-cli/package.json`; Homebrew `gemini-cli/<version>` |
+| goose | Homebrew `block-goose-cli/<version>` (the curl installer leaves no version on disk) |
+| Claude Desktop | `Claude.app/Contents/Info.plist` (macOS) |
+
+Each version is matched against a bundled table (`asca/agentadv_data.py`) built from the GitHub Advisory Database **and each vendor's own repository advisories**. The second source matters: some advisories are published only in the vendor's repo and never reach the global database or OSV. In November 2026 that was 6 for Claude Code and Claude Desktop (including the symlink file write GHSA-5j29-h97v-84ch) and goose's CVE-2026-72718. With `--online-advisories`, OSV.dev, the GitHub Advisory Database and the vendor's repository advisories are queried live as well, and duplicates are merged by alias.
+
+You get one finding per installed agent, e.g. `Claude Code 2.1.128 is affected by 6 known vulnerabilities (4 high, 1 medium, 1 low)`, listing each advisory, which ones have no CVE ID, which are only in the vendor's repo, and the version to upgrade to. A new advisory for your version changes the finding, so `--telegram change` alerts once. Refresh the bundled table with `python3 scripts/update_agent_advisories.py` (read-only GitHub API).
 
 **Freshness:** if the newest review date (built-in table or your file's `"reviewed_at"`) is older than 30 days, asca adds a LOW `advisories.stale` finding. Bump `reviewed_at` whenever you check for new advisories. A weekly scheduled search that updates it is a good pattern: search NVD, vendor advisories and security news for new IDs, ask a human to confirm candidates, and only then add them to the file.
 
@@ -879,6 +895,27 @@ Nothing in the repo is executed and git is never run. A folder without `.git` (a
 
 **Limits:** it reads only what's in the folder. It doesn't follow dependencies (a malicious package in `node_modules` after install) or run code to see what it does. Its source-code checks cover install scripts and agent files, not every `.js` file, so the safest way to try an untrusted repo is still a throwaway VM or container with no keys in it.
 
+## Stolen-key spend tripwire (`asca spend`, opt-in, online)
+
+Stolen AI keys (LLMjacking) usually show up first on the bill. `asca spend` checks your providers' usage and alerts when it jumps, so you can revoke the key the same day. Run it hourly:
+
+```bash
+python3 -m asca spend                                   # keys from the environment or your agents' .env files
+python3 -m asca spend --telegram change                 # scheduled: one message when it starts, one when it's normal again
+python3 -m asca spend --max-daily-usd 20                # also a hard daily ceiling, active from the first run
+```
+
+| Provider | Key it needs | What it checks |
+|---|---|---|
+| OpenRouter | any normal key (`OPENROUTER_API_KEY`) | `GET /api/v1/key` for that key's cumulative usage. asca keeps one sample per run and compares today's spend with the median of the last 7 complete days, and the last hour with a normal day. Also flags a key close to its credit limit (medium) or without one (low). |
+| Anthropic | an **Admin key** (`ANTHROPIC_ADMIN_KEY`, `sk-ant-admin01-…`); normal API keys can't read usage | Daily cost from the Cost API, compared the same way. The Usage API grouped by key and model flags an **API key** (high) or **model** (medium) used today that wasn't used in the previous 8 days, a common sign of a key being resold. |
+
+A spike is `spend.spike` (high): today's spend is over 3× the 7-day median and at least $2 more (`--factor`, `--min-usd`), or the last hour cost more than a normal day. It needs 3 complete days of history first; until then it only reports "learning", except for `--max-daily-usd`.
+
+**Safe by construction:** only GET requests, and each key goes only to its own provider's API host. Keys are never printed or stored. The state file (`~/.local/state/asca/spend.json`, mode `0600`) keeps usage numbers, a short hash per key, and Anthropic API key IDs and model names, none of which are secret.
+
+**Limits:** neither provider reports where requests come from (Anthropic's `inference_geo` is where the model ran, not the caller), so there is no "new region" alert. Anthropic cost data lags a few minutes. Spend from a key on another platform (OpenAI, Google, Bedrock) isn't covered yet.
+
 ## Were your GitHub repos hit by wfx? (`asca github-check`, opt-in, online)
 
 The wfx stealer ([SafeDep](https://safedep.io/blog/github-actions-wfx-credential-stealer), [Aikido](https://www.aikido.dev/blog/compromised-github-accounts-push-ci-secret-stealer-to-tens-of-thousands-of-repositories)) pushed with stolen tokens into the victims' own repos, ran once, then reverted within a minute and deleted the workflow run with its logs. The traces are on GitHub, not on your disk, so this command checks them through the GitHub API:
@@ -979,7 +1016,7 @@ It's only a path: no report content or secret is added.
 - The Docker check reads the host's daemon configuration. Run inside a container, it can't see the host's.
 - The CI-agent check reads workflow files only. It doesn't see repository or organisation settings (the default token permissions, "require approval for fork PRs", branch rules), reusable workflows in other repos, or composite actions that wrap an agent under another name. A job without a `permissions:` block is reported as "doesn't restrict" because the repository default may be read-write.
 - `global core.fsmonitor=false` is suggested as defence in depth only. A repo-local value still overrides it.
-- Version advisories cover Hermes Agent only (extend `asca/advisories.py: PACKAGES` for other agents). For other agents, check vendor advisories; contributions are welcome.
+- Version advisories cover Hermes Agent, Claude Code, Codex, Gemini CLI, goose and Claude Desktop. IDE extensions (Cursor, Copilot, Cline …) aren't matched: no advisory feed covers the VS Code Marketplace, so the inventory only tracks their versions. A goose installed with the curl script has no version on disk and isn't checked.
 
 ## Contributing
 
