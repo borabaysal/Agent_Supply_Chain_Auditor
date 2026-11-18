@@ -15,7 +15,8 @@ What runs (all static; nothing in the repo is executed, git is never run):
 - coding agents in ``.github/workflows`` that strangers can trigger
 - symlinks that lead out of the repo
 - npm lifecycle scripts (``preinstall``/``install``/``postinstall``/``prepare``) that run on
-  ``npm install``; high when they fetch or decode something
+  ``npm install`` (see asca.installhooks), and workflow steps that hand out every secret or the
+  Actions runtime token (asca.wfsecrets); wfx stealer indicators are critical
 
 A folder without ``.git`` (a zip) is treated as if every file were committed.
 Exit codes: 0 no finding at or above ``--fail-on`` (default medium), 1 there are, 2 usage error.
@@ -31,27 +32,15 @@ import sys
 from html import escape
 from pathlib import Path
 
-from . import __version__, ciagent, discover, repohooks, report, symlinks
+from . import __version__, ciagent, discover, installhooks, repohooks, report, symlinks, wfsecrets
 from .model import Finding, Severity
 
 INSTRUCTION_FILES = ["AGENTS.md", "CLAUDE.md", "CLAUDE.local.md", "GEMINI.md", ".cursorrules", ".windsurfrules",
                      ".clinerules", ".github/copilot-instructions.md"]
 INSTRUCTION_DIRS = [".cursor/rules", ".windsurf/rules", ".clinerules", ".claude/commands", ".claude/skills",
                     ".claude/agents", ".agents", ".codex", ".gemini/commands"]
-LIFECYCLE = ("preinstall", "install", "postinstall", "prepare", "preprepare", "postprepare")
 SKIP = {"node_modules", ".git", ".venv", "venv", "__pycache__", "dist", "build", ".next"}
 MAX_FILES = 400
-# a script that runs a file from the repo: `node scripts/x.js`, `sh ./setup.sh`, `python tools/y.py`, `./run`
-_LOCAL_FILE = re.compile(r"(?:^|[;&|]\s*|\s)(?:(?:node|bun|deno\s+run|tsx|ts-node|sh|bash|zsh|python3?|ruby|perl)\s+)?"
-                         r"((?:\./|[\w.-]+/)[\w./-]+\.(?:c?js|mjs|cjs|ts|mts|sh|py|rb|pl)|\./[\w./-]+)(?=\s|$|[;&|])")
-# in that file: runs commands *and* talks to the network, or decodes and evaluates code
-_FILE_EXEC = re.compile(r"child_process|\bexecSync\(|\bspawn\(|\bexec\(|subprocess|os\.system", re.I)
-_FILE_NET = re.compile(r"https?://|\bfetch\(|\baxios\b|\brequire\(['\"]https?['\"]\)|\burllib|\brequests\.", re.I)
-# fetches or pipes to a shell (`node -e`/`python -c` alone are fine: `node -e 'process.exit(0)'`)
-_CMD_RISKY = re.compile(r"\b(?:curl|wget|nc|ncat|socat|telnet|scp|osascript|base64|certutil|powershell|iex)\b|"
-                        r"/dev/tcp|https?://|\|\s*(?:ba|z|da)?sh\b", re.I)
-_INLINE = re.compile(r"\b(?:node|bun)\s+-(?:e|p)\b|\bpython3?\s+-c\b|\b(?:ba|z)?sh\s+-c\b|\bperl\s+-e\b", re.I)
-OBFUSCATED = re.compile(r"\b(?:eval|Function)\s*\(|\bBuffer\.from\([^)]*['\"]base64|\batob\(|\\x[0-9a-f]{2}", re.I)
 
 
 def _instruction_files(root: Path) -> list[Path]:
@@ -70,65 +59,9 @@ def _instruction_files(root: Path) -> list[Path]:
     return out[:MAX_FILES]
 
 
-def _package_jsons(root: Path) -> list[Path]:
-    out = []
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in SKIP and not d.startswith(".")]
-        if Path(dirpath).relative_to(root).parts.__len__() > 3:
-            dirnames[:] = []
-        if "package.json" in filenames:
-            out.append(Path(dirpath) / "package.json")
-        if len(out) >= 50:
-            break
-    return out
-
-
-def audit_package_scripts(root: Path) -> list[Finding]:
-    out = []
-    for p in _package_jsons(root):
-        try:
-            doc = json.loads(p.read_text(encoding="utf-8", errors="replace"))
-        except (OSError, ValueError):
-            continue
-        scripts = doc.get("scripts") if isinstance(doc, dict) else None
-        if not isinstance(scripts, dict):
-            continue
-        rel = str(p.relative_to(root))
-        for name in LIFECYCLE:
-            cmd = scripts.get(name)
-            if not isinstance(cmd, str) or not cmd.strip():
-                continue
-            risky = bool(_CMD_RISKY.search(cmd) or OBFUSCATED.search(cmd)
-                         or (_INLINE.search(cmd) and (_FILE_EXEC.search(cmd) or _FILE_NET.search(cmd))))
-            local = _LOCAL_FILE.search(cmd)
-            file_note = ""
-            if local and not risky:
-                target = (p.parent / local.group(1)).resolve()
-                try:
-                    inside = target.is_relative_to(root.resolve()) and target.is_file()
-                    body = target.read_bytes()[:512 * 1024].decode("utf-8", "replace") if inside else ""
-                except OSError:
-                    body = ""
-                if (_FILE_EXEC.search(body) and _FILE_NET.search(body)) or OBFUSCATED.search(body):
-                    risky = True
-                    file_note = (f" `{local.group(1)}` both runs commands and reaches the network, or decodes and "
-                                 f"evaluates code.")
-            sev = Severity.HIGH if risky else Severity.MEDIUM if local else Severity.LOW
-            out.append(Finding(
-                rule="repo.install-script", category="repo", severity=sev,
-                title=f"`npm install` runs a `{name}` script from {rel}",
-                location=f"{p}#scripts.{name}", subject=f"{rel}:{name}:{cmd[:80]}",
-                detail=(f"`{cmd[:200]}`. npm runs this automatically on install, with your user's access to keys, "
-                        f"wallets and browser data."
-                        + file_note
-                        + (" It fetches, decodes or evaluates something, which is how fake take-home tests have "
-                           "delivered malware." if risky else
-                           f" It runs `{local.group(1)}` from the repo: read that file before installing."
-                           if local else " It looks like a build tool; low risk, listed so you know it runs.")),
-                remediation=("Read what the script runs before installing. To install without running scripts: "
-                             "`npm install --ignore-scripts`. Better, open and run untrusted repos in a throwaway "
-                             "VM or container with no keys in it.")))
-    return out
+def audit_package_scripts(root: Path, git_dir: Path | None = None, assume_committed: bool = False) -> list[Finding]:
+    """Every npm lifecycle script, graded (see asca.installhooks)."""
+    return installhooks.audit(root, git_dir=git_dir, assume_committed=assume_committed, strict=True)
 
 
 def audit_instructions(root: Path) -> list[Finding]:
@@ -164,7 +97,8 @@ def check(root: Path, stats: dict | None = None) -> list[Finding]:
     findings += allowlist.audit_repo(root, git_dir, stats)
     findings += symlinks.audit_tree(root, git_dir=git_dir, stats=stats, assume_committed=archive)
     findings += audit_instructions(root)
-    findings += audit_package_scripts(root)
+    findings += audit_package_scripts(root, git_dir, assume_committed=archive)
+    findings += wfsecrets.audit_repo(root, git_dir, assume_committed=archive)
     uniq: dict[str, Finding] = {}
     for f in findings:
         uniq.setdefault(f.fingerprint, f)

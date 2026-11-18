@@ -12,8 +12,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import (__version__, advisories, agentcfg, allowlist, ciagent, discover, dockerd, ghtoken, hermes, mcp, persona,
-               pystartup, repohooks, report, respond, secrets, sessions, stray, symlinks)
+from . import (__version__, advisories, agentcfg, allowlist, ciagent, discover, dockerd, ghtoken, hermes, installhooks,
+               mcp, persona, pystartup, repohooks, report, respond, secrets, sessions, stray, symlinks, wfsecrets)
 from .model import Finding, Report, Severity
 
 
@@ -56,6 +56,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-agent-allowlist", action="store_true",
                    help="skip secret scanning of agent allow rules (Claude Code permissions, VS Code auto-approve) and "
                         "the committed .claude/settings.local.json check")
+    p.add_argument("--no-install-hooks", action="store_true",
+                   help="skip risky npm install hooks and secret-dumping workflow steps in repos (wfx)")
     p.add_argument("--no-symlinks", action="store_true",
                    help="skip listing symlinks that lead out of repos and the agent home")
     p.add_argument("--no-docker-daemon", action="store_true",
@@ -131,6 +133,9 @@ def run(argv: list[str] | None = None) -> int:
     if argv[:1] == ["dashboard"]:   # `asca dashboard …`: static HTML status page from the reports
         from .dashboard import run as dashboard_run
         return dashboard_run(argv[1:])
+    if argv[:1] == ["github-check"]:   # `asca github-check`: wfx traces in your GitHub repos (online, read-only)
+        from . import ghcheck
+        return ghcheck.run(argv[1:])
     if argv[:1] == ["check-repo"]:   # `asca check-repo PATH`: is a downloaded repo safe to open?
         from .checkrepo import run as checkrepo_run
         return checkrepo_run(argv[1:])
@@ -209,6 +214,9 @@ def run(argv: list[str] | None = None) -> int:
             findings += allowlist.audit_repo(r, discover.resolve_git_dir(r), stats)
         if not args.no_symlinks:
             findings += symlinks.audit_tree(r, git_dir=discover.resolve_git_dir(r), stats=stats)
+        if not args.no_install_hooks:   # only risky hooks here: your own repos' husky hooks are expected
+            findings += installhooks.audit(r, git_dir=discover.resolve_git_dir(r), risky_only=True)
+            findings += wfsecrets.audit_repo(r, discover.resolve_git_dir(r))
 
     if not args.no_session_history:
         if min(args.session_budget_mb, args.session_file_cap_mb, args.session_max_files) < 1:

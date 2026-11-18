@@ -21,14 +21,14 @@ _Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where
 | Category | Checks |
 |---|---|
 | **Pinning** | Hermes Skills Hub installs with no upstream commit pin · skill taps that track a branch · plugins checked out on a moving branch · MCP servers launched with `npx`/`bunx`/`uvx`/`pipx` without an exact version · `docker run` images without `@sha256:` digest · `git+https://` installs without a commit SHA · skills that tell the agent to `curl … \| sh` · remote MCP servers (reported as *info*, since they can't be pinned) |
-| **Repo config** (GitSpawn) | `core.fsmonitor` set to a program (**critical**, see [CVE-2026-71963](https://www.rapid7.com/db/vulnerabilities/cve-2026-71963/) for Hermes, CVE-2026-19592 for Codex, CVE-2026-72718 for goose), plus every other git key that names a program: `core.hooksPath`, `core.sshCommand`, `core.askPass`, `core.pager`/`pager.*`, `core.editor`, `diff.external`, `diff.*.textconv`, `filter.*.{clean,smudge,process}`, `merge.*.driver`, `credential.helper` (non-builtin), `protocol.ext.allow`, `include.path`/`includeIf`, `!` aliases, `gpg.program` · active (non-`.sample`) git hooks · linked worktrees/submodules (`.git` files) · project `.mcp.json` / `.cursor/mcp.json` / `.vscode/mcp.json` / `.gemini/settings.json` MCP servers that ship with a repo · [coding agents in `.github/workflows` that anyone can trigger](#coding-agents-in-github-workflows-that-anyone-can-trigger-on-by-default---no-ci-agents-to-skip) |
+| **Repo config** (GitSpawn) | `core.fsmonitor` set to a program (**critical**, see [CVE-2026-71963](https://www.rapid7.com/db/vulnerabilities/cve-2026-71963/) for Hermes, CVE-2026-19592 for Codex, CVE-2026-72718 for goose), plus every other git key that names a program: `core.hooksPath`, `core.sshCommand`, `core.askPass`, `core.pager`/`pager.*`, `core.editor`, `diff.external`, `diff.*.textconv`, `filter.*.{clean,smudge,process}`, `merge.*.driver`, `credential.helper` (non-builtin), `protocol.ext.allow`, `include.path`/`includeIf`, `!` aliases, `gpg.program` · active (non-`.sample`) git hooks · linked worktrees/submodules (`.git` files) · project `.mcp.json` / `.cursor/mcp.json` / `.vscode/mcp.json` / `.gemini/settings.json` MCP servers that ship with a repo · [coding agents in `.github/workflows` that anyone can trigger](#coding-agents-in-github-workflows-that-anyone-can-trigger-on-by-default---no-ci-agents-to-skip) · [npm install hooks and workflow steps that dump secrets (wfx)](#install-hooks-and-secret-dumping-workflow-steps-wfx-on-by-default---no-install-hooks-to-skip) |
 | **Exposed keys** | Literal API keys in agent config, cron jobs, memories, skills, plugins, scripts and MCP `env`/`headers` (Anthropic, OpenAI, OpenRouter, GitHub, Slack, Telegram, AWS, Google, Stripe, HF, wallet private keys, PEM keys, generic `api_key=` assignments) · tokens embedded in git remote URLs and MCP URLs · credential files (`.env`, `auth.json`, `.git-credentials`, `config.yaml`, MCP OAuth tokens) readable by group/other |
 | **Session history** | Literal keys saved in agents' transcripts: Hermes `sessions/*.json(l)` and `cron/output/**` (incl. `profiles/*`), Claude Code `~/.claude/projects/**/*.jsonl`, Codex `~/.codex/sessions/**/*.jsonl` and `history.jsonl`, Cursor chat rows in `state.vscdb` · transcript files/dirs that group/other can actually reach and read. See [Session history](#session-history-secretsession-history). |
 | **Stray agent instructions** | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.cursor/rules/*` … left in `~/Downloads`, `~/Desktop` or the temp dir, outside any git repo; HIGH when the `asca-skills` content rules match. See [Stray agent instructions](#stray-agent-instructions-repostray-agent-instructions). |
 | **Integrity** | Hub skills whose on-disk content no longer matches the install-time hash (same algorithm as Hermes' Skills Guard) · skills installed despite a non-`safe` scanner verdict · Hermes Agent versions inside a known-vulnerable range |
 | **Agent takeover** | Hermes `SOUL.md` and memories rewritten to take orders, collect keys or hide activity (Carbonato) · gateway open to anyone (`GATEWAY_ALLOW_ALL_USERS`, `*` allow lists) · Docker API reachable over TCP without client certificates · [details](#agent-takeover-workspace-and-response-checks-part-of-asca) |
 | **Workspace** | Symlinks that lead out of a repo or the agent home, high when they point at credentials (CVE-2026-103916) · MCP servers that are archived and will never be patched (MCPhantom) |
-| **Response** | Provider-specific steps on every leaked-key finding, plus a local blast-radius card for AWS keys (profile, long-lived or temporary, assumable roles) |
+| **Response** | Provider-specific steps on every leaked-key finding, plus a local blast-radius card for AWS keys (profile, long-lived or temporary, assumable roles) · a dashboard card per leaked key: every copy across agents, days exposed, and whether it's still your live key · [`asca github-check`](#were-your-github-repos-hit-by-wfx-asca-github-check-opt-in-online) for wfx traces on GitHub |
 
 ### Safety properties of the auditor itself
 
@@ -660,6 +660,28 @@ YAML reader now resolves anchors and aliases (`&steps` / `*steps`), which real w
 share steps between jobs. Over 2,069 YAML files the reader parsed 33 more than before and lost none;
 the 15 whose result changed differ only where an anchor is now resolved.
 
+### Install hooks and secret-dumping workflow steps (wfx) (on by default; `--no-install-hooks` to skip)
+
+In November 2026 the wfx credential stealer ([SafeDep](https://safedep.io/blog/github-actions-wfx-credential-stealer), [Aikido](https://www.aikido.dev/blog/compromised-github-accounts-push-ci-secret-stealer-to-tens-of-thousands-of-repositories)) used stolen GitHub tokens to push two payloads into thousands of repositories:
+- **An npm hook (771 repos):** a `postinstall` script that silently runs a hidden `.ci-xxxxxx.sh`, so every `npm install`, on CI or a laptop, sends secrets, cloud credentials and AI-tool keys out.
+- **Workflow steps (7,309 repos):** one copies the Actions runtime token into `$GITHUB_ENV`, the next passes `${{ toJSON(secrets) }}`, every secret in the repo, to the payload.
+
+asca reads every `package.json` (up to 3 folders deep, not `node_modules`) and every `.github/workflows/*.yml` in your repos, as text:
+
+| Finding | Severity |
+|---|---|
+| `repo.wfx-indicator`: wfx's published indicators: a `.ci-xxxxxx.sh` runner, the `exit 42` sentinel, `WF_CALLBACK` / `WF_CTOKEN`, its exfil servers, a `build-audit-xxxxxx.yml` workflow | critical |
+| `repo.install-hook`: a lifecycle script that runs a hidden file, hides its output while running a file, pipes a download to a shell, decodes or `eval`s, or whose file uploads data or reads credential files and uploads | high |
+| `repo.workflow-secret-dump`: the Actions runtime or OIDC request token persisted by name into `$GITHUB_ENV` / `$GITHUB_OUTPUT` or sent to a hard-coded URL; `toJSON(secrets)` in the same workflow, or in a step that sends data out | high |
+| `toJSON(secrets)` on its own (often deliberate, e.g. a secrets-to-env action) | medium |
+| `toJSON(vars)` (every repository variable) | low |
+
+A hook or workflow that isn't committed yet is one level lower. In the daily audit only high and critical install hooks are reported, because your own `prepare: husky` is expected; `asca check-repo` lists every hook. Using the runtime token normally (requesting an OIDC token, cache tools) isn't reported.
+
+**Tested** on 788 workflow files from 124 repos (vendor examples, large projects and agent workflows) plus 195 found by searching GitHub for `toJSON(secrets)`/`toJSON(vars)`: 0 high. The 93 medium findings are `toJSON(secrets)` used on purpose, mostly with secrets-to-env actions. On 76 repos found by searching GitHub for install hooks, with the files those hooks run: 1 high, a script that really does POST to a service API during install. On 39 popular JS projects: 0 high.
+
+**Limits:** wfx reverted most commits within minutes, so on disk you'll find it only in a checkout pulled in that window or where the revert failed. Its traces on GitHub (probe pull requests, deleted runs) need an online check.
+
 ### GitHub token scopes (opt-in, online: `--github-token-scopes`)
 
 Agents and the tools they call reuse any GitHub credentials they can find: the `gh` login in
@@ -839,20 +861,51 @@ python3 -m asca check-repo ~/Downloads/take-home-test
 python3 -m asca check-repo ~/Downloads/take-home-test --telegram always --env-file ~/.hermes/.env   # verdict on your phone
 ```
 
-- ⛔ **Don't open it yet:** a high finding, for example a folder-open task that runs `curl … | sh`, an install script whose file runs commands and talks to the network, a link to `~/.ssh`, or an archived Puppeteer MCP server.
+- ⛔ **Don't open it yet:** a high finding, for example a folder-open task that runs `curl … | sh`, an install script whose file runs commands and talks to the network, wfx's hidden `.ci-*.sh` hook or a workflow step that dumps every secret, a link to `~/.ssh`, or an archived Puppeteer MCP server.
 - ⚠️ **Check these first:** medium findings, such as a committed IDE hook, or an install script that runs a repo file you should read first.
 - ✅ **No red flags:** low notes only, such as `prepare: husky`.
 
 **What it checks:** git config that runs programs; IDE and agent hooks that run on open; project MCP configs; saved allow rules; agent instruction files (AGENTS.md, CLAUDE.md, .cursorrules, Copilot instructions, `.claude/` commands and skills) against the skill-content rules; coding agents in `.github/workflows`; symlinks; and npm lifecycle scripts:
 - **LOW:** a build tool such as `husky` or `only-allow`.
-- **MEDIUM:** runs a file from the repo.
-- **HIGH:** fetches, decodes or `eval`s, in the script or in the file it runs.
+- **MEDIUM:** runs a file from the repo, or downloads something.
+- **HIGH:** runs a hidden file or hides its output, pipes a download to a shell, decodes or `eval`s, or the file it runs both runs commands and reaches the network, or uploads data. The last one is stricter than the daily audit, which treats it as medium in your own repos because binary downloaders look the same.
+- **CRITICAL:** wfx's published indicators.
+
+Workflows are checked for steps that hand out every secret or the Actions runtime token, see [wfx](#install-hooks-and-secret-dumping-workflow-steps-wfx-on-by-default---no-install-hooks-to-skip).
 
 Nothing in the repo is executed and git is never run. A folder without `.git` (an unpacked zip) is treated as if every file were committed. Exit code 1 means findings at or above `--fail-on` (default medium); `--json` prints them all.
 
-**Tested** on the root `package.json` of 39 popular JS projects (React, Next.js, VS Code, Vite, Angular, Electron …): 0 high. The 13 medium findings all run a file from the repo.
+**Tested** on the root `package.json` of 39 popular JS projects (React, Next.js, VS Code, Vite, Angular, Electron …): 0 high. The 13 medium findings all run a file from the repo. On 76 repos found by searching GitHub for install hooks: 6 high, each an install hook that runs commands and reaches the network (binary downloaders, one service registration), worth reading before you install a stranger's repo.
 
 **Limits:** it reads only what's in the folder. It doesn't follow dependencies (a malicious package in `node_modules` after install) or run code to see what it does. Its source-code checks cover install scripts and agent files, not every `.js` file, so the safest way to try an untrusted repo is still a throwaway VM or container with no keys in it.
+
+## Were your GitHub repos hit by wfx? (`asca github-check`, opt-in, online)
+
+The wfx stealer ([SafeDep](https://safedep.io/blog/github-actions-wfx-credential-stealer), [Aikido](https://www.aikido.dev/blog/compromised-github-accounts-push-ci-secret-stealer-to-tens-of-thousands-of-repositories)) pushed with stolen tokens into the victims' own repos, ran once, then reverted within a minute and deleted the workflow run with its logs. The traces are on GitHub, not on your disk, so this command checks them through the GitHub API:
+
+```bash
+python3 -m asca github-check                          # every repo your token's user owns (incl. private)
+python3 -m asca github-check --owner my-org           # every repo of an org or user
+python3 -m asca github-check --repo me/app --json     # one repo; JSON output
+python3 -m asca github-check --telegram change        # schedule it: a message only when the result changes
+```
+
+| Finding | Severity |
+|---|---|
+| `github.wfx-probe-pr`: a `docs: dependency audit notes` PR or one from a `wfx-docs` branch, open or closed. SafeDep: "a probe pull request on its own means the account is compromised" | critical |
+| `github.wfx-payload-commit`: `chore: add ci helper` / `chore: add dependency audit workflow` (high), `ci: refresh build cache` (medium, generic wording); critical when a `ci: restore` / `ci: cleanup` commit is there too | medium to critical |
+| `github.wfx-branch`: `wfx-docs` (critical); `chore/` plus 8 random characters or `ci-check-NNNN` (medium, could be yours) | medium, critical |
+| `github.deleted-runs`: gaps in a workflow's run numbers since the campaign started. Aikido: "a missing run number … is the more reliable sign that the payload ran". High next to a probe PR or payload commit; on its own it's a low note, because maintainers of busy repos delete runs too | low, high |
+| `github.wfx-loot`: a `wfx-loot` artifact or a `wfx-` cache entry | critical |
+| The default branch's `package.json`, the file its hook runs, and its workflows, checked with the offline [wfx rules](#install-hooks-and-secret-dumping-workflow-steps-wfx-on-by-default---no-install-hooks-to-skip) | as there |
+
+Each repo gets a verdict: 🟥 payload pushed · 🟥 probed (account compromised) · 🟧/🟨 check · ✅ clean · ❔ couldn't check (a repo that can't be read is never called clean). The window starts on 10 Nov 2026, the first probe (`--since`).
+
+**Read-only.** Only GET requests, only to `api.github.com` (or your Enterprise host). Nothing is cloned and nothing is written to GitHub. The token is found the same way as `--github-token-scopes` (gh login, `GH_TOKEN`/`GITHUB_TOKEN`, `.git-credentials`) or given with `--token-env VAR`, and it's never printed. Deleted runs can only be checked where the token can read Actions (fine-grained: *Actions: read*); the output says how many repos that skipped.
+
+**Tested** on four repositories SafeDep lists as affected: it finds their probe PRs, the payload commits SafeDep cites, the cleanup commits and the deleted runs (one repo has since been deleted and is reported as "couldn't check"). On 40 busy public repos (Hermes, OpenClaw, Codex, VS Code, React, CPython …): all clean. 15 run-number gaps there are low notes only; the first version, which grouped runs by name, reported 84. On the 24 repos of a real account: clean, using 194 API calls.
+
+**Limits:** GitHub keeps only what the attacker didn't delete. A force-push that rewrote history removes the commits, and a deleted branch leaves no trace. If a probe PR is there, treat the account as compromised even when nothing else shows.
 
 ## Dashboard (`asca dashboard`)
 
@@ -871,6 +924,22 @@ open ~/.local/state/asca/dashboard.html        # macOS; xdg-open on Linux
 - **Act on these:** every critical, high and medium finding, with *where*, *why* and *fix*.
   Commands in a fix are in boxes that select with one click. New findings (first seen within the
   last 36 hours) get a **NEW** badge. Lower-priority and baseline-accepted findings are folded away.
+- **Leaked keys: where each one is.** One card per leaked key instead of one finding per copy, grouped
+  by the hash tag every report uses (never the value). Each card shows:
+  - The provider and the masked key (4-character prefix and length).
+  - Every place a copy was found, by agent (Hermes, Claude Code, Codex, Cursor …) and kind (config,
+    transcripts with a file count, allow rule, MCP config, cron job …).
+  - How many days it has been exposed, from the first-seen date in the dashboard's memory. A key
+    that was already there when tracking started says so, rather than guessing a date.
+  - **Whether it's still your live key:** the values in your agents' `.env` files
+    (`$HERMES_HOME/.env`, `~/.hermes/.env`, `~/.openclaw/.env`, `~/.config/goose/.env`, or
+    `--env-file`) are hashed in memory and compared with the tags; values are never written or
+    shown. A live key needs rotating; a copy of a rotated key only needs deleting.
+    `--no-live-check` skips this.
+  - The provider's revoke steps, once.
+
+  Keys accepted in a baseline ("rotated on …") are listed folded away, and flagged if a key you
+  accepted as rotated is in fact still live.
 - **Fixed recently:** audit and skill findings that disappeared in the last 7 days. A report that's
   missing or unreadable never counts as a fix.
 - **Audit trend** (from `history-*.json`), Hermes patch level, and the egress summary.
