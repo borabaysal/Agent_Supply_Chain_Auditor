@@ -1,0 +1,60 @@
+{
+  "Rules": [
+    {
+      "SettingName": "AscaReportFound",
+      "Operator": "IsEquals",
+      "DataType": "Boolean",
+      "Operand": true,
+      "MoreInfoUrl": "https://github.com/borabaysal/Agent_Supply_Chain_Auditor#readme",
+      "RemediationStrings": [
+        {
+          "Language": "en_US",
+          "Title": "asca hasn't produced a report on this device",
+          "Description": "The daily asca audit isn't installed or hasn't run. Ask IT to (re)install the scheduled asca job."
+        }
+      ]
+    },
+    {
+      "SettingName": "AscaReportAgeHours",
+      "Operator": "LessEquals",
+      "DataType": "Int64",
+      "Operand": 48,
+      "MoreInfoUrl": "https://github.com/borabaysal/Agent_Supply_Chain_Auditor#readme",
+      "RemediationStrings": [
+        {
+          "Language": "en_US",
+          "Title": "The last asca audit is {ActualValue} hours old",
+          "Description": "The scheduled asca job stopped running (limit: 48 hours). Make sure the Mac has been on and logged in, or ask IT to check the job."
+        }
+      ]
+    },
+    {
+      "SettingName": "AscaCritical",
+      "Operator": "IsEquals",
+      "DataType": "Int64",
+      "Operand": 0,
+      "MoreInfoUrl": "https://github.com/borabaysal/Agent_Supply_Chain_Auditor#readme",
+      "RemediationStrings": [
+        {
+          "Language": "en_US",
+          "Title": "asca found {ActualValue} critical issue(s) on this device",
+          "Description": "Open the asca report or dashboard on this device and follow each fix, or contact IT."
+        }
+      ]
+    },
+    {
+      "SettingName": "AscaHigh",
+      "Operator": "LessEquals",
+      "DataType": "Int64",
+      "Operand": 0,
+      "MoreInfoUrl": "https://github.com/borabaysal/Agent_Supply_Chain_Auditor#readme",
+      "RemediationStrings": [
+        {
+          "Language": "en_US",
+          "Title": "asca found {ActualValue} high-severity issue(s)",
+          "Description": "Open the asca report or dashboard on this device and follow each fix, or contact IT. Accepted risks go in asca's baseline file and stop counting."
+        }
+      ]
+    }
+  ]
+}

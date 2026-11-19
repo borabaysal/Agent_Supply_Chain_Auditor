@@ -20,13 +20,13 @@ _Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where
 
 | Category | Checks |
 |---|---|
-| **Pinning** | Hermes Skills Hub installs with no upstream commit pin · skill taps that track a branch · plugins checked out on a moving branch · MCP servers launched with `npx`/`bunx`/`uvx`/`pipx` without an exact version · `docker run` images without `@sha256:` digest · `git+https://` installs without a commit SHA · skills that tell the agent to `curl … \| sh` · remote MCP servers (reported as *info*, since they can't be pinned) |
+| **Pinning** | Hermes Skills Hub installs with no upstream commit pin · skill taps that track a branch · plugins checked out on a moving branch · MCP servers launched with `npx`/`bunx`/`uvx`/`pipx` without an exact version · `docker run` images without `@sha256:` digest · `git+https://` installs without a commit SHA · skills that tell the agent to `curl … \| sh` · remote MCP servers (reported as *info*, since they can't be pinned) · [plugin checkouts with a branch named like a commit hash, or moved off their pin (Plugin4Shell)](#plugin-checkouts-that-arent-on-their-pinned-commit-plugin4shell) |
 | **Repo config** (GitSpawn) | `core.fsmonitor` set to a program (**critical**, see [CVE-2026-71963](https://www.rapid7.com/db/vulnerabilities/cve-2026-71963/) for Hermes, CVE-2026-19592 for Codex, CVE-2026-72718 for goose), plus every other git key that names a program: `core.hooksPath`, `core.sshCommand`, `core.askPass`, `core.pager`/`pager.*`, `core.editor`, `diff.external`, `diff.*.textconv`, `filter.*.{clean,smudge,process}`, `merge.*.driver`, `credential.helper` (non-builtin), `protocol.ext.allow`, `include.path`/`includeIf`, `!` aliases, `gpg.program` · active (non-`.sample`) git hooks · linked worktrees/submodules (`.git` files) · project `.mcp.json` / `.cursor/mcp.json` / `.vscode/mcp.json` / `.gemini/settings.json` MCP servers that ship with a repo · [coding agents in `.github/workflows` that anyone can trigger](#coding-agents-in-github-workflows-that-anyone-can-trigger-on-by-default---no-ci-agents-to-skip) · [npm install hooks and workflow steps that dump secrets (wfx)](#install-hooks-and-secret-dumping-workflow-steps-wfx-on-by-default---no-install-hooks-to-skip) |
 | **Exposed keys** | Literal API keys in agent config, cron jobs, memories, skills, plugins, scripts and MCP `env`/`headers` (Anthropic, OpenAI, OpenRouter, GitHub, Slack, Telegram, AWS, Google, Stripe, HF, wallet private keys, PEM keys, generic `api_key=` assignments) · tokens embedded in git remote URLs and MCP URLs · credential files (`.env`, `auth.json`, `.git-credentials`, `config.yaml`, MCP OAuth tokens) readable by group/other |
 | **Session history** | Literal keys saved in agents' transcripts: Hermes `sessions/*.json(l)` and `cron/output/**` (incl. `profiles/*`), Claude Code `~/.claude/projects/**/*.jsonl`, Codex `~/.codex/sessions/**/*.jsonl` and `history.jsonl`, Cursor chat rows in `state.vscdb` · transcript files/dirs that group/other can actually reach and read. See [Session history](#session-history-secretsession-history). |
 | **Stray agent instructions** | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.cursor/rules/*` … left in `~/Downloads`, `~/Desktop` or the temp dir, outside any git repo; HIGH when the `asca-skills` content rules match. See [Stray agent instructions](#stray-agent-instructions-repostray-agent-instructions). |
 | **Integrity** | Hub skills whose on-disk content no longer matches the install-time hash (same algorithm as Hermes' Skills Guard) · skills installed despite a non-`safe` scanner verdict · Hermes Agent versions inside a known-vulnerable range · [installed Claude Code, Codex, Gemini CLI, goose and Claude Desktop versions with known vulnerabilities](#other-coding-agents-claude-code-codex-gemini-cli-goose-claude-desktop), including advisories that never got a CVE or never reached OSV |
-| **Agent takeover** | Hermes `SOUL.md` and memories rewritten to take orders, collect keys or hide activity (Carbonato) · gateway open to anyone (`GATEWAY_ALLOW_ALL_USERS`, `*` allow lists) · Docker API reachable over TCP without client certificates · [details](#agent-takeover-workspace-and-response-checks-part-of-asca) |
+| **Agent takeover** | Hermes `SOUL.md` and memories rewritten to take orders, collect keys or hide activity (Carbonato) · gateway open to anyone (`GATEWAY_ALLOW_ALL_USERS`, `*` allow lists) · Docker API reachable over TCP without client certificates · [details](#agent-takeover-workspace-and-response-checks-part-of-asca) · [macOS Full Disk Access / Accessibility for terminals, IDEs and agent apps](#full-disk-access-for-terminals-ides-and-agents-macos) |
 | **Workspace** | Symlinks that lead out of a repo or the agent home, high when they point at credentials (CVE-2026-103916) · MCP servers that are archived and will never be patched (MCPhantom) |
 | **Response** | [`asca spend`](#stolen-key-spend-tripwire-asca-spend-opt-in-online): hourly spend tripwire for stolen OpenRouter and Anthropic keys · Provider-specific steps on every leaked-key finding, plus a local blast-radius card for AWS keys (profile, long-lived or temporary, assumable roles) · a dashboard card per leaked key: every copy across agents, days exposed, and whether it's still your live key · [`asca github-check`](#were-your-github-repos-hit-by-wfx-asca-github-check-opt-in-online) for wfx traces on GitHub |
 
@@ -252,6 +252,8 @@ On by default (`--no-agent-versions` to skip). asca reads each agent's installed
 Each version is matched against a bundled table (`asca/agentadv_data.py`) built from the GitHub Advisory Database **and each vendor's own repository advisories**. The second source matters: some advisories are published only in the vendor's repo and never reach the global database or OSV. In November 2026 that was 6 for Claude Code and Claude Desktop (including the symlink file write GHSA-5j29-h97v-84ch) and goose's CVE-2026-72718. With `--online-advisories`, OSV.dev, the GitHub Advisory Database and the vendor's repository advisories are queried live as well, and duplicates are merged by alias.
 
 You get one finding per installed agent, e.g. `Claude Code 2.1.128 is affected by 6 known vulnerabilities (4 high, 1 medium, 1 low)`, listing each advisory, which ones have no CVE ID, which are only in the vendor's repo, and the version to upgrade to. A new advisory for your version changes the finding, so `--telegram change` alerts once. Refresh the bundled table with `python3 scripts/update_agent_advisories.py` (read-only GitHub API).
+
+Codex's Plugin4Shell fix (0.146.0) has no published advisory, so it's a hand-curated entry (`CURATED` in `asca/agentvers.py`); Claude Code's is GHSA-pq7j-f95f-qfcv / CVE-2026-86063 (2.1.179).
 
 **Freshness:** if the newest review date (built-in table or your file's `"reviewed_at"`) is older than 30 days, asca adds a LOW `advisories.stale` finding. Bump `reviewed_at` whenever you check for new advisories. A weekly scheduled search that updates it is a good pattern: search NVD, vendor advisories and security news for new IDs, ask a human to confirm candidates, and only then add them to the file.
 
@@ -894,6 +896,53 @@ Nothing in the repo is executed and git is never run. A folder without `.git` (a
 **Tested** on the root `package.json` of 39 popular JS projects (React, Next.js, VS Code, Vite, Angular, Electron …): 0 high. The 13 medium findings all run a file from the repo. On 76 repos found by searching GitHub for install hooks: 6 high, each an install hook that runs commands and reaches the network (binary downloaders, one service registration), worth reading before you install a stranger's repo.
 
 **Limits:** it reads only what's in the folder. It doesn't follow dependencies (a malicious package in `node_modules` after install) or run code to see what it does. Its source-code checks cover install scripts and agent files, not every `.js` file, so the safest way to try an untrusted repo is still a throwaway VM or container with no keys in it.
+
+## Plugin checkouts that aren't on their pinned commit (Plugin4Shell)
+
+On by default (`--no-plugin-pins` to skip). [Air Security's Plugin4Shell](https://www.air.security/blog-posts/plugin4shell) showed Claude Code, Codex and Copilot installing a plugin with `git clone` + `git checkout <pinned-sha>`. If the upstream repo's default branch is named exactly like that SHA, git prefers the branch: the agent reports "installed at the pinned commit" while the attacker's code is on disk, and background auto-update repeats it with no click. A Gemini CLI variant uses a branch named `FETCH_HEAD`. GitHub rejects such branch names; Bitbucket and self-hosted git allow them.
+
+asca reads every git checkout under `~/.claude/plugins`, `~/.codex/plugins`, `~/.copilot`, `~/.gemini/extensions` and the Hermes `plugins/` folder, as text: `HEAD`, loose refs and `packed-refs`. It never runs git.
+
+| Finding | Severity |
+|---|---|
+| `plugin.hash-named-branch`: HEAD is on a branch named like a 40-hex commit or `FETCH_HEAD` (the swap landed) | critical |
+| the same kind of branch exists locally or as a remote-tracking ref, not checked out yet | high |
+| `plugin.pin-drift`: a Hermes catalog plugin is on a different commit than the one Hermes recorded and verified at install | medium |
+
+No normal workflow creates a branch named like a commit hash, so it isn't a guess. **Not compared:** Claude Code's `gitCommitSha` in `installed_plugins.json`, which keeps its install-time value after updates (anthropics/claude-code#54969, #56740, #52218), so a mismatch there means nothing. Your agent's own version is covered by the [version check](#other-coding-agents-claude-code-codex-gemini-cli-goose-claude-desktop): Claude Code < 2.1.179 and Codex < 0.146.0 are flagged.
+
+**Tested** by reproducing the attack with real git in the test suite (a hash-named default branch, then `git clone` + `git checkout <sha>`): git really checks out the attacker's branch, and asca rates it critical.
+
+## Full Disk Access for terminals, IDEs and agents (macOS)
+
+On by default on macOS (`--no-tcc` to skip). Apple says agents misusing Full Disk Access put "all of the data on their Mac at risk" and is tightening the prompt in macOS 27.3, but grants you already gave stay. A grant to a **terminal or IDE** is inherited by every CLI agent you start inside it (Claude Code, Codex, Gemini CLI, Hermes) and by every `node`/`python` script they run.
+
+asca opens the privacy database (`TCC.db`, system and user) with sqlite in read-only mode, and reads `MDMOverrides.plist` for grants pushed by an MDM profile, which aren't in TCC.db:
+
+| Finding | Severity |
+|---|---|
+| `host.tcc-full-disk`: Full Disk Access for a terminal (Terminal, iTerm2, Warp, Ghostty …), an IDE (VS Code, Cursor, Windsurf, Zed, JetBrains …), an agent app (Claude Desktop, ChatGPT, Codex, Hermes Desktop) or a raw `node`/`python`/`bun`/agent binary | high |
+| `host.tcc-app-control`: Accessibility, or Automation of Terminal / System Events / Finder, for one of those. An agent inside can click, type and approve its own prompts | medium |
+| `host.tcc-unreadable`: the database couldn't be read | low |
+
+**TCC.db is itself protected:** only a process with Full Disk Access can read it. From a scheduled job you'll usually get the low "couldn't read" finding instead of a silent pass, with the place to check by hand. If asca *can* read it, whatever launched asca has Full Disk Access, and the report's stats say so. asca never asks for or changes a permission. Grants to other apps (backup tools and the like) aren't reported.
+
+**Tested** against TCC.db files built with Apple's schema (current, and the pre-Big Sur `allowed` column) and an MDM overrides file. It hasn't run against a live Mac's database in CI.
+
+## Intune compliance (`asca export intune`)
+
+Microsoft Intune's [custom compliance](https://learn.microsoft.com/en-us/intune/device-security/compliance/custom-settings) (Windows, Linux and, since July 2026, macOS) runs a discovery script on each device and compares its JSON output with a rules file; Conditional Access can then block non-compliant devices. `asca export intune` is that script's payload. It reads the device's **last** asca report (it doesn't run an audit inside Intune's 5–10 minute limit) and prints one line:
+
+```
+{"AscaReportFound":true,"AscaReportAgeHours":5,"AscaCritical":0,"AscaHigh":1,"AscaMedium":2,"AscaResult":"FAIL","AscaVersion":"0.8.0"}
+```
+
+To set it up:
+1. Deploy the asca checkout and the scheduled job on each device, as for any asca install.
+2. Upload [`examples/intune/discovery-macos.sh`](examples/intune/discovery-macos.sh) (bash 3.2; Intune runs it as root, so it reads the logged-in user's asca state) or [`discovery-linux.sh`](examples/intune/discovery-linux.sh) (user context) under Devices → Compliance → Scripts. Set `ASCA_DIR` to where you deployed asca.
+3. Create a custom compliance policy with [`examples/intune/rules.json`](examples/intune/rules.json). Regenerate it with other limits: `python3 -m asca export intune --rules --max-high 2 --max-medium 10 --max-age-hours 72`.
+
+The default rules require a report, at most 48 hours old, with no critical and no high findings. **Fail closed:** no report, an unreadable one or a stale one makes the device non-compliant, so a stopped asca job doesn't leave a device compliant forever. Baseline-accepted findings don't count, so an accepted risk doesn't block anyone. No Windows script ships yet, because asca's checks are written for macOS and Linux.
 
 ## Stolen-key spend tripwire (`asca spend`, opt-in, online)
 
