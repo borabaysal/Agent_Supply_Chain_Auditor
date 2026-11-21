@@ -79,10 +79,17 @@ def _source_for(pyc: Path) -> tuple[Path, int, bool]:
     return pyc.with_suffix(".py"), 0, False
 
 
+def _minimal_env() -> dict:
+    """PATH only, plus what Windows needs for Python to start at all (SYSTEMROOT; without it CPython fails early)."""
+    keep = ("PATH", "SYSTEMROOT", "SystemRoot") if os.name == "nt" else ("PATH",)
+    return {k: os.environ[k] for k in keep if k in os.environ} or {"PATH": ""}
+
+
 def _compare(src: Path, pyc: Path, opt: int, timeout: float = 20.0) -> str:
     try:
         r = subprocess.run([sys.executable, "-I", "-S", "-c", _HELPER, str(src), str(pyc), str(opt)],
-                           capture_output=True, text=True, timeout=timeout, env={"PATH": os.environ.get("PATH", "")})
+                           capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout,
+                           env=_minimal_env())
         return json.loads(r.stdout.strip() or "{}").get("result", "crashed" if r.returncode else "error")
     except subprocess.TimeoutExpired:
         return "timeout"

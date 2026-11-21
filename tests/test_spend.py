@@ -1,4 +1,5 @@
 """asca spend: stolen-key spend tripwire, against fake OpenRouter / Anthropic APIs (shapes from their docs)."""
+import os
 import io
 import json
 import urllib.error
@@ -144,7 +145,7 @@ def test_cli_notes_admin_key_needed_and_telegram_change(tmp_path, monkeypatch, c
     fake.usage += 0.01
     assert spend.run(base, get=fake, now=t + timedelta(minutes=5)) == 1 and len(sent) == 1   # same alert: silent
     assert FAKE_OR not in state.read_text() and FAKE_OR not in capsys.readouterr().out
-    assert state.stat().st_mode & 0o777 == 0o600
+    assert os.name == "nt" or state.stat().st_mode & 0o777 == 0o600
 
 
 def test_cli_rejected_key_is_an_error(tmp_path, capsys):

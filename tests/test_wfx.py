@@ -124,7 +124,7 @@ def test_nested_packages_found_node_modules_skipped(tmp_path):
         "packages/a/.p.sh": "echo\n",
         "node_modules/evil/package.json": json.dumps({"scripts": {"postinstall": "sh .p.sh"}})})
     fs = installhooks.audit(r)
-    assert [f.location.split("#")[0].endswith("packages/a/package.json") for f in fs] == [True]
+    assert [f.location.split("#")[0].replace("\\", "/").endswith("packages/a/package.json") for f in fs] == [True]
 
 
 def test_hook_file_outside_repo_is_not_read(tmp_path):

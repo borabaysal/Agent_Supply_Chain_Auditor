@@ -25,6 +25,7 @@ from .. import __version__, discover, report
 from ..cli import _default_home, _default_install, _previous_state, apply_baseline
 from ..model import Finding, Report, Severity
 from . import apps, gate, official, scan
+from .. import fsutil
 
 
 def _state_dir() -> Path:
@@ -288,6 +289,7 @@ def _alert(args, rep, md_path, prev, blocked: int = 0, moved: list[str] | None =
 
 
 def main() -> None:
+    fsutil.utf8_stdio()
     sys.exit(run())
 
 

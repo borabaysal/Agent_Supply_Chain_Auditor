@@ -28,6 +28,7 @@ import re
 from pathlib import Path
 
 from .model import Finding, Severity
+from . import fsutil
 
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 SUSPICIOUS_NAMES = {"FETCH_HEAD", "ORIG_HEAD", "MERGE_HEAD", "CHERRY_PICK_HEAD"}
@@ -46,14 +47,14 @@ def _read(p: Path, limit: int = 1 << 20) -> str:
 
 def git_dir(checkout: Path) -> Path | None:
     g = checkout / ".git"
-    if g.is_dir():
+    if fsutil.is_dir(g):
         return g
-    if g.is_file():                                   # worktree / submodule: "gitdir: <path>"
+    if fsutil.is_file(g):                                   # worktree / submodule: "gitdir: <path>"
         m = re.match(r"gitdir:\s*(.+)", _read(g, 4096).strip())
         if m:
             p = Path(m.group(1).strip())
             p = p if p.is_absolute() else (checkout / p)
-            return p if p.is_dir() else None
+            return p if fsutil.is_dir(p) else None
     return None
 
 

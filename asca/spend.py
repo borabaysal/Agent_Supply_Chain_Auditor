@@ -332,7 +332,7 @@ def run(argv: list[str], get=_get, now: datetime | None = None) -> int:
                 print(f"asca spend: telegram: {desc}", file=sys.stderr)
                 return 2
         state["last_alert_key"] = key
-    tmp.write_text(json.dumps(state, indent=1))
+    tmp.write_text(json.dumps(state, indent=1), encoding="utf-8")
     os.chmod(tmp, 0o600)
     tmp.replace(state_path)
     if errors and not findings and len(errors) == len(checks):

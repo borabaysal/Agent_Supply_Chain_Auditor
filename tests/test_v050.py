@@ -82,7 +82,10 @@ def test_symlink_escape_grades(tmp_path):
     assert fs["keys"].severity == Severity.HIGH and "`.ssh`" in fs["keys"].detail
     assert fs["sub/out"].severity == Severity.MEDIUM and "committed" in fs["sub/out"].detail
     assert fs["data"].severity == Severity.LOW
-    assert set(fs) == {"keys", "sub/out", "data"}
+    # the socket-dir link is ignored, unless the repo itself sits in a temp dir (CI runners, a clone in /tmp) or on
+    # Windows (no /tmp): then it's an ordinary low escape
+    extra = {"runtime"} if (symlinks.under_runtime(str(repo)) or os.name == "nt") else set()
+    assert set(fs) == {"keys", "sub/out", "data"} | extra
 
 
 @pytest.mark.parametrize("target,why", [("/home/alice", "whole home"), ("/", "whole home"),
@@ -90,6 +93,24 @@ def test_symlink_escape_grades(tmp_path):
                                         ("/home/x/.config/solana/id.json", "solana")])
 def test_credential_targets(target, why):
     assert why in symlinks.credential_target(target)
+
+
+@pytest.mark.parametrize("target,root,ignored", [("/tmp/pulse-1", "/home/a/repo", True),
+                                                 ("/run/user/1000/bus", "/srv/repo", True),
+                                                 ("/tmp/outside.txt", "/tmp/take-home/repo", False)])
+def test_runtime_links_ignored_only_outside_temp_trees(tmp_path, target, root, ignored):
+    if os.name == "nt":
+        pytest.skip("POSIX paths")
+    repo = tmp_path / "r"
+    (repo / ".git").mkdir(parents=True)
+    os.symlink(target, repo / "l")
+    real = symlinks.under_runtime
+    symlinks.under_runtime = lambda p: real(root) if os.path.normpath(p) == os.path.normpath(str(repo)) else real(p)
+    try:
+        fs = symlinks.audit_tree(repo, home="/home/nobody")
+    finally:
+        symlinks.under_runtime = real
+    assert (fs == []) == ignored
 
 
 def test_symlinks_never_followed_and_skip_dirs(tmp_path):

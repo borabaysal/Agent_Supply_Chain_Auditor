@@ -21,6 +21,7 @@ from pathlib import Path
 from .. import report as asca_report
 from . import log as elog
 from . import summary as esum
+from .. import fsutil
 
 
 def _state_dir() -> Path:
@@ -148,6 +149,7 @@ def run(argv: list[str] | None = None) -> int:
 
 
 def main() -> None:
+    fsutil.utf8_stdio()
     sys.exit(run())
 
 

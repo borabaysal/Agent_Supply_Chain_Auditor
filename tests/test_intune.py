@@ -1,4 +1,5 @@
 """asca export intune: Intune custom-compliance output (asca.intune) and the sample discovery script."""
+import pytest
 import json
 import os
 import subprocess
@@ -65,6 +66,7 @@ def test_cli_prints_one_line(tmp_path, capsys):
     assert cli.run(["export", "nope"]) == 2
 
 
+@pytest.mark.skipif(os.name == "nt", reason="bash on Windows is WSL's, with Linux paths")
 def test_linux_discovery_script(tmp_path):
     st = report(tmp_path / "s", {"critical": 2})
     env = {**os.environ, "ASCA_DIR": str(ROOT), "ASCA_STATE": str(st)}

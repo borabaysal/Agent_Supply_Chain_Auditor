@@ -19,6 +19,7 @@ from pathlib import Path
 from .. import hermes as asca_hermes
 from .. import report as asca_report
 from . import monitor, releases, targets
+from .. import fsutil
 
 
 def _state_dir() -> Path:
@@ -123,6 +124,7 @@ def run(argv: list[str] | None = None) -> int:
 
 
 def main() -> None:
+    fsutil.utf8_stdio()
     sys.exit(run())
 
 

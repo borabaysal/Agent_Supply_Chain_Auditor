@@ -7,15 +7,16 @@ from pathlib import Path
 
 from . import gitconfig, hermes, mcp, secrets
 from .model import Finding, Severity
+from . import fsutil
 
 MAX_DEPTH = 4
 
 
 def resolve_git_dir(worktree: Path) -> Path | None:
     dot = worktree / ".git"
-    if dot.is_dir():
+    if fsutil.is_dir(dot):
         return dot
-    if dot.is_file():  # worktree / submodule: "gitdir: <path>"
+    if fsutil.is_file(dot):  # worktree / submodule: "gitdir: <path>"
         try:
             line = dot.read_text(encoding="utf-8", errors="replace").strip()
         except OSError:
@@ -23,7 +24,7 @@ def resolve_git_dir(worktree: Path) -> Path | None:
         if line.startswith("gitdir:"):
             p = Path(line[7:].strip())
             p = p if p.is_absolute() else (worktree / p)
-            return p.resolve() if p.exists() else None
+            return p.resolve() if fsutil.exists(p) else None
     return None
 
 
@@ -111,6 +112,10 @@ def audit_global_git(env: dict | None = None) -> list[Finding]:
     return out
 
 
+class UnsupportedFormat(ValueError):
+    """The file can't be parsed on this Python (TOML needs tomllib, Python 3.11+)."""
+
+
 def load_mcp_doc(path: Path):
     """Parse an MCP client config: JSON (most clients), JSONC (VS Code), or TOML (Codex CLI)."""
     text = path.read_text(encoding="utf-8")
@@ -124,7 +129,10 @@ def load_mcp_doc(path: Path):
                                     for k, v in doc["extensions"].items() if isinstance(v, dict)}}
         return doc
     if path.suffix == ".toml":
-        import tomllib
+        try:
+            import tomllib
+        except ImportError:
+            raise UnsupportedFormat("reading TOML needs Python 3.11+ (tomllib)") from None
         doc = tomllib.loads(text)
         # Codex: [mcp_servers.<name>] -> same shape as Hermes, iter_servers handles it
         return doc
@@ -168,6 +176,10 @@ def _strip_jsonc(text: str) -> str:
 def audit_json_mcp(path: Path) -> list[Finding]:
     try:
         doc = load_mcp_doc(path)
+    except UnsupportedFormat as exc:
+        return [Finding("scanner.unsupported", "scanner", Severity.LOW, f"MCP config {path.name} not checked: {exc}",
+                        str(path), detail="This Python can't read the file, so its MCP servers weren't audited.",
+                        remediation="Run asca with Python 3.11 or newer.")]
     except (OSError, ValueError) as exc:
         return [Finding("scanner.parse-error", "scanner", Severity.MEDIUM, f"MCP config {path.name} unreadable",
                         str(path), detail=f"{exc}. Not audited (fail closed).",

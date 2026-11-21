@@ -317,7 +317,7 @@ def test_stray_known_names_depth_and_git_repos(tmp_path):
     (d / "w" / ".windsurf" / "rules" / "style.md").write_text("x")
     (d / "w" / ".clinerules").mkdir()
     (d / "w" / ".clinerules" / "01.md").write_text("x")
-    got = sorted(str(Path(x.location).relative_to(d)) for x in stray_audit([d]))
+    got = sorted(Path(x.location).relative_to(d).as_posix() for x in stray_audit([d]))
     assert got == [".cursorrules", ".windsurfrules", "GEMINI.md", "a/.cursor/rules/r.mdc",
                    "a/b/.github/copilot-instructions.md", "w/.clinerules/01.md", "w/.windsurf/rules/style.md"]
 

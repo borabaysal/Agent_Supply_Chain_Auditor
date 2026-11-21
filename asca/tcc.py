@@ -43,6 +43,7 @@ IDES = {"com.microsoft.VSCode": "VS Code", "com.microsoft.VSCodeInsiders": "VS C
         "com.vscodium": "VSCodium", "com.google.antigravity": "Antigravity", "com.trae.app": "Trae"}
 AGENT_APPS = {"com.anthropic.claudefordesktop": "Claude Desktop", "com.openai.chat": "ChatGPT",
               "com.openai.codex": "Codex app"}
+ENABLED = sys.platform == "darwin"     # tests switch this off so the host's real TCC.db is never read
 RAW_BINARIES = ("node", "python", "python3", "bun", "deno", "claude", "codex", "gemini", "goose", "hermes", "uv", "npx")
 
 
@@ -109,7 +110,7 @@ def read_mdm(path: Path) -> list[dict]:
 
 def audit(stats: dict, *, home: Path | None = None, system_db: Path = SYSTEM_DB, mdm_plist: Path = MDM_PLIST,
           force: bool = False) -> list[Finding]:
-    if sys.platform != "darwin" and not force:
+    if not ENABLED and not force:
         return []
     home = home or Path.home()
     user_db = home / "Library" / "Application Support" / "com.apple.TCC" / "TCC.db"
