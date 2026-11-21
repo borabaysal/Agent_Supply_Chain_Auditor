@@ -277,6 +277,25 @@ SENSITIVE_FILES = [".env", "auth.json", ".git-credentials", ".netrc", "credentia
                    "id_rsa", "id_ed25519", "id_ecdsa"]
 
 
+def permissions_checked() -> bool:
+    """POSIX mode bits mean something; on Windows (NTFS ACLs) Python reports nearly every file as 0o666."""
+    return os.name == "posix"
+
+
+def permissions_note() -> Finding:
+    """One explicit note per run instead of silently skipping permission checks (fail closed)."""
+    return Finding(
+        rule="scanner.permissions-not-checked", category="scanner", severity=Severity.LOW,
+        title="File permissions weren't checked (Windows)",
+        location=os.environ.get("USERPROFILE", str(Path.home())), subject="permissions",
+        detail="On Windows, access is controlled by NTFS ACLs, which asca (standard library only) can't read; the "
+               "POSIX mode bits Python reports are meaningless there. So 'credential file / transcripts readable by "
+               "other users' isn't checked on this machine.",
+        remediation="Keep credential files and agent history inside your user profile (C:\\Users\\<you>), which "
+                    "other standard users can't read by default; check a file with `icacls <file>` and remove "
+                    "entries for Everyone, Users or Authenticated Users.")
+
+
 def audit_permissions(path: Path, *, label: str) -> list[Finding]:
     """Flag credential files readable by group/other (POSIX only)."""
     if os.name != "posix" or not path.exists() or path.is_symlink():

@@ -286,6 +286,8 @@ def run(argv: list[str] | None = None) -> int:
     for f in findings:
         uniq.setdefault(f.fingerprint, f)
     findings = list(uniq.values())
+    if not secrets.permissions_checked():     # Windows: say so instead of silently skipping (fail closed)
+        findings.append(secrets.permissions_note())
     respond.enrich(findings, Path.home())     # provider-specific steps + AWS blast-radius card (text only)
 
     if args.write_baseline:
