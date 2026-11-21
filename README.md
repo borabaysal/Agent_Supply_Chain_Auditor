@@ -37,6 +37,16 @@ _Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where
 - **It fails closed.** An unparseable lock file or config produces a HIGH `scanner.parse-error` finding instead of a silent pass.
 - **It has no dependencies.** Python ≥3.10 stdlib only. YAML is read by a small built-in parser (PyYAML's `safe_load` is used instead if it happens to be installed). The built-in parser is differential-tested against PyYAML on real Hermes configs and skill front-matter.
 
+## Requirements
+
+| | |
+|---|---|
+| **Python** | 3.10 or newer, standard library only: nothing to `pip install`. **3.11+ recommended**: on 3.10 there's no `tomllib`, so Codex's `config.toml` sandbox and endpoint settings aren't read (asca reports that as a finding instead of passing silently). |
+| **macOS** | Supported. Daily scheduling with launchd: [docs/macos.md](docs/macos.md). |
+| **Linux** | Supported. Daily scheduling with systemd or cron: [Scheduling](#scheduling-daily-alert-only-on-change). Egress process attribution is Linux-only. |
+| **Windows** | **Not tested yet.** Many config locations know their Windows paths (VS Code, Cursor, Claude Desktop, IDE extensions), but there's no Windows CI or scheduling script, credential-file permission checks assume POSIX modes, and user-scope environment variables in the registry aren't read. Under WSL, asca scans the Linux side only, not agents installed on Windows. Reports from Windows runs are welcome as issues. |
+| **Network** | The audit makes no network calls by default. Online checks are opt-in flags (`--online-advisories`, `--github-token-scopes`, Telegram alerts) or subcommands that are online by design (`asca-fleet`, `asca spend`). |
+
 ## Install
 
 ```bash
