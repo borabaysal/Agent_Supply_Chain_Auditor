@@ -14,6 +14,7 @@ import tempfile
 from pathlib import Path
 
 from .model import Finding, Severity
+from . import fsutil
 
 RULE = "repo.stray-agent-instructions"
 MAX_DEPTH = 2                 # the folder itself, its children and grandchildren
@@ -106,7 +107,7 @@ def find(dirs: list[Path]) -> list[tuple[Path, str, Path]]:
         stack = [(root, 0)]
         while stack:
             d, depth = stack.pop()
-            if (d / ".git").exists():
+            if fsutil.exists(d / ".git"):
                 continue  # repo instruction files are expected; nested repos too
             found.extend((p, client, root) for p, client in _candidates(d))
             if depth >= MAX_DEPTH:

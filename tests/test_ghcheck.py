@@ -1,4 +1,5 @@
 """asca github-check against a fake, offline GitHub API (shapes as returned by the REST API)."""
+import os
 import json
 from urllib.parse import parse_qs, urlparse
 
@@ -184,4 +185,4 @@ def test_telegram_change_only(monkeypatch, tmp_path):
     assert ghcheck.run(st, api=mk([pr(2, "x", "wfx-docs")])) == 1 and len(sent) == 1
     assert ghcheck.run(st, api=mk([pr(2, "x", "wfx-docs")])) == 1 and len(sent) == 1   # unchanged: silent
     assert ghcheck.run(st, api=mk([])) == 0 and len(sent) == 2                   # recovery is reported once
-    assert (tmp_path / "s.json").stat().st_mode & 0o777 == 0o600
+    assert os.name == "nt" or (tmp_path / "s.json").stat().st_mode & 0o777 == 0o600

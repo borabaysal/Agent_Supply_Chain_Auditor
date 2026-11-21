@@ -15,6 +15,7 @@ from pathlib import Path
 from . import (__version__, advisories, agentcfg, agentvers, pluginpins, tcc, allowlist, ciagent, discover, dockerd, ghtoken, hermes, installhooks,
                mcp, persona, pystartup, repohooks, report, respond, secrets, sessions, stray, symlinks, wfsecrets)
 from .model import Finding, Report, Severity
+from . import fsutil
 
 
 def _default_home() -> Path | None:
@@ -372,6 +373,7 @@ def _print_summary(rep: Report, md: Path, js: Path) -> None:
 
 
 def main() -> None:
+    fsutil.utf8_stdio()
     sys.exit(run())
 
 

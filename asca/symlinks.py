@@ -27,6 +27,7 @@ from pathlib import Path
 
 from .model import Finding, Severity
 from .repohooks import tracked_paths
+from . import fsutil
 
 RULE = "repo.symlink-escape"
 MAX_ENTRIES = 200_000
@@ -56,6 +57,11 @@ _HOME = re.compile(r"^/(?:Users|home)/[^/]+/?$|^/root/?$|^/$")
 def _norm(link: Path, target: str) -> str:
     base = target if os.path.isabs(target) else os.path.join(os.path.dirname(str(link)), target)
     return os.path.normpath(base)
+
+
+def under_runtime(path: str) -> bool:
+    """True for paths in /tmp, /run, macOS per-user temp … (also after resolving /var -> /private/var)."""
+    return bool(_RUNTIME.match(path) or _RUNTIME.match(os.path.realpath(path)))
 
 
 def _inside(path: str, root: str) -> bool:
@@ -101,7 +107,7 @@ def _walk_links(root: Path, limit: int, stats: dict, skip: set[str] = frozenset(
             if e.is_symlink():
                 yield Path(e.path)
             elif e.is_dir(follow_symlinks=False) and e.name not in SKIP and e.name not in skip \
-                    and not (Path(e.path) / "pyvenv.cfg").exists():
+                    and not fsutil.exists(Path(e.path) / "pyvenv.cfg"):
                 stack.append(Path(e.path))
 
 
@@ -111,6 +117,9 @@ def audit_tree(root: Path, *, git_dir: Path | None = None, label: str = "repo", 
     stats = stats if stats is not None else {}
     home = home or str(Path.home())
     rootn = os.path.normpath(str(root))
+    # Links into /tmp, /run … are usually sockets that get new names every restart, so they're ignored. Not when
+    # the tree itself lives there (a repo cloned to /tmp to inspect it): then every escape is a real escape.
+    runtime_ok = not under_runtime(rootn)
     escapes = []
     for link in _walk_links(root, limit, stats, skip):
         stats["symlinks_seen"] = stats.get("symlinks_seen", 0) + 1
@@ -121,7 +130,7 @@ def audit_tree(root: Path, *, git_dir: Path | None = None, label: str = "repo", 
         resolved = _norm(link, target)
         if _inside(resolved, rootn):
             continue
-        if _RUNTIME.match(resolved) and not credential_target(resolved, home):
+        if runtime_ok and _RUNTIME.match(resolved) and not credential_target(resolved, home):
             continue                  # sockets and runtime dirs (PulseAudio, X11 …) get new names every restart
 
         escapes.append((link, target, resolved))

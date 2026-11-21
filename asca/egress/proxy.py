@@ -260,7 +260,7 @@ def run(logdir: Path, host: str, port: int, allow: list[str] | None, hermes_home
         p = await Proxy(logdir, host=host, port=port, allow=allow, hermes_home=hermes_home,
                         sample_every=sample_every, sampler_ignore=sampler_ignore).start()
         if pidfile:
-            pidfile.write_text(f"{os.getpid()}\n")
+            pidfile.write_text(f"{os.getpid()}\n", encoding="utf-8")
         print(f"asca-egress: listening on {host}:{p.port}, logging to {logdir}", flush=True)
         stop = asyncio.Event()
         loop = asyncio.get_running_loop()

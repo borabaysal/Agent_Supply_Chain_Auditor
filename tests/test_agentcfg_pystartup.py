@@ -1,5 +1,6 @@
 """Tests for agent-config tamper (asca.agentcfg) and Python startup hooks (asca.pystartup)."""
 from __future__ import annotations
+import re
 
 import json
 import os
@@ -118,7 +119,7 @@ def test_shell_profile_and_process_env(tmp_path):
     f = agentcfg.audit(tmp_path, None, {}, env={"OPENAI_BASE_URL": "https://mirbuds.com/v1"})
     r = _rules(f)
     assert ("agent.relay-endpoint", Severity.CRITICAL) in r and ("agent.token-in-config", Severity.MEDIUM) in r
-    assert {x.location.split("#")[0].split(":")[0] for x in f if x.rule == "agent.relay-endpoint"} >= \
+    assert {re.sub(r":[A-Z_]+$", "", x.location.split("#")[0]) for x in f if x.rule == "agent.relay-endpoint"} >= \
         {str(tmp_path / ".zshrc"), "environment"}
     assert not any("OPENAI_API_KEY" in x.title for x in f)                         # plain SDK keys: secrets check's job
 
@@ -207,7 +208,7 @@ def test_owned_plain_hook_is_medium_unowned_is_high(tmp_path):
     _dist(sp, "some-tracer", "2.0", ["some_tracer_boot.pth"])
     (sp / "some_tracer_boot.pth").write_text("import some_tracer.boot\n")
     (sp / "zz_orphan.pth").write_text("import zz_orphan_mod\n")
-    sev = {x.location.rsplit("/", 1)[1]: x.severity for x in _scan(sp)}
+    sev = {Path(x.location).name: x.severity for x in _scan(sp)}
     assert sev == {"some_tracer_boot.pth": Severity.MEDIUM, "zz_orphan.pth": Severity.HIGH}
     assert "some-tracer 2.0" in next(x.detail for x in _scan(sp) if "tracer" in x.location)
 

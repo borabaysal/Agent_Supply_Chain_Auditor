@@ -353,7 +353,7 @@ def test_cli_summary_exit_codes_and_alert_on_change(tmp_path, monkeypatch):
     _write(st / "logs", [_c("new.example.net", "a", time.time())])
     assert cli.run(args) == 1 and len(sent) == 1 and "example.net" in sent[0]
     assert cli.run(args) == 0 and len(sent) == 1                 # nothing new since
-    assert (st / "baseline.json").stat().st_mode & 0o077 == 0
+    assert os.name == "nt" or (st / "baseline.json").stat().st_mode & 0o077 == 0
     assert st.stat().st_mode & 0o077 == 0
 
 

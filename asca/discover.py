@@ -7,15 +7,16 @@ from pathlib import Path
 
 from . import gitconfig, hermes, mcp, secrets
 from .model import Finding, Severity
+from . import fsutil
 
 MAX_DEPTH = 4
 
 
 def resolve_git_dir(worktree: Path) -> Path | None:
     dot = worktree / ".git"
-    if dot.is_dir():
+    if fsutil.is_dir(dot):
         return dot
-    if dot.is_file():  # worktree / submodule: "gitdir: <path>"
+    if fsutil.is_file(dot):  # worktree / submodule: "gitdir: <path>"
         try:
             line = dot.read_text(encoding="utf-8", errors="replace").strip()
         except OSError:
@@ -23,7 +24,7 @@ def resolve_git_dir(worktree: Path) -> Path | None:
         if line.startswith("gitdir:"):
             p = Path(line[7:].strip())
             p = p if p.is_absolute() else (worktree / p)
-            return p.resolve() if p.exists() else None
+            return p.resolve() if fsutil.exists(p) else None
     return None
 
 

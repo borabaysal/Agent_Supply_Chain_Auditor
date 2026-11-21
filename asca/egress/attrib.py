@@ -86,7 +86,7 @@ def find_inode(client_ip: str, client_port: int, server_ip: str, server_port: in
     for ip, port, sip in ((client_ip, client_port, server_ip),):
         for fam in ("tcp", "tcp6"):
             try:
-                text = (proc / "net" / fam).read_text()
+                text = (proc / "net" / fam).read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
             for row in parse_proc_net(text):
@@ -136,7 +136,7 @@ def _cmdline(pid: int, proc: Path = PROC) -> str:
 
 def _ppid(pid: int, proc: Path = PROC) -> int | None:
     try:
-        stat = (proc / str(pid) / "stat").read_text()
+        stat = (proc / str(pid) / "stat").read_text(encoding="utf-8", errors="replace")
         return int(stat[stat.rindex(")") + 2:].split()[1])
     except (OSError, ValueError, IndexError):
         return None
