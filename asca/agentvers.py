@@ -48,6 +48,14 @@ AGENTS: dict[str, dict] = {
                        "repo_packages": {"Claude Desktop"}, "brew": (),
                        "upgrade": "Claude menu → Check for Updates, or download it again from claude.ai/download"},
 }
+# Hand-curated: vulnerabilities fixed without a published advisory, so the generated table can't have them.
+CURATED: dict[str, list[dict]] = {
+    "codex": [{"id": "PLUGIN4SHELL-CODEX", "cve": "", "severity": "high", "ranges": ["< 0.146.0"], "fixed": "0.146.0",
+               "summary": "Plugin4Shell: a branch named like the pinned commit replaces the plugin at install and "
+                          "auto-update (no advisory published; fix per Air Security and the CSA research note)",
+               "source": "Air Security / CSA research note",
+               "url": "https://labs.cloudsecurityalliance.org/research/csa-research-note-plugin4shell-ai-coding-agent-supply-chain/"}],
+}
 _SEV = {"critical": Severity.CRITICAL, "high": Severity.HIGH, "moderate": Severity.MEDIUM, "medium": Severity.MEDIUM,
         "low": Severity.LOW}
 _VER = re.compile(r"^v?(\d+(?:\.\d+){0,3})(?:-([0-9A-Za-z.-]+))?(?:\+.*)?$")
@@ -298,7 +306,7 @@ def audit(stats: dict, *, use_online: bool = False, home: Path | None = None, in
     reviewed, table = bundled()
     out: list[Finding] = []
     for inst in installs:
-        rows = match(inst["version"], table.get(inst["agent"], []))
+        rows = match(inst["version"], table.get(inst["agent"], []) + CURATED.get(inst["agent"], []))
         if use_online:
             live, errors = online_fn(inst["agent"], inst["version"])
             rows += live

@@ -12,7 +12,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import (__version__, advisories, agentcfg, agentvers, allowlist, ciagent, discover, dockerd, ghtoken, hermes, installhooks,
+from . import (__version__, advisories, agentcfg, agentvers, pluginpins, tcc, allowlist, ciagent, discover, dockerd, ghtoken, hermes, installhooks,
                mcp, persona, pystartup, repohooks, report, respond, secrets, sessions, stray, symlinks, wfsecrets)
 from .model import Finding, Report, Severity
 
@@ -56,6 +56,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-agent-allowlist", action="store_true",
                    help="skip secret scanning of agent allow rules (Claude Code permissions, VS Code auto-approve) and "
                         "the committed .claude/settings.local.json check")
+    p.add_argument("--no-plugin-pins", action="store_true",
+                   help="skip Plugin4Shell checks: plugin checkouts with commit-hash-named branches or off their pin")
+    p.add_argument("--no-tcc", action="store_true",
+                   help="skip macOS Full Disk Access / Accessibility grants for terminals, IDEs and agents")
     p.add_argument("--no-agent-versions", action="store_true",
                    help="skip known-vulnerability checks for installed Claude Code, Codex, Gemini CLI, goose and "
                         "Claude Desktop (versions are read from files, nothing is run)")
@@ -136,6 +140,9 @@ def run(argv: list[str] | None = None) -> int:
     if argv[:1] == ["dashboard"]:   # `asca dashboard …`: static HTML status page from the reports
         from .dashboard import run as dashboard_run
         return dashboard_run(argv[1:])
+    if argv[:1] == ["export"]:   # `asca export intune`: last report as an Intune custom-compliance result
+        from . import intune
+        return intune.main(argv[1:])
     if argv[:1] == ["spend"]:   # `asca spend`: tripwire for stolen AI keys (online, read-only)
         from . import spend
         return spend.run(argv[1:])
@@ -203,6 +210,10 @@ def run(argv: list[str] | None = None) -> int:
 
     if not args.no_agent_versions:
         findings += agentvers.audit(stats, use_online=args.online_advisories)
+    if not args.no_plugin_pins:
+        findings += pluginpins.audit(pluginpins.default_roots(Path.home(), home), stats)
+    if not args.no_tcc:
+        findings += tcc.audit(stats)
 
     client_cfgs = list(args.mcp_config)
     if not args.no_client_configs:

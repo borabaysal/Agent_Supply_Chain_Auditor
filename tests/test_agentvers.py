@@ -75,7 +75,7 @@ def test_finding_groups_advisories_and_names_repo_only_ones(tmp_path):
 
 
 def test_patched_versions_are_clean():
-    inst = [{"agent": "claude-code", "version": "2.99.0", "where": "/x"}, {"agent": "codex", "version": "0.60.0", "where": "/y"},
+    inst = [{"agent": "claude-code", "version": "2.99.0", "where": "/x"}, {"agent": "codex", "version": "0.146.0", "where": "/y"},
             {"agent": "goose", "version": "1.44.0", "where": "/z"}]
     assert A.audit({}, installs=inst) == []
 
@@ -99,7 +99,7 @@ def test_online_merges_aliases_and_adds_new(tmp_path):
     inst = [{"agent": "codex", "version": "0.23.0", "where": "/c"}]
     f = A.audit({}, installs=inst, use_online=True,
                 online_fn=lambda a, v: A.online(a, v, osv=osv, ghsa=lambda *x: [], repo=repo))[0]
-    assert "3 known vulnerabilities" in f.title                                   # 2 bundled + 1 new; dup merged
+    assert "4 known vulnerabilities" in f.title                       # 2 bundled + 1 curated + 1 new; dup merged
     assert "GHSA-new0-0000-0000 (no CVE)" in f.detail and "have no CVE ID" in f.detail
 
 
@@ -149,3 +149,9 @@ def test_cli_flag(tmp_path, monkeypatch):
     assert cli.run(base + ["-o", str(out)]) == 1
     assert any(f["rule"] == "agent.vulnerable-version" for f in json.loads(out.read_text())["findings"])
     assert cli.run(base + ["--no-agent-versions", "-o", str(out)]) == 0
+
+
+def test_curated_plugin4shell_codex():
+    f = A.audit({}, installs=[{"agent": "codex", "version": "0.145.0", "where": "/c"}])[0]
+    assert "PLUGIN4SHELL-CODEX (no CVE)" in f.detail and "0.146.0" in f.remediation
+    assert A.audit({}, installs=[{"agent": "codex", "version": "0.146.0", "where": "/c"}]) == []
