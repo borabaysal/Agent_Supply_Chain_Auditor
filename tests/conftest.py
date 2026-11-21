@@ -11,12 +11,19 @@ import pathlib
 
 import pytest
 
-from asca import tcc
+from asca import secrets, tcc
 
 
 @pytest.fixture(autouse=True)
 def _no_host_tcc(monkeypatch):
     monkeypatch.setattr(tcc, "ENABLED", False)
+
+
+@pytest.fixture(autouse=True)
+def _no_windows_permissions_note(monkeypatch):
+    # The once-per-run low note on Windows would change every exact finding list; test_windows.py covers it.
+    # (Only the note: the mode-bit checks themselves skip Windows on their own.)
+    monkeypatch.setattr(secrets, "permissions_checked", lambda: True)
 
 
 if os.name == "nt":

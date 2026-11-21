@@ -41,7 +41,7 @@ def test_redirected_cp1252_output_is_switched_to_utf8(monkeypatch):
     fsutil.utf8_stdio()
     print("✅ → done")
     fake.flush()
-    assert buf.getvalue().decode("utf-8") == "✅ → done\n"
+    assert buf.getvalue().decode("utf-8").replace("\r\n", "\n") == "✅ → done\n"
 
 
 def test_minimal_env_keeps_systemroot_on_windows(monkeypatch):

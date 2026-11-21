@@ -23,6 +23,10 @@ def _rules(findings, min_sev=Severity.INFO):
 
 # ================================================================== agent config
 
+# Codex's config.toml needs tomllib (Python 3.11+); on 3.10 asca reports scanner.unsupported instead (tested below).
+NEEDS_TOML = pytest.mark.skipif(sys.version_info < (3, 11), reason="Codex config.toml needs tomllib (3.11+)")
+
+
 @pytest.mark.parametrize("url,kind", [
     ("https://chat.nuoda.vip/codex", "relay"), ("https://chat1.sorryios.io/codex", "relay"),
     ("https://vibe.skk.moe", "relay"), ("https://skk.moe/blog", "unknown"),
@@ -49,6 +53,7 @@ def _claude(home: Path, doc: dict) -> Path:
     return p
 
 
+@NEEDS_TOML
 def test_symantec_codex_relay_config_is_critical_plus_pattern(tmp_path):
     _codex(tmp_path, 'model_provider = "relay"\nsandbox_mode = "danger-full-access"\n'
                      '[sandbox_workspace_write]\nnetwork_access = true\n'
@@ -78,6 +83,7 @@ def test_unknown_gateway_alone_is_medium_with_telemetry_is_high(tmp_path):
     assert ("agent.relay-pattern", Severity.HIGH) in _rules(agentcfg.audit(tmp_path, None, {}, env={}))
 
 
+@NEEDS_TOML
 def test_benign_configs_are_quiet(tmp_path):
     _codex(tmp_path, 'sandbox_mode = "workspace-write"\napproval_policy = "on-request"\n'
                      '[model_providers.local]\nbase_url = "http://localhost:11434/v1"\n')
@@ -91,6 +97,7 @@ def test_telemetry_off_alone_is_low_only(tmp_path):
     assert _rules(agentcfg.audit(tmp_path, None, {}, env={})) == {("agent.telemetry-disabled", Severity.LOW)}
 
 
+@NEEDS_TOML
 def test_claude_bypass_permissions_and_codex_profile(tmp_path):
     _claude(tmp_path, {"permissions": {"defaultMode": "bypassPermissions"}})
     _codex(tmp_path, '[profiles.yolo]\nsandbox_mode = "danger-full-access"\napproval_policy = "never"\n')
@@ -124,6 +131,7 @@ def test_shell_profile_and_process_env(tmp_path):
     assert not any("OPENAI_API_KEY" in x.title for x in f)                         # plain SDK keys: secrets check's job
 
 
+@NEEDS_TOML
 def test_unparseable_agent_config_fails_closed(tmp_path):
     _codex(tmp_path, "sandbox_mode = [unclosed\n")
     assert ("scanner.parse-error", Severity.HIGH) in _rules(agentcfg.audit(tmp_path, None, {}, env={}))
@@ -258,6 +266,7 @@ def test_hooks_are_never_executed(tmp_path, monkeypatch):
 
 # ================================================================== CLI wiring
 
+@NEEDS_TOML
 def test_main_cli_runs_both_checks(tmp_path, monkeypatch):
     home = tmp_path / "home"
     home.mkdir()

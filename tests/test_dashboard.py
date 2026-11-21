@@ -138,7 +138,7 @@ def test_output_is_private_and_atomic(tmp_path):
     os.chmod(out, 0o644)
     dashboard.build(tmp_path, out, host="h", now=NOW)
     assert os.name == "nt" or stat.S_IMODE(out.stat().st_mode) == 0o600
-    assert stat.S_IMODE((tmp_path / "dashboard-state.json").stat().st_mode) == 0o600
+    assert os.name == "nt" or stat.S_IMODE((tmp_path / "dashboard-state.json").stat().st_mode) == 0o600
     assert not list(tmp_path.glob(".*.tmp"))
 
 

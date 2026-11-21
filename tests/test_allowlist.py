@@ -157,8 +157,8 @@ def test_jack_four_secret_repo_end_to_end(tmp_path, monkeypatch):
                   "-o", str(out), "--format", "none"])
     rep = json.loads(out.with_suffix(".json").read_text())
     md = out.with_suffix(".md").read_text()
-    repo_hits = [f for f in rep["findings"] if f["rule"] == allowlist.RULE and "/projects/" in f["location"]]
-    home_hits = [f for f in rep["findings"] if f["rule"] == allowlist.RULE and "/home/.claude/" in f["location"]]
+    repo_hits = [f for f in rep["findings"] if f["rule"] == allowlist.RULE and "/projects/" in f["location"].replace("\\", "/")]
+    home_hits = [f for f in rep["findings"] if f["rule"] == allowlist.RULE and "/home/.claude/" in f["location"].replace("\\", "/")]
     assert len(repo_hits) == 4 and len(home_hits) == 4
     assert sorted(f["severity"] for f in repo_hits) == ["high", "high", "high", "medium"]   # MySQL on 10.0.0.5
     assert all("committed" in f["title"] for f in repo_hits)

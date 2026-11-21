@@ -13,62 +13,65 @@ asca is Python standard library only and never runs what it scans, so most check
 ## Test kit
 
 - **`scripts/platform_check.py`:** plants known problems in a **throwaway profile** in a temp folder, runs asca and its subcommands, and prints a pass/fail table. It never reads or changes your real profile, and its fake keys are generated at runtime and never printed.
-- **`docs/ci/tests.yml`:** a GitHub Actions workflow running the test suite on Linux, macOS and Windows with Python 3.10 and 3.12. It has a read-only token, no secrets, and pins actions to commits. Install it with:
-  ```bash
-  mkdir -p .github/workflows && git mv docs/ci/tests.yml .github/workflows/tests.yml
-  git commit -m "CI: tests on Linux, macOS and Windows" && git push
-  ```
-  The maintainer pushes this: GitHub requires the `workflow` permission to add a workflow, and asca's own token check rates that permission as risky for an agent's token.
+- **`.github/workflows/tests.yml`:** CI runs the test suite on Linux, macOS and Windows (x64) with Python 3.10 and 3.12 on every push and PR. It has a read-only token, no secrets, and pins actions to commits.
 - **`scripts/windows/asca-daily.ps1`:** a daily-audit wrapper for Task Scheduler.
+- **`scripts/windows/vm_test.ps1`:** runs every step below and writes one results file you can paste back.
 
 ## Test plan (a disposable Windows 11 VM)
 
-**Use a throwaway VM: no real accounts, keys or repos.** Sign in with a local account, and never copy a real `.env`, SSH keys or agent configs into it. Unactivated Windows is fine (watermark only). 4 vCPU, 8 GB RAM and 64 GB disk are enough.
+**Use a throwaway VM: no real accounts, keys or repos.** Never copy a real `.env`, SSH keys or agent configs into it, and don't log in to any agent. Unactivated Windows is fine for testing (watermark only).
 
-**Step 1, the VM.**
-- **Apple Silicon Mac:** Windows 11 **ARM64** (Microsoft's official ARM64 ISO) in **UTM** (free) or **VMware Fusion Pro** (free for personal use).
-- **Intel Mac:** Windows 11 x64 in UTM, VMware Fusion or VirtualBox.
+### 1. The VM (Apple Silicon Mac, UTM)
+1. Install **UTM** from [mac.getutm.app](https://mac.getutm.app) (free; the App Store version is the same app).
+2. Get the **Windows 11 ARM64 ISO** from Microsoft: [microsoft.com/software-download/windows11arm64](https://www.microsoft.com/en-us/software-download/windows11arm64). Pick "Windows 11 (multi-edition ISO for Arm64)" and your language. (UTM's guide also suggests CrystalFetch, which builds the same ISO from Microsoft's servers.)
+3. UTM → **+** → **Virtualize** → **Windows**. Give it 8 GB RAM and 4 cores. Tick **Install Windows 10 or higher** and **Install drivers and SPICE tools**, then **Browse** to the ISO. Use a 64 GB disk, skip the shared folder, **Save**, then **Run**.
+4. **Press any key** right away when it says "Press any key to boot from CD". If you miss it, you land in an EFI shell: type `exit`, choose Boot Manager, then the CD.
+5. Setup: choose **"I don't have a product key"** and **Windows 11 Pro**, then a custom install onto the empty disk.
+6. Account (first-boot setup):
+   - At the region screen press **Shift+F10** and type `start ms-cxh:localonly`. A local-account window should appear.
+   - Microsoft is blocking this on some 26H2 builds. If it doesn't work, sign in with a **new throwaway Microsoft account made just for this VM**, never your real one.
+7. If the screen goes black after install (a known 24H2+ graphics-driver issue), restart the VM from UTM's toolbar.
+8. In Windows: if there's no network, open the **CD drive (UTM guest tools)** in Explorer and run the installer. It contains the network drivers.
 
-**Step 2, install** (in PowerShell):
+**Intel Mac:** the same, with the x64 ISO from [microsoft.com/software-download/windows11](https://www.microsoft.com/en-us/software-download/windows11).
+
+### 2. Install Python, Git, VS Code, Node, Claude Desktop and an old Claude Code
+In **PowerShell** (Start → type PowerShell):
 ```powershell
 winget install -e --id Python.Python.3.12; winget install -e --id Python.Python.3.10; winget install -e --id Git.Git
 winget install -e --id Microsoft.VisualStudioCode; winget install -e --id OpenJS.NodeJS.LTS; winget install -e --id Anthropic.Claude
 ```
-Then open a **new** PowerShell window, so the new PATH is loaded:
+Accept the agreements when asked. On ARM64, Python 3.12, Git, Node, VS Code and Claude are native ARM64 builds. Python 3.10 has no ARM64 build, so it runs as x64 under Windows' emulation (useful extra coverage). Then **close PowerShell and open a new window**, so the new PATH is loaded:
 ```powershell
-npm install -g @anthropic-ai/claude-code@2.1.150     # an old version on purpose; don't log in
+npm install -g @anthropic-ai/claude-code@2.1.150     # an old version on purpose: asca should flag it. Don't log in.
 code --install-extension ms-python.python; code --install-extension esbenp.prettier-vscode
 git clone https://github.com/borabaysal/Agent_Supply_Chain_Auditor.git C:\asca; cd C:\asca
 py -3.12 -m pip install pytest; py -3.10 -m pip install pytest
 ```
-Open Claude Desktop once and close it without logging in.
+Open **Claude Desktop** once and close it without logging in. For symlink tests, turn on **Settings → System → For developers → Developer Mode**.
 
-**Step 3, the tests.** Paste the output of each block back:
+### 3. Run every test with one command
 ```powershell
-# A. test suite on Python 3.12, then 3.10 (the minimum)
-py -3.12 -m pytest -q -rs -p no:cacheprovider 2>&1 | Select-Object -Last 40
-py -3.10 -m pytest -q -p no:cacheprovider 2>&1 | Select-Object -Last 15
-
-# B. planted problems in a throwaway profile
-py -3.12 scripts\platform_check.py
-py -3.10 scripts\platform_check.py
-
-# C. symlinks: turn on Settings > System > For developers > Developer Mode, open a new window, then:
-py -3.12 scripts\platform_check.py | Select-String symlink
-
-# D. the VM's real profile (finds VS Code, Claude Desktop, Claude Code 2.1.150); counts only, no values
-py -3.12 -m asca --format none -o $env:TEMP\asca-real; "exit $LASTEXITCODE"
-py -3.12 -c "import json,os,collections as c; d=json.load(open(os.path.join(os.environ['TEMP'],'asca-real.json'))); print(d['result'], {k:v for k,v in d['counts'].items() if v}); print(d['stats'].get('agent_versions')); print(sorted(c.Counter((f['rule'],f['severity']) for f in d['findings']).items()))"
-
-# E. scheduled daily run (Task Scheduler, current user, no Telegram)
-schtasks /Create /SC DAILY /ST 09:00 /TN "asca daily audit" /TR "powershell -NoProfile -ExecutionPolicy Bypass -File C:\asca\scripts\windows\asca-daily.ps1" /F
-schtasks /Run /TN "asca daily audit"; Start-Sleep 90
-Get-Content $env:LOCALAPPDATA\asca\run.log; Get-ChildItem $env:LOCALAPPDATA\asca | Select-Object Name, Length
-schtasks /Delete /TN "asca daily audit" /F
+cd C:\asca
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\windows\vm_test.ps1
 ```
-**Expected:** the test suite passes, or the failures are listed; every `platform_check` row passes, with the symlink row SKIP until Developer Mode is on; D shows `claude-code: 2.1.150` with an `agent.vulnerable-version` finding (5 known vulnerabilities); E logs `rc=1` or `rc=0` (not 2).
+It takes a few minutes and writes **`asca-windows-results.txt` on the Desktop**. It covers:
+- the test suite on Python 3.12 (ARM64) and 3.10 (x64)
+- `platform_check.py` on both
+- redirected output
+- an audit and inventory of the VM's real profile
+- a Task Scheduler run of `asca-daily.ps1` (the task is deleted afterwards)
 
-**Step 4 (optional): WSL.** Run `wsl --install`, then in Ubuntu install python3, clone, and run `python3 scripts/platform_check.py` to confirm it only sees the Linux side.
+The output is shape only (rules, severities, counts, versions, exit codes), so you can paste the file back as-is.
+
+**Expected:**
+- The test suite passes (any failures are listed).
+- Every `platform_check` row passes.
+- D shows `claude-code: 2.1.150` with `agent.vulnerable-version`, plus the VS Code extensions and Claude Desktop in the inventory.
+- E logs `rc=0` or `rc=1` (not 2) with `Last Result: 0`.
+
+### 4. Optional: WSL
+Run `wsl --install`, then in Ubuntu install python3, clone, and run `python3 scripts/platform_check.py`. It should only see the Linux side.
 
 ## Results
 

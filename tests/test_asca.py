@@ -484,12 +484,25 @@ def test_client_config_formats(tmp_path):
     gem = tmp_path / "settings.json"
     gem.write_text('{"mcpServers": {"r": {"httpUrl": "http://evil.example.com/mcp"}}}')
     assert rules(discover.audit_json_mcp(vs)) == ["pin.mcp-package"]
-    assert rules(discover.audit_json_mcp(codex)) == ["pin.mcp-package"]
     assert rules(discover.audit_json_mcp(goose)) == ["pin.mcp-package"]
     assert "mcp.plaintext-transport" in rules(discover.audit_json_mcp(gem))
-    bad = tmp_path / "bad.toml"
-    bad.write_text("[[[")
-    assert rules(discover.audit_json_mcp(bad)) == ["scanner.parse-error"]
+    if sys.version_info >= (3, 11):
+        assert rules(discover.audit_json_mcp(codex)) == ["pin.mcp-package"]
+        bad = tmp_path / "bad.toml"
+        bad.write_text("[[[")
+        assert rules(discover.audit_json_mcp(bad)) == ["scanner.parse-error"]
+
+
+def test_toml_without_tomllib_is_low_and_never_crashes(tmp_path, monkeypatch):
+    """Python 3.10 has no tomllib: a Codex config must give a low 'not checked', not crash the audit."""
+    monkeypatch.setitem(sys.modules, "tomllib", None)          # makes `import tomllib` fail on any Python
+    codex = tmp_path / "config.toml"
+    codex.write_text('[mcp_servers.git]\ncommand = "uvx"\n')
+    f = discover.audit_json_mcp(codex)
+    assert [(x.rule, x.severity) for x in f] == [("scanner.unsupported", Severity.LOW)] and "3.11" in f[0].title
+    stats = {}
+    discover.audit_client_configs([codex], stats)              # used to raise ModuleNotFoundError
+    assert stats["mcp_servers"] == 0
 
 
 def test_default_client_configs_discovers_known_paths(tmp_path):

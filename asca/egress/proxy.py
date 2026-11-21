@@ -73,6 +73,11 @@ class Proxy:
         if self.server:
             self.server.close()
             await self.server.wait_closed()
+        # Python < 3.12's wait_closed() doesn't wait for open connections; without this their final log record
+        # (status, bytes) is lost when the loop shuts down.
+        active = [t for t in getattr(self, "_active", ()) if not t.done()]
+        if active:
+            await asyncio.wait(active, timeout=5)
         self.elog.write({"kind": "proxy_stop", "pid": os.getpid(), **self.stats})
         self.elog.close()
 
@@ -103,6 +108,11 @@ class Proxy:
             self.elog.write({"kind": "refused", "client_ip": peer[0]})
             writer.close()
             return
+        task = asyncio.current_task()
+        if not hasattr(self, "_active"):
+            self._active = set()
+        self._active.add(task)
+        task.add_done_callback(self._active.discard)
         async with self.sem:
             self.stats["connections"] += 1
             started = time.time()
