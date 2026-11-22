@@ -955,10 +955,11 @@ To set it up:
    - **Windows** (Pro, Enterprise or Education; Intune doesn't support custom compliance on Home): [`discovery-windows.ps1`](examples/intune/discovery-windows.ps1). It's pure PowerShell (5.1 or 7, 32- or 64-bit host), so it needs no Python at compliance time. It reads the report that [`scripts/windows/asca-daily.ps1`](scripts/windows/asca-daily.ps1) writes to `%LOCALAPPDATA%\asca\latest.json`.
      - Intune runs it as SYSTEM by default, and it then reads the report of the user signed in at the console. With "Run this script using the logged on credentials" set to Yes, it reads that user's own report.
      - If nobody is signed in at the console (RDP-only sessions included), the device is non-compliant until the next check.
+     - With several accounts signed in (fast user switching), only the report of the account currently at the console counts. Every person who uses the PC needs their own daily asca task.
      - Set `$ReportOverride` in the script to use a fixed report path instead.
 3. Create a custom compliance policy with [`examples/intune/rules.json`](examples/intune/rules.json). Regenerate it with other limits: `python3 -m asca export intune --rules --max-high 2 --max-medium 10 --max-age-hours 72`.
 
-The default rules require a report, at most 48 hours old, with no critical and no high findings. **Fail closed:** no report, an unreadable one or a stale one makes the device non-compliant, so a stopped asca job doesn't leave a device compliant forever. Baseline-accepted findings don't count, so an accepted risk doesn't block anyone. The Windows script is tested against the exporter: CI runs it in Windows PowerShell 5.1 and PowerShell 7 on 16 report variants (normal, stale, BOM, broken JSON …) and requires identical output.
+The default rules require a report, at most 48 hours old, with no critical and no high findings. **Fail closed:** no report, an unreadable one or a stale one makes the device non-compliant, so a stopped asca job doesn't leave a device compliant forever. Baseline-accepted findings don't count, so an accepted risk doesn't block anyone. The Windows script is tested against the exporter: CI runs it in Windows PowerShell 5.1 and PowerShell 7 on 16 report variants (normal, stale, BOM, broken JSON …) and requires identical output. It was also run as SYSTEM in the 32-bit host (Intune's default) on a Windows 11 ARM64 VM, where it read the console user's report correctly.
 
 ## Stolen-key spend tripwire (`asca spend`, opt-in, online)
 
