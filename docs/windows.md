@@ -1,6 +1,6 @@
 # asca on Windows
 
-**Status: not tested yet.** This page is the test plan and kit. It gets rewritten with measured results after the Windows test.
+**Status: tested** on Windows 11 Pro 26100 (ARM64 VM) and in CI on Windows x64; results below. The limits are listed under "Known before testing" and "Still open".
 
 asca is Python standard library only and never runs what it scans, so most checks should work unchanged. What's known before testing:
 
@@ -84,6 +84,19 @@ Run `wsl --install`, then in Ubuntu install python3, clone, and run `python3 scr
 | Task Scheduler via `asca-daily.ps1` | OK: `rc=0`, Last Result 0, reports written, empty error.log |
 | Test suite | **Didn't run**: Microsoft Defender quarantined `tests/test_skillscan.py` (`Trojan:AIAgent/ClawHavoc!AMTB`) because of its malware-skill samples. Fixed: the samples are now stored ROT13-encoded and decoded at test time. |
 | Real profile | **Missed Claude Code 2.1.150 and Claude Desktop.** With Node from the zip, npm's global folder is the Node folder (not `%APPDATA%\npm`), and Claude Desktop's per-user install (`%LOCALAPPDATA%\AnthropicClaude\app-<version>`) wasn't a known location. Fixed: global npm folders are now also found from `.npmrc` `prefix=` and from the Node folder on `PATH` (plus nvm-windows, Volta and fnm), and the per-user Claude Desktop install is detected. |
+
+**Second VM run (2026-11-22, after PR #25):** same VM, asca `e5241da`.
+
+| Check | Result |
+|---|---|
+| `platform_check.py`, both Pythons | **17/17 passed** |
+| Real profile | **Found** `claude-code 2.1.150` (high `agent.vulnerable-version`) and `claude-desktop 6.28899.6` (no known advisories), plus 5 VS Code extensions |
+| Test suite | Ran: 642 passed on 3.12 and 638 on 3.10. The 5 (3.12) and 4 (3.10) failures were the tests seeing the VM's real, deliberately old Claude Code on `PATH`: asca was right, the tests weren't isolated. Fixed with a conftest fixture that gives tests an empty host; reproduced and verified on Linux with a fake old Claude Code on `PATH`. |
+| Defender | `test_skillscan.py` was readable all run. The one detection listed was the first run's, which stays in Defender's history; `vm_test.ps1` now counts only detections made during the run. |
+| Task Scheduler | OK: `rc=1` (findings) logged, Last Result 0, empty error.log |
+| Redirected output | OK |
+
+**Verdict:** asca works on Windows 11, including ARM64, with the limits listed on this page.
 
 Still open: the Store (MSIX) edition of Claude Desktop installs into `WindowsApps`, which standard users can't list, so its version isn't detected.
 

@@ -11,12 +11,25 @@ import pathlib
 
 import pytest
 
-from asca import secrets, tcc
+from asca import agentvers, secrets, tcc
 
 
 @pytest.fixture(autouse=True)
 def _no_host_tcc(monkeypatch):
     monkeypatch.setattr(tcc, "ENABLED", False)
+
+
+@pytest.fixture(autouse=True)
+def _no_host_agent_installs(monkeypatch):
+    """Agent-version detection reads PATH, APPDATA, LOCALAPPDATA, Homebrew and /Applications, so a test run on a
+    machine with a real (old) Claude Code would see it. Tests get an empty host unless they pass their own."""
+    real = agentvers.installed
+
+    def isolated(home=None, env=None, brew_dirs=None, app_dirs=None):
+        return real(home, env={} if env is None else env, brew_dirs=[] if brew_dirs is None else brew_dirs,
+                    app_dirs=[] if app_dirs is None else app_dirs)
+
+    monkeypatch.setattr(agentvers, "installed", isolated)
 
 
 @pytest.fixture(autouse=True)
