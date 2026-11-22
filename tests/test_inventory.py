@@ -131,7 +131,7 @@ def test_discovers_every_source(env):
     assert kinds["hermes-plugin"]["version"] == "2.0.1@682b22d019a1" and kinds["hermes-plugin"]["publisher"] == "nousresearch"
     assert kinds["openclaw-extension"]["publisher"] == "@openclaw"
     for p in (env.state, env.state / "state.json", env.state / "inventory-latest.md"):
-        assert p.stat().st_mode & 0o077 == 0
+        assert os.name == "nt" or p.stat().st_mode & 0o077 == 0
 
 
 def test_folder_fallback_skips_obsolete_and_keeps_newest(tmp_path):
@@ -292,7 +292,7 @@ def test_approved_publisher_and_write_approved(env, tmp_path):
     assert cli.run(["--dir", str(env.state), "--home", str(env.home), "--hermes-home", str(env.hermes),
                     "--write-approved", str(base)]) == 0
     assert {"anthropic", "rando", "nousresearch"} <= set(json.loads(base.read_text())["approved_publishers"])
-    assert base.stat().st_mode & 0o077 == 0
+    assert os.name == "nt" or base.stat().st_mode & 0o077 == 0
 
 
 def test_removed_is_info(env):

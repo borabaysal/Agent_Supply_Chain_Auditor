@@ -1,5 +1,6 @@
 """Tests for asca.fleet: release-note extraction, target probing, evaluation, alerting."""
 from __future__ import annotations
+import os
 
 import json
 from datetime import datetime, timezone
@@ -236,7 +237,7 @@ def test_change_detection(tmp_path):
     s4 = monitor.evaluate([_obs("a", None)], RELS, now=NOW, feed_error="HTTP 503")
     msgs = monitor.changes(monitor.load_state(p), s4)
     assert "a: version unreadable" in msgs and "release feed failing" in msgs
-    assert (p.stat().st_mode & 0o077) == 0
+    assert os.name == "nt" or (p.stat().st_mode & 0o077) == 0
 
 
 def test_telegram_message():

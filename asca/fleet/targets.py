@@ -93,7 +93,8 @@ def _split_remote(spec_rest: str) -> tuple[str, str]:
 def _run(cmd: list[str], timeout: float) -> str:
     if not shutil.which(cmd[0]):
         raise RuntimeError(f"{cmd[0]} not found on PATH")
-    p = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)   # list args, no shell
+    p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                       timeout=timeout)   # list args, no shell
     if p.returncode != 0:
         raise RuntimeError((p.stderr or p.stdout or f"exit {p.returncode}").strip().splitlines()[-1][:200])
     return p.stdout

@@ -23,6 +23,7 @@ from .. import __version__, report
 from ..model import Finding, Severity
 from . import collect, diff
 from .hashing import MiB, Budget, Limits
+from .. import fsutil
 
 STATE_VERSION = 1
 TITLE = "IDE & agent inventory"
@@ -250,6 +251,7 @@ def run(argv: list[str] | None = None) -> int:
 
 
 def main() -> None:
+    fsutil.utf8_stdio()
     sys.exit(run())
 
 

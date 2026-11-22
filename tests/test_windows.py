@@ -28,3 +28,26 @@ def test_no_note_on_posix(tmp_path, monkeypatch):
 
 def test_note_is_low_and_never_fails_the_audit():
     assert secrets.permissions_note().severity == Severity.LOW
+
+
+def test_redirected_cp1252_output_is_switched_to_utf8(monkeypatch):
+    import io
+    import sys
+    from asca import fsutil
+    buf = io.BytesIO()
+    fake = io.TextIOWrapper(buf, encoding="cp1252")
+    monkeypatch.setattr(sys, "stdout", fake)
+    monkeypatch.setattr(sys, "stderr", io.TextIOWrapper(io.BytesIO(), encoding="utf-8"))
+    fsutil.utf8_stdio()
+    print("✅ → done")
+    fake.flush()
+    assert buf.getvalue().decode("utf-8").replace("\r\n", "\n") == "✅ → done\n"
+
+
+def test_minimal_env_keeps_systemroot_on_windows(monkeypatch):
+    from asca.skillscan import bytecode
+    monkeypatch.setattr(bytecode.os, "name", "nt")
+    monkeypatch.setenv("SYSTEMROOT", "C:\\\\Windows")
+    monkeypatch.setenv("SECRET_THING", "x")
+    env = bytecode._minimal_env()
+    assert env.get("SYSTEMROOT") == "C:\\\\Windows" and "SECRET_THING" not in env

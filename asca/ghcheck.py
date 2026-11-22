@@ -244,7 +244,7 @@ def _live_files(api: Api, repo: str, web: str) -> list[Finding]:
         if st == 200 and isinstance(body, (bytes, str)):
             (root / "package.json").write_bytes(body if isinstance(body, bytes) else body.encode())
             try:
-                scripts = json.loads((root / "package.json").read_text("utf-8", "replace")).get("scripts") or {}
+                scripts = json.loads((root / "package.json").read_text(encoding="utf-8", errors="replace")).get("scripts") or {}
             except (ValueError, AttributeError):
                 scripts = {}
             for k in installhooks.LIFECYCLE:          # fetch the in-repo file the hook runs, if any
@@ -365,7 +365,7 @@ def run(argv: list[str], api: Api | None = None) -> int:
         key = sorted(f"{r['repo']}|{f.rule}|{f.subject}" for r in bad for f in r["findings"])
         state = args.state.expanduser()
         try:
-            prev = json.loads(state.read_text()).get("key")
+            prev = json.loads(state.read_text(encoding="utf-8")).get("key")
         except (OSError, ValueError):
             prev = None
         changed = prev != key
@@ -383,7 +383,8 @@ def run(argv: list[str], api: Api | None = None) -> int:
                 return 2
         state.parent.mkdir(parents=True, exist_ok=True)
         tmp = state.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"key": key, "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}))
+        tmp.write_text(json.dumps({"key": key, "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}),
+                       encoding="utf-8")
         os.chmod(tmp, 0o600)
         tmp.replace(state)
     return 1 if bad else 0

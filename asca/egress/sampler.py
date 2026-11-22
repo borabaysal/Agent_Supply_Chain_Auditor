@@ -58,7 +58,7 @@ class Sampler:
         live = set()
         for fam in ("tcp", "tcp6"):
             try:
-                rows = attrib.parse_proc_net((self.proc / "net" / fam).read_text())
+                rows = attrib.parse_proc_net((self.proc / "net" / fam).read_text(encoding="utf-8", errors="replace"))
             except OSError:
                 continue
             for row in rows:
