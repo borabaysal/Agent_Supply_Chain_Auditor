@@ -41,7 +41,7 @@ In **PowerShell** (Start → type PowerShell):
 winget install -e --id Python.Python.3.12; winget install -e --id Python.Python.3.10; winget install -e --id Git.Git
 winget install -e --id Microsoft.VisualStudioCode; winget install -e --id OpenJS.NodeJS.LTS; winget install -e --id Anthropic.Claude
 ```
-Accept the agreements when asked. On ARM64, Python 3.12, Git, Node, VS Code and Claude are native ARM64 builds. Python 3.10 has no ARM64 build, so it runs as x64 under Windows' emulation (useful extra coverage). Then **close PowerShell and open a new window**, so the new PATH is loaded:
+Accept the agreements when asked. If winget fails with "Failed when searching source: msstore … certificate", add `--source winget` (the Store source on a fresh install is the problem, not the package). If the **Node.js installer fails with 1603**, use the official zip instead: download `node-<version>-win-arm64.zip` from nodejs.org, check it against `SHASUMS256.txt`, unpack it to `%LOCALAPPDATA%\Programs`, and add that folder to your user PATH. On a stock install PowerShell blocks `.ps1` launchers, so type **`npm.cmd`** (and `code.cmd`) instead of `npm`. On ARM64, Python 3.12, Git, Node, VS Code and Claude are native ARM64 builds. Python 3.10 has no ARM64 build, so it runs as x64 under Windows' emulation (useful extra coverage). Then **close PowerShell and open a new window**, so the new PATH is loaded:
 ```powershell
 npm install -g @anthropic-ai/claude-code@2.1.150     # an old version on purpose: asca should flag it. Don't log in.
 code --install-extension ms-python.python; code --install-extension esbenp.prettier-vscode
@@ -75,4 +75,18 @@ Run `wsl --install`, then in Ubuntu install python3, clone, and run `python3 scr
 
 ## Results
 
-_To be filled in from the test: Windows version and architecture, Python versions, what works, what doesn't, and the fixes._
+**First VM run (2026-11-22):** Windows 11 Pro 26100 on ARM64 (UTM on an Apple Silicon Mac), Python 3.12.10 ARM64 and Python 3.10.11 x64 (emulated), Developer Mode on.
+
+| Check | Result |
+|---|---|
+| `platform_check.py`, both Pythons | **17/17 passed**: every planted problem found at the right severity, symlinks included; the planted `fsmonitor` command never ran |
+| Redirected output (cp1252) | OK: no crash, nothing on stderr |
+| Task Scheduler via `asca-daily.ps1` | OK: `rc=0`, Last Result 0, reports written, empty error.log |
+| Test suite | **Didn't run**: Microsoft Defender quarantined `tests/test_skillscan.py` (`Trojan:AIAgent/ClawHavoc!AMTB`) because of its malware-skill samples. Fixed: the samples are now stored ROT13-encoded and decoded at test time. |
+| Real profile | **Missed Claude Code 2.1.150 and Claude Desktop.** With Node from the zip, npm's global folder is the Node folder (not `%APPDATA%\npm`), and Claude Desktop's per-user install (`%LOCALAPPDATA%\AnthropicClaude\app-<version>`) wasn't a known location. Fixed: global npm folders are now also found from `.npmrc` `prefix=` and from the Node folder on `PATH` (plus nvm-windows, Volta and fnm), and the per-user Claude Desktop install is detected. |
+
+Still open: the Store (MSIX) edition of Claude Desktop installs into `WindowsApps`, which standard users can't list, so its version isn't detected.
+
+
+
+
