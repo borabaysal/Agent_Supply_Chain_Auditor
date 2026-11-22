@@ -5,6 +5,7 @@
 $ErrorActionPreference = "Continue"
 [Console]::OutputEncoding = [Text.Encoding]::UTF8      # decode Python's UTF-8 output; PYTHONIOENCODING is NOT set on purpose
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$Started = Get-Date          # Defender keeps old detections in its history; only count the ones from this run
 $Out = Join-Path ([Environment]::GetFolderPath("Desktop")) "asca-windows-results.txt"
 Set-Location $Root
 Remove-Item $Out -ErrorAction SilentlyContinue
@@ -26,7 +27,7 @@ Step "system" {
     $dev = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -ErrorAction SilentlyContinue).AllowDevelopmentWithoutDevLicense
     "Developer Mode (symlinks): $(if ($dev -eq 1) { 'on' } else { 'off' })"
     $det = Get-MpThreatDetection -ErrorAction SilentlyContinue | Where-Object { ($_.Resources -join ' ') -like '*asca*' }
-    "Defender detections in the asca folder: $(@($det).Count)"
+    "Defender detections in the asca folder (all time, incl. old): $(@($det).Count)"
 }
 
 foreach ($v in "3.12", "3.10") {
@@ -79,8 +80,9 @@ Step "E. Task Scheduler (current user, no Telegram)" {
 }
 
 Step "Defender after the run" {
-    $det = Get-MpThreatDetection -ErrorAction SilentlyContinue | Where-Object { ($_.Resources -join ' ') -like '*asca*' }
-    "detections in the asca folder: $(@($det).Count)"
+    $det = Get-MpThreatDetection -ErrorAction SilentlyContinue |
+        Where-Object { ($_.Resources -join ' ') -like '*asca*' -and $_.InitialDetectionTime -ge $Started }
+    "new detections in the asca folder during this run: $(@($det).Count)"
     $det | ForEach-Object { ($_.Resources -join ' ') }
 }
 
