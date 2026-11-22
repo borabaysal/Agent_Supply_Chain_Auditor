@@ -114,8 +114,59 @@ def _npm_roots(home: Path, env: dict) -> list[Path]:
     roots += sorted((home / ".volta" / "tools" / "image" / "packages").glob("*/lib/node_modules"))
     roots += sorted((home / ".local" / "share" / "fnm" / "node-versions").glob("*/installation/lib/node_modules"))
     if env.get("APPDATA"):
-        roots.append(Path(env["APPDATA"]) / "npm" / "node_modules")
-    return roots
+        appdata = Path(env["APPDATA"])
+        roots.append(appdata / "npm" / "node_modules")                         # npm's default on Windows
+        roots += sorted((appdata / "nvm").glob("v*/node_modules"))              # nvm-windows
+        roots += sorted((appdata / "fnm" / "node-versions").glob("*/installation/node_modules"))
+    if env.get("LOCALAPPDATA"):
+        roots += sorted((Path(env["LOCALAPPDATA"]) / "Volta" / "tools" / "image" / "packages").glob("*/node_modules"))
+    # A custom global prefix: `prefix=` in the user's .npmrc (npm reads it with the same meaning on every OS)
+    for prefix in _npmrc_prefixes(home, env):
+        roots += [prefix / "lib" / "node_modules", prefix / "node_modules"]
+    # Node from a zip / tarball: with no prefix configured, npm's global folder is where node itself lives
+    # (Windows: <dir>\node_modules next to node.exe; POSIX: <dir>/../lib/node_modules). Found via PATH only.
+    for d in _path_dirs(env):
+        if (d / "node.exe").is_file():
+            roots.append(d / "node_modules")
+        elif (d / "node").is_file():
+            roots.append(d.parent / "lib" / "node_modules")
+    seen, uniq = set(), []
+    for r in roots:
+        k = os.path.normcase(os.path.normpath(str(r)))
+        if k not in seen:
+            seen.add(k)
+            uniq.append(r)
+    return uniq
+
+
+def _path_dirs(env: dict) -> list[Path]:
+    out = []
+    for part in (env.get("PATH") or env.get("Path") or "").split(os.pathsep):
+        part = part.strip().strip('"')
+        if part and os.path.isabs(part):
+            out.append(Path(part))
+    return out[:64]
+
+
+def _npmrc_prefixes(home: Path, env: dict) -> list[Path]:
+    """`prefix=` lines from ~/.npmrc (or NPM_CONFIG_USERCONFIG); ${VAR} and a leading ~ are expanded."""
+    files = [Path(env["NPM_CONFIG_USERCONFIG"])] if env.get("NPM_CONFIG_USERCONFIG") else []
+    files.append(home / ".npmrc")
+    out = []
+    for f in files:
+        try:
+            text = f.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for line in text.splitlines():
+            key, sep, val = line.partition("=")
+            if sep and key.strip().lower() == "prefix" and val.strip():
+                v = re.sub(r"\$\{([^}]+)\}", lambda m: env.get(m.group(1), m.group(0)), val.strip().strip('"'))
+                if v.startswith("~"):
+                    v = str(home) + v[1:]
+                if os.path.isabs(v):
+                    out.append(Path(v))
+    return out
 
 
 def _brew_dirs() -> list[Path]:
@@ -186,6 +237,17 @@ def installed(home: Path | None = None, env: dict | None = None, brew_dirs: list
             continue
         if info.get("CFBundleIdentifier", "").startswith("com.anthropic"):
             add("claude-desktop", str(info.get("CFBundleShortVersionString") or ""), plist)
+    # Claude Desktop on Windows, per-user installer: %LOCALAPPDATA%\AnthropicClaude\app-<version>
+    # (the Store/MSIX edition lives in WindowsApps, which standard users can't list, so it isn't found)
+    if env.get("LOCALAPPDATA"):
+        base = Path(env["LOCALAPPDATA"]) / "AnthropicClaude"
+        try:
+            vers = [d.name[4:] for d in base.iterdir() if d.name.startswith("app-") and parse(d.name[4:])]
+        except OSError:
+            vers = []
+        if vers:
+            v = max(vers, key=parse)
+            add("claude-desktop", v, base / f"app-{v}")
     return found
 
 

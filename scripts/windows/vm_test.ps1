@@ -22,9 +22,11 @@ Step "system" {
     "asca commit: $(git rev-parse --short HEAD 2>$null)"
     py --list
     foreach ($v in "3.12", "3.10") { py -$v -c "import platform,sys; print(sys.version.split()[0], platform.machine())" }
-    "node $(node --version 2>$null) · git $(git --version 2>$null)"
+    "node $(node --version 2>$null) | git $(git --version 2>$null)"
     $dev = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -ErrorAction SilentlyContinue).AllowDevelopmentWithoutDevLicense
     "Developer Mode (symlinks): $(if ($dev -eq 1) { 'on' } else { 'off' })"
+    $det = Get-MpThreatDetection -ErrorAction SilentlyContinue | Where-Object { ($_.Resources -join ' ') -like '*asca*' }
+    "Defender detections in the asca folder: $(@($det).Count)"
 }
 
 foreach ($v in "3.12", "3.10") {
@@ -74,6 +76,12 @@ Step "E. Task Scheduler (current user, no Telegram)" {
     if ((Test-Path $err) -and (Get-Item $err).Length) { "error.log (last lines):"; Get-Content $err -Tail 5 }
     schtasks /Query /TN "asca daily audit" /V /FO LIST | Select-String "Last Result|Last Run"
     schtasks /Delete /TN "asca daily audit" /F
+}
+
+Step "Defender after the run" {
+    $det = Get-MpThreatDetection -ErrorAction SilentlyContinue | Where-Object { ($_.Resources -join ' ') -like '*asca*' }
+    "detections in the asca folder: $(@($det).Count)"
+    $det | ForEach-Object { ($_.Resources -join ' ') }
 }
 
 Write-Host "`nDone. Results: $Out  (paste its contents back to Hermes)" -ForegroundColor Green

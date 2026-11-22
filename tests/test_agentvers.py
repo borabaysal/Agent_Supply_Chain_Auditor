@@ -155,3 +155,48 @@ def test_curated_plugin4shell_codex():
     f = A.audit({}, installs=[{"agent": "codex", "version": "0.145.0", "where": "/c"}])[0]
     assert "PLUGIN4SHELL-CODEX (no CVE)" in f.detail and "0.146.0" in f.remediation
     assert A.audit({}, installs=[{"agent": "codex", "version": "0.146.0", "where": "/c"}]) == []
+
+
+def _pkg(root: Path, name: str, version: str) -> None:
+    d = root / name
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "package.json").write_text(json.dumps({"name": name, "version": version}), encoding="utf-8")
+
+
+def test_windows_vm_layout_zip_node_and_desktop(tmp_path):
+    """The Windows 11 ARM64 VM: Node from the official zip (npm prefix = the node folder) and Claude Desktop's
+    per-user installer in %LOCALAPPDATA%\\AnthropicClaude\\app-<version>."""
+    local = tmp_path / "AppData" / "Local"
+    node = local / "Programs" / "node-v26.13.1-win-arm64"
+    node.mkdir(parents=True)
+    (node / "node.exe").write_bytes(b"MZ")
+    _pkg(node / "node_modules", "@anthropic-ai/claude-code", "2.1.150")
+    _pkg(node / "node_modules", "npm", "11.20.0")
+    claude = local / "AnthropicClaude"
+    (claude / "app-6.28899.6").mkdir(parents=True)
+    (claude / "app-6.28000.1").mkdir()
+    (claude / "packages").mkdir()
+    env = {"PATH": os.pathsep.join([str(node), str(tmp_path / "missing")]), "LOCALAPPDATA": str(local),
+           "APPDATA": str(tmp_path / "AppData" / "Roaming")}
+    got = {(i["agent"], i["version"]) for i in A.installed(tmp_path, env=env, brew_dirs=[], app_dirs=[])}
+    assert got == {("claude-code", "2.1.150"), ("claude-desktop", "6.28899.6")}
+
+
+def test_npmrc_prefix_and_posix_tarball_node(tmp_path):
+    roaming = tmp_path / "Roaming"
+    _pkg(roaming / "custom" / "node_modules", "@openai/codex", "0.23.0")
+    (tmp_path / ".npmrc").write_text("registry=https://registry.npmjs.org/\nprefix=${APPDATA}/custom\n",
+                                     encoding="utf-8")
+    tar = tmp_path / "opt" / "node-v26"
+    (tar / "bin").mkdir(parents=True)
+    (tar / "bin" / "node").write_bytes(b"\x7fELF")
+    _pkg(tar / "lib" / "node_modules", "@google/gemini-cli", "0.39.0")
+    env = {"APPDATA": str(roaming), "PATH": str(tar / "bin")}
+    got = {(i["agent"], i["version"]) for i in A.installed(tmp_path, env=env, brew_dirs=[], app_dirs=[])}
+    assert got == {("codex", "0.23.0"), ("gemini-cli", "0.39.0")}
+
+
+def test_desktop_folder_without_app_dirs_is_not_an_install(tmp_path):
+    (tmp_path / "AnthropicClaude" / "packages").mkdir(parents=True)
+    env = {"LOCALAPPDATA": str(tmp_path), "PATH": ""}
+    assert A.installed(tmp_path, env=env, brew_dirs=[], app_dirs=[]) == []

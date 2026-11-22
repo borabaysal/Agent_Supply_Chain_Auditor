@@ -166,7 +166,8 @@ def main() -> int:
             if crash:
                 crashes.append(f"{label}: {crash}")
     width = max(len(r[0]) for r in rows)
-    print(f"asca platform check · {platform.system()} {platform.release()} {platform.machine()} · "
+    print(f"asca platform check · {platform.system()} {platform.release()} (build {platform.version()}) "
+          f"{platform.machine()} · "
           f"Python {platform.python_version()}")
     for label, want, res in rows:
         print(f"  {label:<{width}}  {res:<8}  ({want})")
