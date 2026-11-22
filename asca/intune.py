@@ -34,7 +34,7 @@ def result(state_dir: Path | None = None, report: Path | None = None, now: datet
     out = {"AscaReportFound": False, "AscaReportAgeHours": NEVER, "AscaCritical": 0, "AscaHigh": 0, "AscaMedium": 0,
            "AscaResult": "MISSING", "AscaVersion": "0.0.0"}
     try:
-        d = json.loads(Path(report).read_text(encoding="utf-8")) if report else None
+        d = json.loads(Path(report).read_text(encoding="utf-8-sig")) if report else None   # BOM: Windows editors
     except (OSError, ValueError):
         d = None
     if not isinstance(d, dict) or not isinstance(d.get("counts"), dict):
@@ -61,7 +61,7 @@ def rules(max_high: int = 0, max_medium: int | None = None, max_age_hours: int =
               "The daily asca audit isn't installed or hasn't run. Ask IT to (re)install the scheduled asca job.", url),
         _rule("AscaReportAgeHours", "LessEquals", "Int64", max_age_hours,
               "The last asca audit is {ActualValue} hours old",
-              f"The scheduled asca job stopped running (limit: {max_age_hours} hours). Make sure the Mac has been on "
+              f"The scheduled asca job stopped running (limit: {max_age_hours} hours). Make sure the device has been on "
               f"and logged in, or ask IT to check the job.", url),
         _rule("AscaCritical", "IsEquals", "Int64", 0, "asca found {ActualValue} critical issue(s) on this device",
               "Open the asca report or dashboard on this device and follow each fix, or contact IT.", url),

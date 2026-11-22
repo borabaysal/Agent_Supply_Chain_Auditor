@@ -15,6 +15,7 @@ asca is Python standard library only and never runs what it scans, so most check
 - **`scripts/platform_check.py`:** plants known problems in a **throwaway profile** in a temp folder, runs asca and its subcommands, and prints a pass/fail table. It never reads or changes your real profile, and its fake keys are generated at runtime and never printed.
 - **`.github/workflows/tests.yml`:** CI runs the test suite on Linux, macOS and Windows (x64) with Python 3.10 and 3.12 on every push and PR. It has a read-only token, no secrets, and pins actions to commits.
 - **`scripts/windows/asca-daily.ps1`:** a daily-audit wrapper for Task Scheduler.
+- **`examples/intune/discovery-windows.ps1`:** an Intune custom-compliance discovery script for Windows (see the README's Intune section).
 - **`scripts/windows/vm_test.ps1`:** runs every step below and writes one results file you can paste back.
 
 ## Test plan (a disposable Windows 11 VM)

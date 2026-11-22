@@ -76,3 +76,80 @@ def test_linux_discovery_script(tmp_path):
     p = subprocess.run(["bash", str(ROOT / "examples/intune/discovery-linux.sh")],
                        env={**env, "ASCA_DIR": str(tmp_path / "nope")}, capture_output=True, text=True)
     assert p.returncode == 0 and json.loads(p.stdout)["AscaReportFound"] is False
+
+
+# ------------------------------------------------------------------ Windows discovery script (PowerShell)
+
+WIN_SCRIPT = ROOT / "examples" / "intune" / "discovery-windows.ps1"
+PS_NOW = "2026-11-22T15:30:00Z"
+
+
+def _powershell():
+    """Windows PowerShell 5.1 on Windows (what Intune runs), else PowerShell 7 if installed (CI images have it)."""
+    import shutil
+    return (shutil.which("powershell") if os.name == "nt" else None) or shutil.which("pwsh")
+
+
+def _run_ps(*args, env=None):
+    exe = _powershell()
+    cmd = [exe, "-NoProfile", "-NonInteractive"] + (["-ExecutionPolicy", "Bypass"] if os.name == "nt" else [])
+    p = subprocess.run(cmd + ["-File", str(WIN_SCRIPT), *args], capture_output=True, text=True, encoding="utf-8",
+                       errors="replace", timeout=120, env=env)
+    lines = [ln for ln in p.stdout.splitlines() if ln.strip()]
+    return p.returncode, lines
+
+
+GOOD = {"tool": "agent-supply-chain-auditor", "version": "0.5.0", "generated_at": "2026-11-22T10:00:00Z",
+        "result": "FAIL", "counts": {"critical": 1, "high": 2, "medium": 3, "low": 4}}
+CASES = {
+    "normal": json.dumps(GOOD),
+    "pass-zero-counts": json.dumps({**GOOD, "result": "PASS", "counts": {"critical": 0, "high": 0, "medium": 0}}),
+    "missing-count-keys": json.dumps({**GOOD, "counts": {"high": 5}}),
+    "null-counts-values": json.dumps({**GOOD, "counts": {"critical": None, "high": None, "medium": 2}}),
+    "string-numbers": json.dumps({**GOOD, "counts": {"critical": "0", "high": "2", "medium": "1"}}),
+    "no-result-no-version": json.dumps({k: v for k, v in GOOD.items() if k not in ("result", "version")}),
+    "other-time-format": json.dumps({**GOOD, "generated_at": "2026-11-22T10:00:00+00:00"}),
+    "no-generated-at": json.dumps({k: v for k, v in GOOD.items() if k != "generated_at"}),
+    "future-timestamp": json.dumps({**GOOD, "generated_at": "2026-11-22T16:00:00Z"}),
+    "old-report": json.dumps({**GOOD, "generated_at": "2026-11-01T00:00:00Z"}),
+    "utf8-bom": "\ufeff" + json.dumps(GOOD),
+    "no-counts": json.dumps({k: v for k, v in GOOD.items() if k != "counts"}),
+    "counts-not-object": json.dumps({**GOOD, "counts": [1, 2]}),
+    "root-is-list": json.dumps([GOOD]),
+    "invalid-json": '{"counts": {',
+    "empty-file": "",
+}
+
+
+@pytest.mark.skipif(not _powershell(), reason="needs PowerShell (powershell.exe on Windows, or pwsh)")
+@pytest.mark.parametrize("case", sorted(CASES))
+def test_windows_discovery_script_matches_exporter(tmp_path, case):
+    rep = tmp_path / "latest.json"
+    rep.write_text(CASES[case], encoding="utf-8")
+    rc, lines = _run_ps("-Report", str(rep), "-NowUtc", PS_NOW)
+    assert rc == 0 and len(lines) == 1, (rc, lines)                       # one line of JSON, as Intune requires
+    want = intune.result(report=rep, now=datetime(2026, 11, 22, 15, 30, tzinfo=timezone.utc))
+    assert json.loads(lines[0]) == want
+
+
+@pytest.mark.skipif(not _powershell(), reason="needs PowerShell")
+def test_windows_discovery_script_missing_report_fails_closed(tmp_path):
+    rc, lines = _run_ps("-Report", str(tmp_path / "nope.json"))
+    assert rc == 0 and json.loads(lines[0]) == intune.result(report=tmp_path / "nope.json")
+    assert json.loads(lines[0])["AscaReportFound"] is False
+
+
+@pytest.mark.skipif(os.name != "nt" or not _powershell(), reason="the per-user default path is Windows-only")
+def test_windows_discovery_script_reads_the_daily_task_report(tmp_path):
+    """No -Report: as a normal user it reads %LOCALAPPDATA%\\asca\\latest.json, where asca-daily.ps1 writes."""
+    (tmp_path / "asca").mkdir()
+    (tmp_path / "asca" / "latest.json").write_text(json.dumps({**GOOD, "result": "PASS"}), encoding="utf-8")
+    rc, lines = _run_ps("-NowUtc", PS_NOW, env={**os.environ, "LOCALAPPDATA": str(tmp_path)})
+    got = json.loads(lines[0])
+    assert rc == 0 and got["AscaReportFound"] is True and got["AscaResult"] == "PASS" and got["AscaReportAgeHours"] == 5
+
+
+def test_windows_script_is_ascii_and_ends_with_the_intune_return_line():
+    text = WIN_SCRIPT.read_text(encoding="utf-8")
+    assert text.isascii()                                   # Windows PowerShell 5.1 reads BOM-less files as ANSI
+    assert text.rstrip().splitlines()[-1] == "return $hash | ConvertTo-Json -Compress"

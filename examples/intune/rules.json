@@ -24,7 +24,7 @@
         {
           "Language": "en_US",
           "Title": "The last asca audit is {ActualValue} hours old",
-          "Description": "The scheduled asca job stopped running (limit: 48 hours). Make sure the Mac has been on and logged in, or ask IT to check the job."
+          "Description": "The scheduled asca job stopped running (limit: 48 hours). Make sure the device has been on and logged in, or ask IT to check the job."
         }
       ]
     },
