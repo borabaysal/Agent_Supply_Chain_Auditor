@@ -626,7 +626,11 @@ folder (or from folders the same `.pth` adds, like pywin32's `win32\lib`), asca 
 | a compiled `.so`/`.pyd` that no package installed sits next to it (Python loads it before the `.py`) | 🟧 high |
 | no package installed it and it isn't virtualenv's own `_virtualenv.py`; high when its `.pth` passed as standard tooling, since the name may be borrowed | 🟨 medium / 🟧 high |
 
-On the real site-packages folders of the Hermes host and on 12 wheels that ship executable `.pth` files
+Distro packages (Debian/Ubuntu `dist-packages`) have no pip `RECORD`. There, ownership and the "changed after
+install" check use dpkg's own md5 list (`/var/lib/dpkg/info/*.md5sums`), and failing that, the package's
+`top_level.txt` (a claim with no file hashes, as on RPM-based distros).
+
+On the real site-packages folders of the Hermes host, Debian's own `python3-setuptools` package, and 12 wheels that ship executable `.pth` files
 (setuptools, coverage, pytest-cov, pywin32, namespace packages ...), this check reports nothing.
 Current coverage's `a1_coverage.pth` is now recognised by its exact line, which removes a false high.
 

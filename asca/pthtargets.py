@@ -41,6 +41,8 @@ CRED = re.compile(r"\.ssh/|\.aws/credentials|\.git-credentials|\.npmrc|\.pypirc|
 # Files that tools (not pip) write next to their .pth: (module, marker that their own file contains)
 TOOL_FILES = {"_virtualenv": "VIRTUALENV_PATCH_FILE"}
 MAX_BYTES = 512 * 1024
+# Distro Python packages (Debian/Ubuntu dist-packages) carry no pip RECORD; dpkg keeps an md5 per file instead.
+DPKG_INFO = Path("/var/lib/dpkg/info")
 
 
 def imported_modules(line: str) -> list[str]:
@@ -128,6 +130,51 @@ def record_entries(dists) -> dict[str, tuple[str, str]]:
     return out
 
 
+def dpkg_entries(info_dir: Path | None = None) -> dict[str, tuple[str, str]]:
+    """Absolute path -> (deb package, md5) for Python files dpkg installed."""
+    out: dict[str, tuple[str, str]] = {}
+    d = DPKG_INFO if info_dir is None else info_dir
+    try:
+        files = sorted(d.glob("*.md5sums"))
+    except OSError:
+        return out
+    for f in files:
+        pkg = f.name[: -len(".md5sums")].split(":")[0]
+        try:
+            with open(f, encoding="utf-8", errors="replace") as fh:
+                for line in fh:
+                    if "-packages/" in line:
+                        md5, _, rel = line.rstrip("\r\n").partition("  ")
+                        out["/" + rel.lstrip("/")] = (pkg, md5)
+        except OSError:
+            continue
+    return out
+
+
+def top_level_owners(site: Path) -> dict[str, str]:
+    """Top-level module -> 'dist version' from top_level.txt (egg-info, setuptools-built dist-info). A claim with
+    no file hashes: distro packages and old installs only have this."""
+    out: dict[str, str] = {}
+    for meta in sorted([*site.glob("*.egg-info"), *site.glob("*.dist-info")]):
+        try:
+            names = (meta / "top_level.txt").read_text(encoding="utf-8", errors="replace").split()
+        except OSError:
+            continue
+        m = re.match(r"^(.+?)-(\d[^-]*?)(?:-py\d.*)?\.(?:egg|dist)-info$", meta.name)
+        label = f"{m.group(1)} {m.group(2)}" if m else meta.name
+        for n in names:
+            out.setdefault(n.strip(), label)
+    return out
+
+
+def _md5(p: Path) -> str:
+    h = hashlib.md5(usedforsecurity=False)          # integrity check against dpkg's own record, not security
+    with open(p, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 16), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def _digest(p: Path) -> str:
     h = hashlib.sha256()
     with open(p, "rb") as fh:
@@ -147,7 +194,7 @@ def audit_site(site, dists, pth_lines: list[tuple[Path, str, bool]], stats: dict
     """pth_lines: (.pth file, executable line, whether pystartup let it pass as standard tooling)."""
     out: list[Finding] = []
     sp = site.path
-    records = None
+    records = dpkg = tops = None
     done: set[Path] = set()
     for pth, line, allowed in pth_lines:
         for mod in imported_modules(line):
@@ -160,6 +207,18 @@ def audit_site(site, dists, pth_lines: list[tuple[Path, str, bool]], stats: dict
                 records = record_entries(dists)
             rel = target.resolve().relative_to(sp.resolve()).as_posix()
             owner, want = records.get(rel, (None, ""))
+            want_md5 = ""
+            if not owner:                                   # distro package: dpkg's md5, else top_level.txt
+                if dpkg is None:
+                    dpkg = dpkg_entries()
+                hit = dpkg.get(str(target.resolve()))
+                if hit:
+                    owner, want_md5 = f"{hit[0]} (dpkg)", hit[1]
+                else:
+                    if tops is None:
+                        tops = top_level_owners(sp)
+                    claim = tops.get(rel.split("/")[0].split(".")[0]) if "/" in rel else tops.get(mod)
+                    owner = f"{claim} (top_level.txt, no file hashes)" if claim else None
             where = f"{pth.name} → {rel} ({site.label})"
 
             def add(sev, what, detail, rel=rel, owner=owner):
@@ -176,6 +235,10 @@ def audit_site(site, dists, pth_lines: list[tuple[Path, str, bool]], stats: dict
                     add(Severity.HIGH, "Startup module changed after install",
                         "Its sha256 no longer matches the one in its package's RECORD, so something rewrote it "
                         "after pip installed it.")
+                    continue
+                if want_md5 and _md5(target) != want_md5:
+                    add(Severity.HIGH, "Startup module changed after install",
+                        "Its md5 no longer matches the one dpkg recorded when the distro package installed it.")
                     continue
                 if target.suffix in (".so", ".pyd"):
                     if not owner:

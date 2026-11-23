@@ -159,3 +159,45 @@ def test_agent_framework_stealer_releases_are_known_bad(site, ver, pth):
 def test_agent_framework_clean_release_is_not_flagged(site):
     install(site, "agent-framework", {"agent_framework_meta/__init__.py": "X = 1\n"}, version="1.26.0")
     assert pystartup.audit([pystartup.Site(site, "venv")], {}) == []
+
+
+def _debian_site(site, dpkg_dir, *, md5_of=None):
+    """Debian/Ubuntu python3-setuptools layout: egg-info without RECORD, file md5s in dpkg's md5sums."""
+    import hashlib
+    line = ("import os; var = 'SETUPTOOLS_USE_DISTUTILS'; enabled = os.environ.get(var, 'local') == 'local'; "
+            "enabled and __import__('_distutils_hack').add_shim(); \n")
+    (site / "distutils-precedence.pth").write_text(line, encoding="utf-8")
+    hack = site / "_distutils_hack" / "__init__.py"
+    hack.parent.mkdir()
+    hack.write_text("import sys, os\n\ndef add_shim():\n    pass\n", encoding="utf-8")
+    egg = site / "setuptools-84.2.0.egg-info"
+    egg.mkdir()
+    (egg / "PKG-INFO").write_text("Metadata-Version: 2.1\nName: setuptools\nVersion: 84.2.0\n", encoding="utf-8")
+    (egg / "top_level.txt").write_text("_distutils_hack\nsetuptools\n", encoding="utf-8")
+    if dpkg_dir is not None:
+        md5 = hashlib.md5((md5_of or hack.read_text(encoding="utf-8")).encode()).hexdigest()
+        (dpkg_dir / "python3-setuptools.md5sums").write_text(
+            f"{md5}  {str(hack.resolve()).lstrip('/')}\n", encoding="utf-8")
+    return hack
+
+
+def test_debian_distro_package_is_owned_via_dpkg(site, tmp_path, monkeypatch):
+    dpkg = tmp_path / "dpkg"
+    dpkg.mkdir()
+    monkeypatch.setattr(pthtargets, "DPKG_INFO", dpkg)
+    _debian_site(site, dpkg)
+    assert run(site) == []
+
+
+def test_debian_distro_package_changed_after_install(site, tmp_path, monkeypatch):
+    dpkg = tmp_path / "dpkg"
+    dpkg.mkdir()
+    monkeypatch.setattr(pthtargets, "DPKG_INFO", dpkg)
+    _debian_site(site, dpkg, md5_of="the original content\n")
+    [f] = run(site)
+    assert f.title.startswith("Startup module changed after install") and "dpkg" in f.detail
+
+
+def test_egg_info_top_level_claim_without_dpkg_counts_as_owned(site):
+    _debian_site(site, None)                     # e.g. an RPM distro: no dpkg, no RECORD
+    assert run(site) == []

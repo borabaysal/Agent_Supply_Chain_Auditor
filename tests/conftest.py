@@ -11,7 +11,7 @@ import pathlib
 
 import pytest
 
-from asca import agentvers, aistack, devcreds, secrets, tcc, userhooks
+from asca import agentvers, aistack, devcreds, pthtargets, pystartup, secrets, tcc, userhooks
 
 REAL_HOME = pathlib.Path.home().resolve()     # captured before any test changes HOME
 
@@ -66,6 +66,19 @@ def _no_host_ai_stack(monkeypatch, tmp_path_factory):
                     env={} if env is None else env, sites=[] if sites is None else sites, system_dirs=system_dirs)
 
     monkeypatch.setattr(aistack, "audit", isolated)
+
+
+@pytest.fixture(autouse=True)
+def _no_host_python_sites(monkeypatch, tmp_path_factory):
+    """CLI runs would read the machine's system site-packages and dpkg database (CI's Ubuntu image has distro
+    Python packages with startup hooks). Tests that want a system site pass it explicitly."""
+    real = pystartup.discover
+
+    def isolated(home, *, hermes_install=None, repo_roots=(), extra=(), system=False):
+        return real(home, hermes_install=hermes_install, repo_roots=repo_roots, extra=extra, system=False)
+
+    monkeypatch.setattr(pystartup, "discover", isolated)
+    monkeypatch.setattr(pthtargets, "DPKG_INFO", tmp_path_factory.mktemp("no-dpkg"))
 
 
 @pytest.fixture(autouse=True)
