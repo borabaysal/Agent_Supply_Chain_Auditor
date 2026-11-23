@@ -16,7 +16,7 @@ from . import (__version__, advisories, agentcfg, agentvers, pluginpins, tcc, al
                mcp, persona, pystartup, repohooks, report, respond, secrets, sessions, stray, symlinks, wfsecrets)
 from .model import Finding, Report, Severity
 from . import fsutil
-from . import devcreds, userhooks
+from . import devcreds, mcpvers, userhooks
 
 
 def _default_home() -> Path | None:
@@ -163,6 +163,7 @@ def run(argv: list[str] | None = None) -> int:
         from .inventory.cli import run as inventory_run
         return inventory_run(argv[1:])
     args = build_parser().parse_args(argv)
+    mcpvers.LAUNCHES.clear()                  # pinned MCP launches seen in this run (online lookup)
     try:
         fail_on = Severity.parse(args.fail_on)
     except ValueError as exc:
@@ -293,6 +294,17 @@ def run(argv: list[str] | None = None) -> int:
     if not args.no_global_git:
         targets["global_git_configs"] = [str(p) for p in discover.global_git_configs()]
         findings += discover.audit_global_git()
+
+    if args.online_advisories and mcpvers.LAUNCHES:
+        more, errs = mcpvers.online()
+        stats["mcp_online_advisories"] = len(more)
+        findings += more
+        if errs:
+            findings.append(Finding(
+                rule="scanner.feed-unavailable", category="scanner", severity=Severity.LOW,
+                title="Some MCP server advisory lookups failed", location="osv.dev+github-advisories",
+                subject="mcp-online", detail="; ".join(sorted(set(errs)))[:400] + ". The bundled table was still used.",
+                remediation="Retry later; set ASCA_GITHUB_TOKEN to raise GitHub's rate limit."))
 
     # dedupe (the same file can be reached via two roots)
     uniq: dict[str, Finding] = {}

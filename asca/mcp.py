@@ -121,6 +121,8 @@ def audit_server(location: str, name: str, spec: dict) -> list[Finding]:
     if isinstance(command, str) and command.strip():
         argv = command.split() + [str(a) for a in args] if not args else [command] + [str(a) for a in args]
         out.extend(_audit_command(location, name, argv))
+        from . import mcpvers                    # pinned != frozen, pinned != safe
+        out.extend(mcpvers.audit(location, name, argv, spec.get("env") if isinstance(spec.get("env"), dict) else {}))
     url = spec.get("url") or spec.get("serverUrl") or spec.get("httpUrl")
     if isinstance(url, str) and url:
         out.extend(_audit_url(location, name, url))
