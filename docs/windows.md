@@ -97,6 +97,8 @@ Run `wsl --install`, then in Ubuntu install python3, clone, and run `python3 scr
 | Task Scheduler | OK: `rc=1` (findings) logged, Last Result 0, empty error.log |
 | Redirected output | OK |
 
+**Intune discovery script as SYSTEM (2026-11-22):** `examples/intune/discovery-windows.ps1` ran from a SYSTEM scheduled task in the 32-bit Windows PowerShell 5.1 host (Intune's default) while a standard user was at the console. It returned `AscaReportFound:true, AscaReportAgeHours:2, AscaHigh:1, AscaResult:FAIL`, matching that user's report. A first attempt returned the fail-closed result because a different account (with no asca report) was at the console after a user switch. That's the intended behaviour: only the account at the console counts.
+
 **Verdict:** asca works on Windows 11, including ARM64, with the limits listed on this page.
 
 Still open: the Store (MSIX) edition of Claude Desktop installs into `WindowsApps`, which standard users can't list, so its version isn't detected.
