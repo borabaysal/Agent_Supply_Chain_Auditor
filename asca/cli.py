@@ -16,6 +16,7 @@ from . import (__version__, advisories, agentcfg, agentvers, pluginpins, tcc, al
                mcp, persona, pystartup, repohooks, report, respond, secrets, sessions, stray, symlinks, wfsecrets)
 from .model import Finding, Report, Severity
 from . import fsutil
+from . import devcreds, mcpvers, userhooks
 
 
 def _default_home() -> Path | None:
@@ -81,6 +82,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--github-token-scopes", action="store_true",
                    help="ONLINE: look up the scopes of GitHub tokens found locally (one HTTPS request per token, "
                         "sent only to that token's own GitHub host)")
+    p.add_argument("--no-dev-credentials", action="store_true",
+                   help="skip developer credential files (.npmrc, .pypirc, pip.conf, .netrc, Docker, Azure CLI, "
+                        "Hugging Face, .git-credentials)")
+    p.add_argument("--no-user-hooks", action="store_true",
+                   help="skip hooks/statusLine in user-level and managed agent settings (Claude Code, Cursor, Gemini)")
     p.add_argument("--no-agent-config", action="store_true",
                    help="skip agent config tamper checks (Codex sandbox, endpoint overrides, approvals, telemetry)")
     p.add_argument("--claude-settings", type=Path, action="append", default=[], metavar="FILE",
@@ -157,6 +163,7 @@ def run(argv: list[str] | None = None) -> int:
         from .inventory.cli import run as inventory_run
         return inventory_run(argv[1:])
     args = build_parser().parse_args(argv)
+    mcpvers.LAUNCHES.clear()                  # pinned MCP launches seen in this run (online lookup)
     try:
         fail_on = Severity.parse(args.fail_on)
     except ValueError as exc:
@@ -266,6 +273,9 @@ def run(argv: list[str] | None = None) -> int:
     if not args.no_agent_config:
         findings += agentcfg.audit(Path.home(), home, stats, extra_claude=args.claude_settings)
 
+    if not args.no_user_hooks:
+        findings += userhooks.audit(Path.home(), stats)
+
     if not args.no_python_startup:
         sites = pystartup.discover(Path.home(), hermes_install=args.hermes_install or _default_install(),
                                    repo_roots=list(args.repos), extra=list(args.python_site))
@@ -275,12 +285,26 @@ def run(argv: list[str] | None = None) -> int:
     if not args.no_docker_daemon:
         findings += dockerd.audit(home=Path.home(), stats=stats)
 
+    if not args.no_dev_credentials:
+        findings += devcreds.audit(Path.home(), stats)
+
     # cloud credential files hold keys by design: check who can read them, not what's in them
     findings += secrets.audit_permissions(Path.home() / ".aws" / "credentials", label="~/.aws/credentials")
 
     if not args.no_global_git:
         targets["global_git_configs"] = [str(p) for p in discover.global_git_configs()]
         findings += discover.audit_global_git()
+
+    if args.online_advisories and mcpvers.LAUNCHES:
+        more, errs = mcpvers.online()
+        stats["mcp_online_advisories"] = len(more)
+        findings += more
+        if errs:
+            findings.append(Finding(
+                rule="scanner.feed-unavailable", category="scanner", severity=Severity.LOW,
+                title="Some MCP server advisory lookups failed", location="osv.dev+github-advisories",
+                subject="mcp-online", detail="; ".join(sorted(set(errs)))[:400] + ". The bundled table was still used.",
+                remediation="Retry later; set ASCA_GITHUB_TOKEN to raise GitHub's rate limit."))
 
     # dedupe (the same file can be reached via two roots)
     uniq: dict[str, Finding] = {}

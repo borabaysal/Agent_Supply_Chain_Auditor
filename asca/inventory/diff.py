@@ -38,6 +38,8 @@ TAMPER_FIX = ("Don't open the IDE/agent until you know why. Compare the folder w
               "and reinstall from the official source. If code ran, rotate credentials the user could reach.")
 
 
+HOOK_FIX = ("If you didn't change it, read the command (asca's agent.user-hook finding shows it) and treat "
+            "an unexplained hook as a compromise: user-level hooks are a persistence spot.")
 ACCESS_FIX = ("If you didn't change it, an attacker may have added themselves: check the .env, revoke the bot token in "
               "@BotFather if needed, and list only your own IDs.")
 
@@ -110,8 +112,13 @@ def diff(prev: dict, items: list[Item], *, approved: set[str], same_limits: bool
     prev_kinds = {d.get("kind") for d in prev.values()}
     for k, it in sorted(cur.items()):
         p = prev.get(k)
-        if p is None and it.kind in ("agent-persona", "agent-access") and it.kind not in prev_kinds:
+        if p is None and it.kind in ("agent-persona", "agent-access", "agent-hook") and it.kind not in prev_kinds:
             continue                     # first run with these item kinds: learn, don't alert
+        if p is None and it.kind == "agent-hook":
+            out.append(_f("inventory.hook-changed", Severity.MEDIUM, f"New agent hook: {it.name} ({it.note})", it,
+                          f"{k}:{it.hash[:12]}", f"A hook was added at {it.id} in {it.path}. It runs in every "
+                          f"project. The audit's agent.user-hook finding shows the command.", HOOK_FIX))
+            continue
         if p is None and it.kind == "agent-access":
             out.append(_f("inventory.access-changed", Severity.MEDIUM, f"Hermes: new access setting `{it.name}`",
                           it, f"{k}:{it.hash[:12]}", f"`{it.name}` was added in {it.path} ({it.note}). It decides "
@@ -172,6 +179,10 @@ def diff(prev: dict, items: list[Item], *, approved: set[str], same_limits: bool
                               f"loaded into every conversation; Carbonato took over Hermes agents by rewriting it.",
                               "If you didn't edit it, compare it with your backup and treat a rewrite you can't "
                               "explain as a compromise (see the persona.* findings in the audit)."))
+            elif it.policy == "hook":
+                out.append(_f("inventory.hook-changed", Severity.MEDIUM, f"Agent hook changed: {it.name}", it,
+                              f"{k}:{it.hash[:12]}", f"The command at {it.id} in {it.path} changed "
+                              f"({p['hash'][:12]} → {it.hash[:12]}). It runs in every project.", HOOK_FIX))
             elif it.policy == "access":
                 out.append(_f("inventory.access-changed", Severity.MEDIUM,
                               f"Hermes: `{it.name}` changed (who can command the agent)", it, f"{k}:{it.hash[:12]}",

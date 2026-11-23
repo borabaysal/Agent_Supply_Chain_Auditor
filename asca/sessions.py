@@ -489,6 +489,8 @@ def audit(roots: list[Root], stats: dict, budget: Budget | None = None) -> list[
                         _scan_blob(data, 1, fp, root, found)
                 else:
                     _scan_text_file(fp, size, root, budget, found)
+            except FileNotFoundError:
+                continue                 # deleted between listing and reading (rotating logs, cron output)
             except (OSError, sqlite3.Error, ValueError) as exc:
                 unreadable[root.agent + "\x00" + str(root.path)].append(f"{fp} ({type(exc).__name__})")
     finally:

@@ -53,7 +53,7 @@ _TAG = re.compile(r"sha256:([0-9a-f]{8})")
 
 
 def label_of(f: Finding) -> str | None:
-    if f.category != "secrets":
+    if f.category != "secrets" or f.rule.startswith("devcred."):   # stored, not leaked: no revoke steps
         return None
     for label in sorted(STEPS, key=len, reverse=True):
         if label.lower() in f"{f.title} {f.subject}".lower():

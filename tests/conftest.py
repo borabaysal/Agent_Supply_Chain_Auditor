@@ -11,7 +11,9 @@ import pathlib
 
 import pytest
 
-from asca import agentvers, secrets, tcc
+from asca import agentvers, devcreds, secrets, tcc, userhooks
+
+REAL_HOME = pathlib.Path.home().resolve()     # captured before any test changes HOME
 
 
 @pytest.fixture(autouse=True)
@@ -30,6 +32,24 @@ def _no_host_agent_installs(monkeypatch):
                     app_dirs=[] if app_dirs is None else app_dirs)
 
     monkeypatch.setattr(agentvers, "installed", isolated)
+
+
+@pytest.fixture(autouse=True)
+def _no_real_home_files(monkeypatch):
+    """Checks that read the user's own files (credential files, agent hooks) see nothing in the real home of
+    the machine running the tests; tests that point HOME at a temp dir are unaffected."""
+    for mod in (devcreds, userhooks):
+        real = mod.audit
+
+        def isolated(home, stats, env=None, _real=real):
+            if pathlib.Path(home).resolve() == REAL_HOME:
+                return []
+            return _real(home, stats, env=env)
+
+        monkeypatch.setattr(mod, "audit", isolated)
+    real_collect = userhooks.collect
+    monkeypatch.setattr(userhooks, "collect", lambda home, env=None: ([], []) if pathlib.Path(home).resolve() ==
+                        REAL_HOME else real_collect(home, env))
 
 
 @pytest.fixture(autouse=True)
