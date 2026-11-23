@@ -16,7 +16,7 @@ from . import (__version__, advisories, agentcfg, agentvers, pluginpins, tcc, al
                mcp, persona, pystartup, repohooks, report, respond, secrets, sessions, stray, symlinks, wfsecrets)
 from .model import Finding, Report, Severity
 from . import fsutil
-from . import userhooks
+from . import devcreds, userhooks
 
 
 def _default_home() -> Path | None:
@@ -82,6 +82,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--github-token-scopes", action="store_true",
                    help="ONLINE: look up the scopes of GitHub tokens found locally (one HTTPS request per token, "
                         "sent only to that token's own GitHub host)")
+    p.add_argument("--no-dev-credentials", action="store_true",
+                   help="skip developer credential files (.npmrc, .pypirc, pip.conf, .netrc, Docker, Azure CLI, "
+                        "Hugging Face, .git-credentials)")
     p.add_argument("--no-user-hooks", action="store_true",
                    help="skip hooks/statusLine in user-level and managed agent settings (Claude Code, Cursor, Gemini)")
     p.add_argument("--no-agent-config", action="store_true",
@@ -280,6 +283,9 @@ def run(argv: list[str] | None = None) -> int:
 
     if not args.no_docker_daemon:
         findings += dockerd.audit(home=Path.home(), stats=stats)
+
+    if not args.no_dev_credentials:
+        findings += devcreds.audit(Path.home(), stats)
 
     # cloud credential files hold keys by design: check who can read them, not what's in them
     findings += secrets.audit_permissions(Path.home() / ".aws" / "credentials", label="~/.aws/credentials")
