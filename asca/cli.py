@@ -158,6 +158,9 @@ def run(argv: list[str] | None = None) -> int:
     if argv[:1] == ["github-check"]:   # `asca github-check`: wfx traces in your GitHub repos (online, read-only)
         from . import ghcheck
         return ghcheck.run(argv[1:])
+    if argv[:1] == ["post"]:   # `asca post INCIDENT`: sample finding + X/LinkedIn post text (nothing is posted)
+        from . import post
+        return post.main(argv[1:])
     if argv[:1] == ["check-repo"]:   # `asca check-repo PATH`: is a downloaded repo safe to open?
         from .checkrepo import run as checkrepo_run
         return checkrepo_run(argv[1:])
