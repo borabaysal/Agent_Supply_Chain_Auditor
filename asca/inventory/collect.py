@@ -412,6 +412,17 @@ def hermes_identity(hermes_home: Path, out: Collected) -> None:
                                   note=f"{len([x for x in norm.split(',') if x])} value(s)"))
 
 
+def agent_hooks(home: Path, out: Collected) -> None:
+    """Hooks in user-level and managed agent settings, tracked by a hash of the command (never its text)."""
+    from .. import userhooks
+    hooks, _ = userhooks.collect(home)
+    for h in hooks:
+        out.items.append(Item(kind="agent-hook", source=h["path"], id=h["loc"], name=f"{h['client']} {h['what']}",
+                              publisher="local", policy="hook", path=h["path"],
+                              hash=hashlib.sha256(h["cmd"].encode("utf-8", "replace")).hexdigest(),
+                              note=f"{h['scope']} settings"))
+
+
 def collect(home: Path, hermes_home: Path | None, budget: Budget, *, mcp_configs: list[Path] = (),
             ide_dirs: list[tuple[str, Path]] = (), include_skills: bool = True) -> Collected:
     out = Collected()
@@ -420,6 +431,7 @@ def collect(home: Path, hermes_home: Path | None, budget: Budget, *, mcp_configs
     openclaw_extensions(home, budget, out)
     cfgs = list(mcp_configs) + [p for p in discover.default_client_configs(home) if p not in mcp_configs]
     mcp_servers(cfgs, (hermes_home / "config.yaml") if hermes_home else None, out)
+    agent_hooks(home, out)
     if hermes_home:
         hermes_plugins(hermes_home, budget, out)
         hermes_identity(hermes_home, out)

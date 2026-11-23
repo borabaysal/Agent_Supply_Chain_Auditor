@@ -16,6 +16,7 @@ from . import (__version__, advisories, agentcfg, agentvers, pluginpins, tcc, al
                mcp, persona, pystartup, repohooks, report, respond, secrets, sessions, stray, symlinks, wfsecrets)
 from .model import Finding, Report, Severity
 from . import fsutil
+from . import userhooks
 
 
 def _default_home() -> Path | None:
@@ -81,6 +82,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--github-token-scopes", action="store_true",
                    help="ONLINE: look up the scopes of GitHub tokens found locally (one HTTPS request per token, "
                         "sent only to that token's own GitHub host)")
+    p.add_argument("--no-user-hooks", action="store_true",
+                   help="skip hooks/statusLine in user-level and managed agent settings (Claude Code, Cursor, Gemini)")
     p.add_argument("--no-agent-config", action="store_true",
                    help="skip agent config tamper checks (Codex sandbox, endpoint overrides, approvals, telemetry)")
     p.add_argument("--claude-settings", type=Path, action="append", default=[], metavar="FILE",
@@ -265,6 +268,9 @@ def run(argv: list[str] | None = None) -> int:
 
     if not args.no_agent_config:
         findings += agentcfg.audit(Path.home(), home, stats, extra_claude=args.claude_settings)
+
+    if not args.no_user_hooks:
+        findings += userhooks.audit(Path.home(), stats)
 
     if not args.no_python_startup:
         sites = pystartup.discover(Path.home(), hermes_install=args.hermes_install or _default_install(),
