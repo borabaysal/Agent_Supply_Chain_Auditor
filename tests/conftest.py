@@ -11,7 +11,7 @@ import pathlib
 
 import pytest
 
-from asca import agentvers, devcreds, secrets, tcc, userhooks
+from asca import agentvers, aistack, devcreds, secrets, tcc, userhooks
 
 REAL_HOME = pathlib.Path.home().resolve()     # captured before any test changes HOME
 
@@ -50,6 +50,22 @@ def _no_real_home_files(monkeypatch):
     real_collect = userhooks.collect
     monkeypatch.setattr(userhooks, "collect", lambda home, env=None: ([], []) if pathlib.Path(home).resolve() ==
                         REAL_HOME else real_collect(home, env))
+
+
+@pytest.fixture(autouse=True)
+def _no_host_ai_stack(monkeypatch, tmp_path_factory):
+    """The AI-stack check walks home, /opt and /srv and reads systemd units, launchd plists, OLLAMA_HOST and
+    site-packages. Tests see none of the host's unless they pass their own root/env/sites."""
+    real = aistack.audit
+    empty = tmp_path_factory.mktemp("no-host-root")
+
+    def isolated(home, stats, *, repo_roots=(), root=None, env=None, sites=None, system_dirs=None):
+        if pathlib.Path(home).resolve() == REAL_HOME:
+            return []
+        return real(home, stats, repo_roots=repo_roots, root=empty if root is None else root,
+                    env={} if env is None else env, sites=[] if sites is None else sites, system_dirs=system_dirs)
+
+    monkeypatch.setattr(aistack, "audit", isolated)
 
 
 @pytest.fixture(autouse=True)

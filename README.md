@@ -27,6 +27,8 @@ _Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where
 | **Stray agent instructions** | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.cursor/rules/*` … left in `~/Downloads`, `~/Desktop` or the temp dir, outside any git repo; HIGH when the `asca-skills` content rules match. See [Stray agent instructions](#stray-agent-instructions-repostray-agent-instructions). |
 | **Integrity** | Hub skills whose on-disk content no longer matches the install-time hash (same algorithm as Hermes' Skills Guard) · skills installed despite a non-`safe` scanner verdict · Hermes Agent versions inside a known-vulnerable range · [installed Claude Code, Codex, Gemini CLI, goose and Claude Desktop versions with known vulnerabilities](#other-coding-agents-claude-code-codex-gemini-cli-goose-claude-desktop), including advisories that never got a CVE or never reached OSV |
 | **Agent takeover** | Hermes `SOUL.md` and memories rewritten to take orders, collect keys or hide activity (Carbonato) · gateway open to anyone (`GATEWAY_ALLOW_ALL_USERS`, `*` allow lists) · Docker API reachable over TCP without client certificates · [details](#agent-takeover-workspace-and-response-checks-part-of-asca) · [macOS Full Disk Access / Accessibility for terminals, IDEs and agent apps](#full-disk-access-for-terminals-ides-and-agents-macos) |
+| **Self-hosted AI stack** | [LiteLLM, Ollama, Open WebUI, Langflow, RAGFlow, Dify, One API and other gateways next to your agents](#self-hosted-ai-gateways-and-apps-on-by-default---no-ai-stack-to-skip): LiteLLM's example master key or none at all · Open WebUI without login or with open sign-up · `OLLAMA_HOST` on all interfaces · compose ports published on all interfaces · Langflow CVE-2025-3248 and RAGFlow CVE-2026-28797 (the ARTEX playbook) |
+| **Developer machine** | [Hooks in user-level and managed agent settings](#hooks-in-user-level-and-managed-agent-settings-on-by-default---no-user-hooks-to-skip) (SOMBERMEME) · [plain-text developer credential files a stealer would take](#developer-credential-files-on-by-default---no-dev-credentials-to-skip) · [pinned MCP launches whose dependencies still float, and pinned versions with known vulnerabilities](#pinned-mcp-servers-dependency-drift-and-known-vulnerabilities) |
 | **Workspace** | Symlinks that lead out of a repo or the agent home, high when they point at credentials (CVE-2026-103916) · MCP servers that are archived and will never be patched (MCPhantom) |
 | **Response** | [`asca spend`](#stolen-key-spend-tripwire-asca-spend-opt-in-online): hourly spend tripwire for stolen OpenRouter and Anthropic keys · Provider-specific steps on every leaked-key finding, plus a local blast-radius card for AWS keys (profile, long-lived or temporary, assumable roles) · a dashboard card per leaked key: every copy across agents, days exposed, and whether it's still your live key · [`asca github-check`](#were-your-github-repos-hit-by-wfx-asca-github-check-opt-in-online) for wfx traces on GitHub |
 
@@ -847,6 +849,35 @@ Carbonato gets in through Docker daemons that listen on TCP without authenticati
 | loopback only | 🟨 medium |
 
 `--tls` without `--tlsverify` encrypts the traffic but still lets anyone in, so it counts as unauthenticated. Docker Desktop on macOS has no TCP option (its "expose on 2375" switch exists on Windows only), so on a Mac this check finds nothing.
+
+### Self-hosted AI gateways and apps (on by default; `--no-ai-stack` to skip)
+
+In November 2026 [Amazon Threat Intelligence](https://aws.amazon.com/blogs/security/amazon-threat-intelligence-observes-threat-actors-running-cybercrime-campaigns-with-artex-ai-agents/) captured the working memory of ARTEX attack agents. They look for internet-exposed LLM gateways and AI app builders (LiteLLM, One API, New API, Dify, FastGPT, Langflow, RAGFlow, Open WebUI, LobeChat, Ollama), take the provider keys those apps hold, test them and spend them on the next round of hunting. Their playbook listed unfinished installs, open management endpoints, default admin credentials such as "the LiteLLM default master key", Langflow CVE-2025-3248 and RAGFlow CVE-2026-28797. asca reads the files that configure these apps. It never starts or contacts them.
+
+| Rule | What | Severity |
+|---|---|---|
+| `aistack.litellm-default-key` | `master_key` / `LITELLM_MASTER_KEY` is `sk-1234`, the value LiteLLM's own `proxy_server_config.yaml` and `.env.example` shipped (Amazon doesn't name the value; this is the one LiteLLM published) | 🟧 high, 🟥 critical when the proxy is published on all interfaces |
+| `aistack.litellm-no-master-key` | a LiteLLM proxy config with no master key, and none set next to it | 🟦 low, 🟧 high when published |
+| `aistack.auth-disabled` | Open WebUI `WEBUI_AUTH=False` (no login) | 🟧 high, 🟥 critical when published |
+| `aistack.open-signup` | Open WebUI sign-up left on with `DEFAULT_USER_ROLE=user` (or `admin`), so new accounts skip approval | 🟨 medium (admin 🟧 high), one step higher when published |
+| `aistack.ollama-host` | `OLLAMA_HOST` on all interfaces in shell profiles, launchd plists (`EnvironmentVariables` or `launchctl setenv`), systemd units and drop-ins, `/etc/environment` or the environment. Ollama has no authentication. | 🟧 high (a specific address: 🟨 medium) |
+| `aistack.port-exposed` | a compose service running one of these images publishes ports on all interfaces (`"4000:4000"`, `"11434"`, long syntax without `host_ip`, `network_mode: host`). Docker's published ports bypass ufw/firewalld. | 🟨 medium (Ollama 🟧 high) |
+| `aistack.vulnerable-version` | Langflow < 1.3.0 (CVE-2025-3248, unauthenticated RCE, in CISA KEV) from site-packages or the image tag; RAGFlow image v0.24.0 (CVE-2026-28797, the advisory lists no patched release) | 🟥 critical |
+
+Compose `${VAR}`, `${VAR:-default}` and `${VAR-default}` are filled in from the `.env` next to the file, so RAGFlow's `image: ${RAGFLOW_IMAGE}` is matched. Files are found under your home (4 levels deep), each `--repos` root and, on Linux/macOS, `/opt` and `/srv`, skipping dependency and cache folders. Example files (`.env.example`, `docs/`, `tests/`, `examples/`) and a LiteLLM source checkout are skipped. On 1,193 public compose files and LiteLLM configs, the check ran without crashes. Its compose reading matched PyYAML on 971 of 972 files; the one difference is `53:53`, which PyYAML turns into a base-60 number and Compose keeps as a port.
+
+### Hooks in user-level and managed agent settings (on by default; `--no-user-hooks` to skip)
+
+SOMBERMEME (GTIG) used a Claude Code `SessionStart` hook to download a backdoor at every launch. Repo hooks are covered by `--repos`; `agent.user-hook` covers the same fields in settings that apply to every project: `~/.claude/settings*.json` and Claude Code managed settings (`hooks`, `statusLine`), `~/.cursor/hooks.json` and `~/.gemini/settings.json`. Hooks are graded by what they run: 🟧 high when a hook downloads and runs code, decodes base64 into a shell or opens a raw socket; 🟨 medium when it sends data to a non-local host; ℹ️ info for everything else, so you know it's there. On 4,234 hooks from public settings files this gave 0 high findings. The inventory stores a hash of each hook (never its text), so a new or changed hook shows up as a change.
+
+### Developer credential files (on by default; `--no-dev-credentials` to skip)
+
+The agent-framework PyPI stealer collected a fixed list of files. `devcred.plaintext` (🟦 low) reports the ones that hold a credential in plain text: an `_authToken` in `.npmrc`, passwords in `.pypirc`, `pip.conf` index URLs and `.netrc`, Docker `auths` with no `credsStore`, the Azure CLI token cache, the Hugging Face token and `.git-credentials`. Values are shown as `prefix… (len, sha256:tag)`. Group/other-readable files are reported like the other credential files, and `devcred.summary` sums up what a stealer running as you would get.
+
+### Pinned MCP servers: dependency drift and known vulnerabilities
+
+- **`mcp.launcher-dep-drift` (ℹ️ info):** `npx -y pkg@1.4.2` or `uvx pkg==1.4.2` pins the server but not its dependencies, which are resolved again whenever the launcher rebuilds its cache (Corelight saw one pinned server run with 15 dependency sets over 19 builds). It isn't reported when the launch line installs from constraints or a lock (`--constraints`, `--with-requirements`, `--require-hashes`, `--locked`, `--frozen`).
+- **`mcp.vulnerable-version`:** the pinned version is matched against a bundled table (`awslabs.document-loader-mcp-server` 1.0.10 to 1.0.20, CVE-2026-130901) and, with `--online-advisories`, against OSV and GitHub advisories. For document-loader, a `DOCUMENT_BASE_DIR` set in the server's `env` lowers it to medium, and `DOCUMENT_BASE_DIR=/` is reported on its own (`mcp.document-loader-root`).
 
 ### Symlinks that lead out of a repo or the agent home (on by default; `--no-symlinks` to skip)
 
