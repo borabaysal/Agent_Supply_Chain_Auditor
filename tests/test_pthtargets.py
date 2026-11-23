@@ -189,6 +189,7 @@ def test_debian_distro_package_is_owned_via_dpkg(site, tmp_path, monkeypatch):
     assert run(site) == []
 
 
+@pytest.mark.skipif(__import__("os").name != "posix", reason="dpkg paths are Linux-only")
 def test_debian_distro_package_changed_after_install(site, tmp_path, monkeypatch):
     dpkg = tmp_path / "dpkg"
     dpkg.mkdir()
