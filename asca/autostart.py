@@ -70,8 +70,8 @@ _TMP = ("/tmp/", "/var/tmp/", "/dev/shm/", "/private/tmp/", "/private/var/tmp/")
 
 # ------------------------------------------------------------------ reading entries
 def _expand(s: str, home: Path) -> str:
-    return (s.replace("%h", str(home)).replace("${HOME}", str(home)).replace("$HOME", str(home))
-            .replace("%u", home.name))
+    h = home.as_posix()                        # forward slashes: shlex would eat Windows backslashes
+    return s.replace("%h", h).replace("${HOME}", h).replace("$HOME", h).replace("%u", home.name)
 
 
 def _split(cmd: str) -> list[str]:
@@ -168,14 +168,12 @@ def script_of(argv: list[str]) -> tuple[Path | None, str, str]:
 
 
 def place(p: Path, home: Path) -> str:
-    """'hidden' (dot-folder, ~/Library or a temp folder), 'home' (elsewhere in home) or 'system'."""
-    s = str(p)
-    if s.startswith(_TMP):
-        return "hidden"
+    """'hidden' (dot-folder, ~/Library or a temp folder), 'home' (elsewhere in home) or 'system'.
+    Inside home is judged first: a home that itself lives under /tmp (CI runners) isn't "hidden"."""
     try:
         rel = p.relative_to(home)
     except ValueError:
-        return "system"
+        return "hidden" if p.as_posix().startswith(_TMP) else "system"
     parts = rel.parts[:-1]
     if any(x.startswith(".") for x in parts) or parts[:1] == ("Library",):
         return "hidden"
