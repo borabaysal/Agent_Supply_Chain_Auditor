@@ -151,6 +151,10 @@ def render(jobs: dict, fkey, mem: dict, now: datetime, live: dict[str, str], esc
     active, accepted = group(jobs, fkey, mem)
     if not active and not accepted:
         return ""
+    switch = any(f.get("rule") == "host.revoke-switch" and not f.get("suppressed")
+                 for j in jobs.values() if j for f in getattr(j, "findings", []))
+    fix_first = ("Remove the delete-on-revoke switch first (see host.revoke-switch), then rotate from a clean device, "
+                 "then delete every copy above. " if switch else "Rotate it first, then delete every copy above. ")
     h = ["<h2>Leaked keys: where each one is</h2>",
          "<div class='mut'>Every copy of the same key grouped by its hash tag (never the value). "
          "<b>Still live</b> means the same value is in one of your agents' current .env files: rotate it. "
@@ -177,7 +181,7 @@ def render(jobs: dict, fkey, mem: dict, now: datetime, live: dict[str, str], esc
                  f"<div class='mut'>{len(k['places'])} place{'s' if len(k['places']) != 1 else ''} across "
                  f"{esc(', '.join(agents))} · {esc(age)}</div>"
                  f"<table><tr><th>agent</th><th>kind</th><th>where</th></tr>{rows}{more}</table>"
-                 + (f"<dl><dt>fix</dt><dd>{'Rotate it first, then delete every copy above. ' if is_live or not live else 'Delete every copy above. '}"
+                 + (f"<dl><dt>fix</dt><dd>{fix_first if is_live or not live else 'Delete every copy above. '}"
                     f"{esc(k['steps'])}</dd></dl>" if k["steps"] or is_live else "")
                  + "</div>")
     if accepted:

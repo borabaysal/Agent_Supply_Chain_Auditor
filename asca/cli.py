@@ -16,7 +16,7 @@ from . import (__version__, advisories, agentcfg, agentvers, pluginpins, tcc, al
                mcp, persona, pystartup, repohooks, report, respond, secrets, sessions, stray, symlinks, wfsecrets)
 from .model import Finding, Report, Severity
 from . import fsutil
-from . import aistack, devcreds, mcpvers, userhooks
+from . import aistack, autostart, devcreds, mcpvers, userhooks
 
 
 def _default_home() -> Path | None:
@@ -69,6 +69,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="skip risky npm install hooks and secret-dumping workflow steps in repos (wfx)")
     p.add_argument("--no-symlinks", action="store_true",
                    help="skip listing symlinks that lead out of repos and the agent home")
+    p.add_argument("--no-user-autostart", action="store_true",
+                   help="skip LaunchAgents / systemd user services / XDG autostart and delete-on-revoke switches")
     p.add_argument("--no-ai-stack", action="store_true",
                    help="skip self-hosted AI gateway/app checks (LiteLLM, Ollama, Open WebUI, Langflow, RAGFlow ...)")
     p.add_argument("--no-docker-daemon", action="store_true",
@@ -294,6 +296,9 @@ def run(argv: list[str] | None = None) -> int:
     if not args.no_dev_credentials:
         findings += devcreds.audit(Path.home(), stats)
 
+    if not args.no_user_autostart:            # testmetest/Miasma: backdoor + delete-on-revoke monitor
+        findings += autostart.audit(Path.home(), stats)
+
     if not args.no_ai_stack:                  # the ARTEX playbook: gateways and apps next to your agents
         findings += aistack.audit(Path.home(), stats, repo_roots=list(args.repos), sites=sites)
 
@@ -323,6 +328,7 @@ def run(argv: list[str] | None = None) -> int:
     if not secrets.permissions_checked():     # Windows: say so instead of silently skipping (fail closed)
         findings.append(secrets.permissions_note())
     respond.enrich(findings, Path.home())     # provider-specific steps + AWS blast-radius card (text only)
+    stats["remediation_guarded"] = autostart.guard_remediation(findings)   # never "rotate first" over a wiper
 
     if args.write_baseline:
         args.write_baseline.write_text(json.dumps({"suppress": [
