@@ -16,7 +16,7 @@ from . import (__version__, advisories, agentcfg, agentvers, pluginpins, tcc, al
                mcp, persona, pystartup, repohooks, report, respond, secrets, sessions, stray, symlinks, wfsecrets)
 from .model import Finding, Report, Severity
 from . import fsutil
-from . import devcreds, mcpvers, userhooks
+from . import aistack, devcreds, mcpvers, userhooks
 
 
 def _default_home() -> Path | None:
@@ -69,6 +69,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="skip risky npm install hooks and secret-dumping workflow steps in repos (wfx)")
     p.add_argument("--no-symlinks", action="store_true",
                    help="skip listing symlinks that lead out of repos and the agent home")
+    p.add_argument("--no-ai-stack", action="store_true",
+                   help="skip self-hosted AI gateway/app checks (LiteLLM, Ollama, Open WebUI, Langflow, RAGFlow ...)")
     p.add_argument("--no-docker-daemon", action="store_true",
                    help="skip checking whether the Docker API is exposed over TCP without client certificates")
     p.add_argument("--no-persona", action="store_true",
@@ -156,6 +158,9 @@ def run(argv: list[str] | None = None) -> int:
     if argv[:1] == ["github-check"]:   # `asca github-check`: wfx traces in your GitHub repos (online, read-only)
         from . import ghcheck
         return ghcheck.run(argv[1:])
+    if argv[:1] == ["post"]:   # `asca post INCIDENT`: sample finding + X/LinkedIn post text (nothing is posted)
+        from . import post
+        return post.main(argv[1:])
     if argv[:1] == ["check-repo"]:   # `asca check-repo PATH`: is a downloaded repo safe to open?
         from .checkrepo import run as checkrepo_run
         return checkrepo_run(argv[1:])
@@ -276,6 +281,7 @@ def run(argv: list[str] | None = None) -> int:
     if not args.no_user_hooks:
         findings += userhooks.audit(Path.home(), stats)
 
+    sites = None
     if not args.no_python_startup:
         sites = pystartup.discover(Path.home(), hermes_install=args.hermes_install or _default_install(),
                                    repo_roots=list(args.repos), extra=list(args.python_site))
@@ -287,6 +293,9 @@ def run(argv: list[str] | None = None) -> int:
 
     if not args.no_dev_credentials:
         findings += devcreds.audit(Path.home(), stats)
+
+    if not args.no_ai_stack:                  # the ARTEX playbook: gateways and apps next to your agents
+        findings += aistack.audit(Path.home(), stats, repo_roots=list(args.repos), sites=sites)
 
     # cloud credential files hold keys by design: check who can read them, not what's in them
     findings += secrets.audit_permissions(Path.home() / ".aws" / "credentials", label="~/.aws/credentials")

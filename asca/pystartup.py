@@ -24,9 +24,16 @@ KNOWN_BAD_DISTS = {
     "litellm": {"1.82.7": "TeamPCP backdoor in proxy_server.py (Mar 2026)",
                 "1.82.8": "TeamPCP backdoor with litellm_init.pth startup hook (Mar 2026)",
                 "1.107.0": "credential stealer + hourly remote loader via cook.pth / sitecustomize.py (Oct 2026)"},
+    # Microsoft agent-framework meta-package, published from a hijacked publisher (Nov 17 2026)
+    "agent-framework": {"1.26.1": "credential stealer run from agent_framework_meta.pth + _telemetry.py (Nov 2026)",
+                        "1.26.2": "credential stealer run from af_runtime_diag.pth + af_runtime_diag.py (Nov 2026)"},
 }
-KNOWN_BAD_FILES = {"litellm_init.pth": "litellm 1.82.8 backdoor", "cook.pth": "litellm 1.107.0 credential stealer"}
-REFERENCES = {"litellm": "https://docs.litellm.ai/blog/security-incident-oct-21-2026"}
+KNOWN_BAD_FILES = {"litellm_init.pth": "litellm 1.82.8 backdoor", "cook.pth": "litellm 1.107.0 credential stealer",
+                   "agent_framework_meta.pth": "agent-framework 1.26.1 credential stealer",
+                   "af_runtime_diag.pth": "agent-framework 1.26.2 credential stealer"}
+REFERENCES = {"litellm": "https://docs.litellm.ai/blog/security-incident-oct-21-2026",
+              "agent-framework": "https://www.elastic.co/security-labs/threat-command/"
+                                 "we-caught-the-agent-framework-pypi-compromise-six-minutes-after-it-published"}
 
 # Executable .pth files that standard tooling writes. Name *and* content must match.
 BENIGN_PTH = [
@@ -39,6 +46,10 @@ BENIGN_PTH = [
     (r"^pywin32\.pth$", r"^import pywin32_bootstrap\s*$"),
     (r"^(?:a1_)?coverage\.pth$|^pytest-cov\.pth$|^.*coverage.*\.pth$",
      r"^import (?:os, sys;exec\(.*COV_CORE_SOURCE.*|coverage; coverage\.process_startup\(\))"),
+    # coverage >= 7.10 (a1_coverage.pth): the whole line, so nothing can be appended to it
+    (r"^a1_coverage\.pth$", r"^import sys; exec\('import os\\n\\nif os\.getenv\(\"COVERAGE_PROCESS_START\"\) or "
+                            r"os\.getenv\(\"COVERAGE_PROCESS_CONFIG\"\):\\n try:\\n  import coverage\\n except:\\n  "
+                            r"pass\\n else:\\n  coverage\.process_startup\(slug=\"pth\"\)'\)\s*$"),
     (r"^_uv_ephemeral_overlay\.pth$", r"^import "),
     (r"^matplotlib-.*\.pth$", r"^import sys, types, os;"),
 ]
@@ -168,12 +179,14 @@ def audit_site(site: Site, stats: dict) -> list[Finding]:
                 title=f"Known-malicious {name} {ver} is installed ({site.label})", location=str(d),
                 subject=f"{_norm(name)}=={ver}", detail=f"{bad}. Its code may already have run on every Python start "
                 f"in this environment.", remediation=f"{STARTUP_FIX} Advisory: {REFERENCES.get(_norm(name), '')}"))
+    pth_lines: list[tuple[Path, str, bool]] = []
     for f in sorted(sp.glob("*.pth")):
         try:
             text = f.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
         exec_lines = [l for l in text.splitlines() if l.startswith(("import ", "import\t"))]
+        pth_lines += [(f, l, _benign_pth(f.name, l)) for l in exec_lines]   # their import targets: pthtargets
         if f.name in KNOWN_BAD_FILES:
             out.append(Finding(
                 rule="python.known-bad-hook", category="python-startup", severity=Severity.CRITICAL,
@@ -219,6 +232,8 @@ def audit_site(site: Site, stats: dict) -> list[Finding]:
                        + (f" Contains `{sus.group(0).strip('( ')}`." if sus else "")
                        + " Packages have no business shipping this file (litellm 1.107.0 did).",
                 remediation=STARTUP_FIX))
+    from . import pthtargets
+    out += pthtargets.audit_site(site, dists, pth_lines, stats, STARTUP_FIX)
     return out
 
 

@@ -27,6 +27,8 @@ _Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where
 | **Stray agent instructions** | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.cursor/rules/*` … left in `~/Downloads`, `~/Desktop` or the temp dir, outside any git repo; HIGH when the `asca-skills` content rules match. See [Stray agent instructions](#stray-agent-instructions-repostray-agent-instructions). |
 | **Integrity** | Hub skills whose on-disk content no longer matches the install-time hash (same algorithm as Hermes' Skills Guard) · skills installed despite a non-`safe` scanner verdict · Hermes Agent versions inside a known-vulnerable range · [installed Claude Code, Codex, Gemini CLI, goose and Claude Desktop versions with known vulnerabilities](#other-coding-agents-claude-code-codex-gemini-cli-goose-claude-desktop), including advisories that never got a CVE or never reached OSV |
 | **Agent takeover** | Hermes `SOUL.md` and memories rewritten to take orders, collect keys or hide activity (Carbonato) · gateway open to anyone (`GATEWAY_ALLOW_ALL_USERS`, `*` allow lists) · Docker API reachable over TCP without client certificates · [details](#agent-takeover-workspace-and-response-checks-part-of-asca) · [macOS Full Disk Access / Accessibility for terminals, IDEs and agent apps](#full-disk-access-for-terminals-ides-and-agents-macos) |
+| **Self-hosted AI stack** | [LiteLLM, Ollama, Open WebUI, Langflow, RAGFlow, Dify, One API and other gateways next to your agents](#self-hosted-ai-gateways-and-apps-on-by-default---no-ai-stack-to-skip): LiteLLM's example master key or none at all · Open WebUI without login or with open sign-up · `OLLAMA_HOST` on all interfaces · compose ports published on all interfaces · Langflow CVE-2025-3248 and RAGFlow CVE-2026-28797 (the ARTEX playbook) |
+| **Developer machine** | [Hooks in user-level and managed agent settings](#hooks-in-user-level-and-managed-agent-settings-on-by-default---no-user-hooks-to-skip) (SOMBERMEME) · [plain-text developer credential files a stealer would take](#developer-credential-files-on-by-default---no-dev-credentials-to-skip) · [pinned MCP launches whose dependencies still float, and pinned versions with known vulnerabilities](#pinned-mcp-servers-dependency-drift-and-known-vulnerabilities) |
 | **Workspace** | Symlinks that lead out of a repo or the agent home, high when they point at credentials (CVE-2026-103916) · MCP servers that are archived and will never be patched (MCPhantom) |
 | **Response** | [`asca spend`](#stolen-key-spend-tripwire-asca-spend-opt-in-online): hourly spend tripwire for stolen OpenRouter and Anthropic keys · Provider-specific steps on every leaked-key finding, plus a local blast-radius card for AWS keys (profile, long-lived or temporary, assumable roles) · a dashboard card per leaked key: every copy across agents, days exposed, and whether it's still your live key · [`asca github-check`](#were-your-github-repos-hit-by-wfx-asca-github-check-opt-in-online) for wfx traces on GitHub |
 
@@ -594,7 +596,9 @@ privacy settings. Accept those in your baseline. Official, local and private-net
 Python runs every `import …` line in any `*.pth` file in site-packages, and imports
 `sitecustomize`/`usercustomize`, at **every** start, pip included. Both LiteLLM compromises
 used this: 1.82.8 shipped `litellm_init.pth` (Mar 2026), 1.107.0 shipped `cook.pth` +
-`sitecustomize.py` in every wheel (Oct 2026).
+`sitecustomize.py` in every wheel (Oct 2026). So did Microsoft's `agent-framework` 1.26.1 and 1.26.2
+(`agent_framework_meta.pth`, `af_runtime_diag.pth`), published from a hijacked account on Nov 17 2026
+([Elastic](https://www.elastic.co/security-labs/threat-command/we-caught-the-agent-framework-pypi-compromise-six-minutes-after-it-published)).
 
 **Where it looks:** the Hermes venv and bundled Pythons, user site-packages, pipx and uv tool
 environments, every virtualenv under `--repos` (4 levels deep), system site-packages, and
@@ -602,7 +606,7 @@ environments, every virtualenv under `--repos` (4 levels deep), system site-pack
 
 | Finding | Severity |
 |---|---|
-| Known-bad distribution installed (litellm 1.82.7, 1.82.8, 1.107.0) or known-bad hook file (`litellm_init.pth`, `cook.pth`) | 🟥 critical |
+| Known-bad distribution installed (litellm 1.82.7, 1.82.8, 1.107.0; agent-framework 1.26.1, 1.26.2) or known-bad hook file (`litellm_init.pth`, `cook.pth`, `agent_framework_meta.pth`, `af_runtime_diag.pth`) | 🟥 critical |
 | Executable `.pth` or `sitecustomize` that no installed package owns (not in any `RECORD`), or that uses exec/eval/base64/subprocess/sockets/URLs | 🟧 high |
 | Executable `.pth` or `sitecustomize` owned by an installed package | 🟨 medium, naming the package |
 
@@ -610,6 +614,25 @@ Standard hooks stay quiet when **both** name and content match: virtualenv, setu
 distutils shim, editable installs (setuptools, hatch, pdm), namespace packages, pywin32,
 coverage. Path-only `.pth` files are ignored. A standard *name* with extra code is flagged.
 Files are read as text; no interpreter is started and nothing is imported.
+
+**What the `.pth` imports (`python.pth-import-target`).** A standard-looking `.pth` line only names a module;
+the code that runs is that module. For every module an executable `.pth` imports from its own site-packages
+folder (or from folders the same `.pth` adds, like pywin32's `win32\lib`), asca checks:
+
+| Finding | Severity |
+|---|---|
+| the file's sha256 differs from its package's `RECORD` (rewritten after pip installed it) | 🟧 high |
+| it reaches the network or runs commands **and** decodes/evaluates code or reads credential files, even when its package lists it (malicious wheels list their own files) | 🟧 high |
+| a compiled `.so`/`.pyd` that no package installed sits next to it (Python loads it before the `.py`) | 🟧 high |
+| no package installed it and it isn't virtualenv's own `_virtualenv.py`; high when its `.pth` passed as standard tooling, since the name may be borrowed | 🟨 medium / 🟧 high |
+
+Distro packages (Debian/Ubuntu `dist-packages`) have no pip `RECORD`. There, ownership and the "changed after
+install" check use dpkg's own md5 list (`/var/lib/dpkg/info/*.md5sums`), and failing that, the package's
+`top_level.txt` (a claim with no file hashes, as on RPM-based distros).
+
+On the real site-packages folders of the Hermes host, Debian's own `python3-setuptools` package, and 12 wheels that ship executable `.pth` files
+(setuptools, coverage, pytest-cov, pywin32, namespace packages ...), this check reports nothing.
+Current coverage's `a1_coverage.pth` is now recognised by its exact line, which removes a false high.
 
 **Limits:** the relay domain and bad-package lists are as published (Oct 2026). Windows
 user-scope environment variables in the registry aren't read. A malicious hook installed by a
@@ -848,6 +871,35 @@ Carbonato gets in through Docker daemons that listen on TCP without authenticati
 
 `--tls` without `--tlsverify` encrypts the traffic but still lets anyone in, so it counts as unauthenticated. Docker Desktop on macOS has no TCP option (its "expose on 2375" switch exists on Windows only), so on a Mac this check finds nothing.
 
+### Self-hosted AI gateways and apps (on by default; `--no-ai-stack` to skip)
+
+In November 2026 [Amazon Threat Intelligence](https://aws.amazon.com/blogs/security/amazon-threat-intelligence-observes-threat-actors-running-cybercrime-campaigns-with-artex-ai-agents/) captured the working memory of ARTEX attack agents. They look for internet-exposed LLM gateways and AI app builders (LiteLLM, One API, New API, Dify, FastGPT, Langflow, RAGFlow, Open WebUI, LobeChat, Ollama), take the provider keys those apps hold, test them and spend them on the next round of hunting. Their playbook listed unfinished installs, open management endpoints, default admin credentials such as "the LiteLLM default master key", Langflow CVE-2025-3248 and RAGFlow CVE-2026-28797. asca reads the files that configure these apps. It never starts or contacts them.
+
+| Rule | What | Severity |
+|---|---|---|
+| `aistack.litellm-default-key` | `master_key` / `LITELLM_MASTER_KEY` is `sk-1234`, the value LiteLLM's own `proxy_server_config.yaml` and `.env.example` shipped (Amazon doesn't name the value; this is the one LiteLLM published) | 🟧 high, 🟥 critical when the proxy is published on all interfaces |
+| `aistack.litellm-no-master-key` | a LiteLLM proxy config with no master key, and none set next to it | 🟦 low, 🟧 high when published |
+| `aistack.auth-disabled` | Open WebUI `WEBUI_AUTH=False` (no login) | 🟧 high, 🟥 critical when published |
+| `aistack.open-signup` | Open WebUI sign-up left on with `DEFAULT_USER_ROLE=user` (or `admin`), so new accounts skip approval | 🟨 medium (admin 🟧 high), one step higher when published |
+| `aistack.ollama-host` | `OLLAMA_HOST` on all interfaces in shell profiles, launchd plists (`EnvironmentVariables` or `launchctl setenv`), systemd units and drop-ins, `/etc/environment` or the environment. Ollama has no authentication. | 🟧 high (a specific address: 🟨 medium) |
+| `aistack.port-exposed` | a compose service running one of these images publishes ports on all interfaces (`"4000:4000"`, `"11434"`, long syntax without `host_ip`, `network_mode: host`). Docker's published ports bypass ufw/firewalld. | 🟨 medium (Ollama 🟧 high) |
+| `aistack.vulnerable-version` | Langflow < 1.3.0 (CVE-2025-3248, unauthenticated RCE, in CISA KEV) from site-packages or the image tag; RAGFlow image v0.24.0 (CVE-2026-28797, the advisory lists no patched release) | 🟥 critical |
+
+Compose `${VAR}`, `${VAR:-default}` and `${VAR-default}` are filled in from the `.env` next to the file, so RAGFlow's `image: ${RAGFLOW_IMAGE}` is matched. Files are found under your home (4 levels deep), each `--repos` root and, on Linux/macOS, `/opt` and `/srv`, skipping dependency and cache folders. Example files (`.env.example`, `docs/`, `tests/`, `examples/`) and a LiteLLM source checkout are skipped. Veloera and Sub2API, which Amazon also names, aren't matched yet: their image names weren't verified. On 1,193 public compose files and LiteLLM configs, the check ran without crashes. Its compose reading matched PyYAML on 971 of 972 files; the one difference is `53:53`, which PyYAML turns into a base-60 number and Compose keeps as a port.
+
+### Hooks in user-level and managed agent settings (on by default; `--no-user-hooks` to skip)
+
+SOMBERMEME (GTIG) used a Claude Code `SessionStart` hook to download a backdoor at every launch. Repo hooks are covered by `--repos`; `agent.user-hook` covers the same fields in settings that apply to every project: `~/.claude/settings*.json` and Claude Code managed settings (`hooks`, `statusLine`), `~/.cursor/hooks.json` and `~/.gemini/settings.json`. Hooks are graded by what they run: 🟧 high when a hook downloads and runs code, decodes base64 into a shell or opens a raw socket; 🟨 medium when it sends data to a non-local host; ℹ️ info for everything else, so you know it's there. On 4,234 hooks from public settings files this gave 0 high findings. The inventory stores a hash of each hook (never its text), so a new or changed hook shows up as a change.
+
+### Developer credential files (on by default; `--no-dev-credentials` to skip)
+
+The agent-framework PyPI stealer collected a fixed list of files. `devcred.plaintext` (🟦 low) reports the ones that hold a credential in plain text: an `_authToken` in `.npmrc`, passwords in `.pypirc`, `pip.conf` index URLs and `.netrc`, Docker `auths` with no `credsStore`, the Azure CLI token cache, the Hugging Face token and `.git-credentials`. Values are shown as `prefix… (len, sha256:tag)`. Group/other-readable files are reported like the other credential files, and `devcred.summary` sums up what a stealer running as you would get.
+
+### Pinned MCP servers: dependency drift and known vulnerabilities
+
+- **`mcp.launcher-dep-drift` (ℹ️ info):** `npx -y pkg@1.4.2` or `uvx pkg==1.4.2` pins the server but not its dependencies, which are resolved again whenever the launcher rebuilds its cache ([Corelight](https://corelight.com/blog/mcp-server-supply-chain-risk) saw one pinned server run with 15 dependency sets over 19 builds). It isn't reported when the launch line installs from constraints or a lock (`--constraints`, `--with-requirements`, `--require-hashes`, `--locked`, `--frozen`).
+- **`mcp.vulnerable-version`:** the pinned version is matched against a bundled table (`awslabs.document-loader-mcp-server` 1.0.10 to 1.0.20, CVE-2026-130901) and, with `--online-advisories`, against OSV and GitHub advisories. For document-loader, a `DOCUMENT_BASE_DIR` set in the server's `env` lowers it to medium, and `DOCUMENT_BASE_DIR=/` is reported on its own (`mcp.document-loader-root`).
+
 ### Symlinks that lead out of a repo or the agent home (on by default; `--no-symlinks` to skip)
 
 In [CVE-2026-103916](https://www.endorlabs.com/learn/docker-sandboxes-vulnerability-lets-ai-agents-access-sensitive-files-outside-their-sandbox-cve-2026-103916) (Endor Labs), a sandboxed agent planted a symlink in its workspace. A later copy by the operator followed it and read or wrote host files outside the sandbox. A link left behind is the trap even after the agent has gone. asca lists links with `os.readlink` in every repo under `--repos` and in the Hermes home (caches and session folders are skipped). Targets are never opened or followed.
@@ -1009,6 +1061,22 @@ Each repo gets a verdict: 🟥 payload pushed · 🟥 probed (account compromise
 **Tested** on four repositories SafeDep lists as affected: it finds their probe PRs, the payload commits SafeDep cites, the cleanup commits and the deleted runs (one repo has since been deleted and is reported as "couldn't check"). On 40 busy public repos (Hermes, OpenClaw, Codex, VS Code, React, CPython …): all clean. 15 run-number gaps there are low notes only; the first version, which grouped runs by name, reported 84. On the 24 repos of a real account: clean, using 194 API calls.
 
 **Limits:** GitHub keeps only what the attacker didn't delete. A force-push that rewrote history removes the commits, and a deleted branch leaves no trace. If a probe PR is there, treat the account as compromised even when nothing else shows.
+
+## Incident posts (`asca post`)
+
+Turns an incident into a sample asca finding plus a short X post (≤280 characters, links counted as 23) and a
+three-line LinkedIn post, each linking the primary source. Nothing is published; it prints text to review.
+
+```bash
+asca post --list                                    # incidents: artex, agent-framework, stealer-view, litellm-cook,
+                                                    # sombermeme, mcp-drift, document-loader, carbonato
+asca post artex                                     # sample from a planted setup in a temp folder
+asca post stealer-view --report asca-report.json    # a matching finding from your real report instead
+asca post mcp-drift --format json -o post.json
+```
+
+- **The sample is real asca output.** It comes from running the current check on a throwaway setup at generation time, so a rule change can't leave a stale example in a post.
+- **Findings from a real report are cut down to their title, severity, rule, location, detail and fix.** Paths keep only the file name, plus its parent when that's a dot-folder or a standard system folder, so user, project and client folder names are left out. The report's host label, subject and fingerprint are never used, and secrets are already redacted in findings. Finding titles can still name your tools (an MCP server's name, for example), so read the post before you publish it.
 
 ## Dashboard (`asca dashboard`)
 

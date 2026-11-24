@@ -203,6 +203,15 @@ class _MiniParser:
                 am = _ANCHOR.match(val.strip())
                 if am:
                     anchor, val = am.group(1), am.group(2) or ""
+                lm = re.match(r"^\[\s*(\*[^\s,\[\]{}]+(?:\s*,\s*\*[^\s,\[\]{}]+)*)\s*\]$", val.strip())
+                if key == "<<" and lm:           # "<<: [*a, *b]": merge several; earlier mappings win
+                    for alias in re.split(r"\s*,\s*", lm.group(1)):
+                        _, aval = self._alias(alias, n)
+                        if not isinstance(aval, dict):
+                            raise YamlError(f"line {n}: merge key needs mapping aliases")
+                        for k, v in aval.items():
+                            out.setdefault(k, v)
+                    continue
                 is_alias, aval = self._alias(val, n)
                 if is_alias:
                     if key == "<<":          # merge key: copy the anchored mapping, explicit keys win
@@ -272,6 +281,10 @@ class _MiniParser:
                 item_indent = indent + (len(text) - len(rest))
                 self.lines.insert(self.i, (item_indent, rest, n))
                 out.append(self._map(item_indent))
+            elif rest in ("|", ">", "|-", ">-", "|+", ">+"):
+                # "- |" block scalar as a list item (compose `command:` scripts); same chomping as "key: |"
+                lit = self._literal(indent, fold=rest.startswith(">"))
+                out.append(lit if rest.endswith("-") or not lit else lit + "\n")
             else:
                 out.append(_scalar(rest))
             if anchor:
