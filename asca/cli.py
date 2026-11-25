@@ -70,7 +70,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-symlinks", action="store_true",
                    help="skip listing symlinks that lead out of repos and the agent home")
     p.add_argument("--no-user-autostart", action="store_true",
-                   help="skip LaunchAgents / systemd user services / XDG autostart and delete-on-revoke switches")
+                   help="skip autostart entries (LaunchAgents/Daemons, systemd units, XDG autostart, cron, Windows Run keys and "
+                        "Startup folders) and delete-on-revoke switches")
     p.add_argument("--no-ai-stack", action="store_true",
                    help="skip self-hosted AI gateway/app checks (LiteLLM, Ollama, Open WebUI, Langflow, RAGFlow ...)")
     p.add_argument("--no-docker-daemon", action="store_true",
