@@ -127,7 +127,7 @@ def _demo_miasma(tmp: Path) -> list[Finding]:
     script.write_text(codecs.decode(_MIASMA_WATCHDOG, "rot13"), encoding="utf-8")
     unit = home / ".config" / "systemd" / "user" / "monitor.service"
     unit.parent.mkdir(parents=True)
-    unit.write_text(f"[Service]\nExecStart=/bin/bash {script}\n", encoding="utf-8")
+    unit.write_text(f"[Service]\nExecStart=/bin/bash {script.as_posix()}\n", encoding="utf-8")   # unit syntax
     return autostart.audit(home, {}, root=tmp / "root", user="nobody")
 
 
