@@ -164,10 +164,20 @@ def run_demo(tmp: Path, *, fmt: str = "text") -> dict:
             "check_repo": (crc, ctext), "facts": facts, "tmp": tmp}
 
 
-def check(findings: list[dict]) -> list[tuple[str, bool, str]]:
-    """(label, found, what) for every planted item."""
+NEEDS_TOML = {"agent.relay-pattern"}        # Codex config.toml: tomllib is Python 3.11+
+
+
+def skipped(rule: str) -> bool:
+    return rule in NEEDS_TOML and sys.version_info < (3, 11)
+
+
+def check(findings: list[dict]) -> list[tuple[str, bool | None, str]]:
+    """(label, found, what) for every planted item; found is None when this Python can't check it."""
     rows = []
     for label, rule, sev, where in EXPECTED:
+        if skipped(rule):
+            rows.append((label, None, "not checked: reading config.toml needs Python 3.11+"))
+            continue
         ok = any(f["rule"] == rule and f["severity"] == sev and where in f.get("location", "").replace("\\", "/")
                  for f in findings)
         rows.append((label, ok, f"{rule} ({sev})"))
@@ -197,7 +207,7 @@ def main(argv: list[str]) -> int:
         print(r["check_repo"][1].replace(str(tmp / "home"), "~").replace(str(tmp), "<demo>").strip())
         print("\n## What the demo planted, and whether asca found it\n")
         for label, ok, what in check(r["findings"]):
-            print(f"  {'✅' if ok else '❌'} {label:<48} {what}")
+            print(f"  {'⏭️ ' if ok is None else '✅' if ok else '❌'} {label:<48} {what}")
         inv_ok = any("chang" in x or "tamper" in x for x in r["inventory_rules"])
         print(f"  {'✅' if inv_ok else '❌'} {'VS Code extension changed after install':<48} inventory change")
         print(f"  {'✅' if r['check_repo'][0] == 1 else '❌'} {'check-repo says: do not open':<48} exit 1")

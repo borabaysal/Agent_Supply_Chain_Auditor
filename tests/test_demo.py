@@ -1,6 +1,7 @@
 """`asca demo` (feat-asca-demo) and the --home-only mode it runs the audit with."""
 import json
 import os
+import sys
 import tempfile
 from pathlib import Path
 
@@ -40,7 +41,8 @@ def test_every_planted_item_is_found_with_its_severity(sandbox, tmp_path):
     work.mkdir()
     r = demo.run_demo(work)
     rows = demo.check(r["findings"])
-    assert all(ok for _, ok, _ in rows), [row for row in rows if not row[1]]
+    assert all(ok is not False for _, ok, _ in rows), [row for row in rows if row[1] is False]
+    assert sum(ok is None for _, ok, _ in rows) == (1 if sys.version_info < (3, 11) else 0)
     assert any("chang" in x or "tamper" in x for x in r["inventory_rules"]), r["inventory_rules"]
     assert r["check_repo"][0] == 1
 
@@ -51,7 +53,8 @@ def test_only_planted_problems_show(sandbox, tmp_path):
     rules = {f["rule"] for f in demo.run_demo(work)["findings"]}
     planted = {rule for _, rule, _, _ in demo.EXPECTED}
     side_effects = {"agent.sandbox-disabled", "agent.endpoint-override", "python.pth-import-target",
-                    "mcp.launcher-dep-drift"}                  # the same planted items, seen by a second rule
+                    "mcp.launcher-dep-drift",                  # the same planted items, seen by a second rule
+                    "scanner.unsupported"}                     # Python 3.10: Codex config.toml not readable
     assert rules <= planted | side_effects, rules - planted - side_effects
     assert "secret.file-permissions" not in rules and "git.global-fsmonitor-default" not in rules
 
@@ -62,7 +65,8 @@ def test_main_prints_banner_and_never_touches_the_real_home(sandbox, capsys):
     assert cli.run(["demo"]) == 0
     out = capsys.readouterr().out
     assert out.startswith("=" * 72) and "asca DEMO" in out and "FAKE home folder" in out
-    assert "❌" not in out and out.count("✅") == len(demo.EXPECTED) + 2
+    n_skip = sum(demo.skipped(rule) for _, rule, _, _ in demo.EXPECTED)
+    assert "❌" not in out and out.count("✅") == len(demo.EXPECTED) + 2 - n_skip
     assert sandbox["secret"] not in out and str(sandbox["real"]) not in out and "rm -rf" not in out
     assert "<demo>" not in out or "asca-demo-" not in out.split("<demo>")[0]        # temp paths are hidden
     assert _tree(sandbox["real"]) == before_home and _tree(sandbox["cwd"]) == before_cwd   # no writes there
