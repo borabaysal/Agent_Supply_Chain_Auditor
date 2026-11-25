@@ -1,0 +1,95 @@
+{
+  "tool": "agent-supply-chain-auditor",
+  "version": "0.5.0",
+  "generated_at": "2000-01-01T00:00:00Z",
+  "result": "PASS",
+  "fail_on": "high",
+  "targets": {
+    "mcp_client_configs": [
+      "/home/demo/.claude/settings.json",
+      "/home/demo/.codex/config.toml",
+      "/home/demo/.config/Claude/claude_desktop_config.json",
+      "/home/demo/.config/Code/User/mcp.json"
+    ],
+    "repo_roots": [
+      "/home/demo/work"
+    ],
+    "session_history": [
+      "/home/demo/.claude/projects"
+    ],
+    "instruction_dirs": [
+      "/home/demo/Desktop",
+      "/home/demo/Downloads"
+    ],
+    "python_sites": [
+      "/home/demo/work/take-home/.venv/lib/python3.12/site-packages"
+    ],
+    "global_git_configs": [
+      "/home/demo/.gitconfig"
+    ]
+  },
+  "stats": {
+    "plugin_checkouts": 0,
+    "mcp_servers": 2,
+    "git_repos": 1,
+    "agent_allowlist_files": 1,
+    "session_history_files": 1,
+    "session_history_bytes": 94,
+    "session_history_secrets": 0,
+    "session_history_truncated_files": 0,
+    "stray_instruction_files": 0,
+    "agent_endpoints": 0,
+    "user_hooks": 0,
+    "python_sites": 1,
+    "python_dists": 0,
+    "dev_credential_files": 0,
+    "user_autostart_entries": 0,
+    "system_autostart_entries": 0,
+    "ai_stack_dirs": 18,
+    "ai_stack_files": 0,
+    "ai_stack_findings": 0,
+    "remediation_guarded": 0
+  },
+  "counts": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "info": 2,
+    "suppressed": 0
+  },
+  "findings": [
+    {
+      "rule": "mcp.launcher-dep-drift",
+      "category": "mcp",
+      "severity": "info",
+      "title": "MCP server `files` is pinned to @modelcontextprotocol/server-filesystem 2025.8.21, but its dependencies aren't",
+      "location": "/home/demo/.config/Claude/claude_desktop_config.json#mcpServers.files",
+      "subject": "files:npm:@modelcontextprotocol/server-filesystem@2025.8.21",
+      "detail": "`npx` resolves the server's dependencies again from the registry whenever it rebuilds its cache, within whatever ranges the package allows. Corelight saw one MCP server pinned to one release run with 15 different dependency sets over 19 builds in five weeks. A malicious dependency release only has to be live during one rebuild.",
+      "remediation": "Freeze it: run the server from a local install from the package's lockfile (`npm ci` in a dedicated folder) or a container image pinned by digest, and point the agent config at that. Someone then owns updates on purpose.",
+      "suppressed": false,
+      "suppress_reason": "",
+      "fingerprint": "10fd3577e5db622e"
+    },
+    {
+      "rule": "mcp.launcher-dep-drift",
+      "category": "mcp",
+      "severity": "info",
+      "title": "MCP server `browser` is pinned to @playwright/mcp 0.0.41, but its dependencies aren't",
+      "location": "/home/demo/.config/Code/User/mcp.json#servers.browser",
+      "subject": "browser:npm:@playwright/mcp@0.0.41",
+      "detail": "`npx` resolves the server's dependencies again from the registry whenever it rebuilds its cache, within whatever ranges the package allows. Corelight saw one MCP server pinned to one release run with 15 different dependency sets over 19 builds in five weeks. A malicious dependency release only has to be live during one rebuild.",
+      "remediation": "Freeze it: run the server from a local install from the package's lockfile (`npm ci` in a dedicated folder) or a container image pinned by digest, and point the agent config at that. Someone then owns updates on purpose.",
+      "suppressed": false,
+      "suppress_reason": "",
+      "fingerprint": "a1825bab6e99628a"
+    }
+  ],
+  "demo": {
+    "asca_version": "0.5.0",
+    "fixed": true,
+    "note": "Real asca output for the planted `asca demo` setup after every planted problem was fixed. All values are fake (asca-demo markers); paths are rewritten to /home/demo.",
+    "regenerate": "python3 -m asca demo --write-reports examples (Linux, Python 3.11+)"
+  }
+}

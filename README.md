@@ -1,6 +1,8 @@
 # Agent Supply-Chain Auditor (`asca`)
 
-A zero-dependency CLI for people who **self-host AI agents**: Hermes Agent, Claude Code, Codex CLI, Gemini CLI, goose, Cursor, Windsurf, VS Code, Claude Desktop, or any MCP client. It audits the setup for supply-chain risk, writes a **PASS/FAIL report**, and can **alert you on Telegram**.
+Find the API keys, unpinned MCP servers and risky settings your AI agents left on your machine, in one command. Works with Claude Code, Codex, Cursor, Claude Desktop, Hermes and any MCP client. Python standard library only, no network calls by default, and it never prints your secrets.
+
+Try it on sample data first: `python3 -m asca demo`
 
 ```
 $ asca --repos ~/Projects --telegram fail --env-file ~/.hermes/.env
@@ -68,6 +70,8 @@ Planted: a key-shaped string in a Claude Code transcript, an unpinned and an arc
 - **Nothing real is read.** The audit runs with `--home-only` and HOME/USERPROFILE/APPDATA pointing into the temp folder (restored afterwards). Managed settings, `/etc`, Docker, TCC, global npm/brew, cron, the registry and environment overrides are skipped.
 - **No network, and nothing is written outside the temp folder.** Nothing planted is ever executed.
 - **The fake keys are made at run time** with an `asca-demo` marker, so asca's source holds no key-shaped strings. `--keep` leaves the folder in place for you to look around; `--format json` prints the findings.
+
+The website's interactive demo replays real output from this command: [`examples/demo-report.json`](examples/demo-report.json) (the planted setup, FAIL) and [`examples/demo-report-fixed.json`](examples/demo-report-fixed.json) (after every planted fix, PASS). They're regenerated with `python3 -m asca demo --write-reports examples` (Linux, Python 3.11+), and a test fails if they no longer match what asca reports.
 
 `--home-only` also works on its own: it reads only the home folder, `--repos` and paths given on the command line. That's useful for a mounted home or a CI job.
 

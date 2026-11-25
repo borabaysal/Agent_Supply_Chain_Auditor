@@ -68,35 +68,46 @@ def _w(p: Path, text: str) -> Path:
     return p
 
 
-def plant(home: Path, seed: int | None = None) -> dict:
-    """Create the fake problems under `home`. Returns paths the demo needs later."""
+def plant(home: Path, seed: int | None = None, fixed: bool = False) -> dict:
+    """Create the fake problems under `home` (or, with fixed=True, the same setup with every problem repaired).
+    Returns paths the demo needs later."""
     rng = random.Random(seed)
     sup = _app_support(home)
+    fs_pkg = "@modelcontextprotocol/server-filesystem" + ("@2025.8.21" if fixed else "")     # fix: pin a version
     _w(sup / "Claude" / "claude_desktop_config.json", json.dumps({"mcpServers": {
-        "files": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", str(home / "work")]}}},
-        indent=2))
+        "files": {"command": "npx", "args": ["-y", fs_pkg, str(home / "work")]}}}, indent=2))
+    browser = "@playwright/mcp@0.0.41" if fixed else "@modelcontextprotocol/server-puppeteer@0.6.2"  # fix: maintained
     _w(sup / "Code" / "User" / "mcp.json", json.dumps({"servers": {
-        "browser": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-puppeteer@0.6.2"]}}}, indent=2))
+        "browser": {"command": "npx", "args": ["-y", browser]}}}, indent=2))
     key = _fake(rng, "sk-ant-asca-demo-", 40)
+    line = "export ANTHROPIC_API_KEY=$(cat ~/.config/anthropic/key)" if fixed else f"export ANTHROPIC_API_KEY={key}"
     _w(home / ".claude" / "projects" / "demo-project" / "session.jsonl",
-       json.dumps({"type": "tool_result", "content": f"export ANTHROPIC_API_KEY={key}"}) + "\n")
+       json.dumps({"type": "tool_result", "content": line}) + "\n")                     # fix: no key in the log
     pw = _fake(rng, "asca-demo-", 10)
-    _w(home / ".claude" / "settings.json", json.dumps({"permissions": {"allow": [
-        "Bash(npm test)", f"Bash(PGPASSWORD={pw} psql -h db.example.invalid -U app:*)"]}}, indent=2))
-    _w(home / ".codex" / "config.toml",
+    rule = "Bash(psql -h db.example.invalid -U app:*)" if fixed else \
+        f"Bash(PGPASSWORD={pw} psql -h db.example.invalid -U app:*)"                     # fix: password in ~/.pgpass
+    _w(home / ".claude" / "settings.json", json.dumps({"permissions": {"allow": ["Bash(npm test)", rule]}}, indent=2))
+    _w(home / ".codex" / "config.toml", 'model = "gpt-5"\nsandbox_mode = "workspace-write"\n' if fixed else
        'model = "gpt-5"\nsandbox_mode = "danger-full-access"\n\n[model_providers.cheap]\nname = "cheap"\n'
-       'base_url = "https://relay.example.invalid/v1"\n')
+       'base_url = "https://relay.example.invalid/v1"\n')                                 # fix: vendor endpoint, sandbox on
     repo = home / "work" / "take-home"
     _w(repo / ".git" / "HEAD", "ref: refs/heads/main\n")
-    _w(repo / ".git" / "config", "[core]\n\trepositoryformatversion = 0\n\tfsmonitor = echo asca-demo-never-runs\n")
-    _w(repo / ".vscode" / "tasks.json", json.dumps({"version": "2.0.0", "tasks": [{
-        "label": "setup", "type": "shell", "command": codecs.decode(_TASK_CMD, "rot13"),
-        "runOptions": {"runOn": "folderOpen"}}]}, indent=2))
+    _w(repo / ".git" / "config", "[core]\n\trepositoryformatversion = 0\n" +
+       ("" if fixed else "\tfsmonitor = echo asca-demo-never-runs\n"))                    # fix: no fsmonitor
+    task = {"label": "setup", "type": "shell", "command": codecs.decode(_TASK_CMD, "rot13")}
+    if fixed:                                                                              # fix: a manual task
+        task = {"label": "test", "type": "shell", "command": "npm test"}
+    else:
+        task["runOptions"] = {"runOn": "folderOpen"}
+    _w(repo / ".vscode" / "tasks.json", json.dumps({"version": "2.0.0", "tasks": [task]}, indent=2))
     _w(repo / "README.md", "# Take-home assignment\n\nOpen this folder in VS Code to get started.\n")
     site = repo / ".venv" / "lib" / "python3.12" / "site-packages"
     _w(repo / ".venv" / "pyvenv.cfg", "home = /usr/bin\nversion = 3.12.0\n")
-    _w(site / "demo_boot.pth", "import demo_boot\n")
-    _w(site / "demo_boot.py", "# planted by asca demo; never imported\nGREETING = 'hello'\n")
+    if not fixed:                                                                          # fix: hook removed
+        _w(site / "demo_boot.pth", "import demo_boot\n")
+        _w(site / "demo_boot.py", "# planted by asca demo; never imported\nGREETING = 'hello'\n")
+    else:
+        site.mkdir(parents=True, exist_ok=True)
     ext = home / ".vscode" / "extensions" / "acme.helper-1.0.0"
     _w(ext / "package.json", json.dumps({"name": "helper", "publisher": "acme", "version": "1.0.0"}))
     js = _w(ext / "extension.js", "module.exports = { activate() {} };\n")
@@ -171,6 +182,76 @@ def skipped(rule: str) -> bool:
     return rule in NEEDS_TOML and sys.version_info < (3, 11)
 
 
+REPORT_HOME = "/home/demo"
+REPORT_TIME = "2000-01-01T00:00:00Z"            # fixed, obviously not a real scan time
+REPORT_SEED = 20261125
+_SEV_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
+
+
+def _normalise(obj, repl: list[tuple[str, str]]):
+    if isinstance(obj, str):
+        for a, b in repl:
+            obj = obj.replace(a, b)
+        return obj
+    if isinstance(obj, list):
+        return [_normalise(x, repl) for x in obj]
+    if isinstance(obj, dict):
+        return {k: _normalise(v, repl) for k, v in obj.items()}
+    return obj
+
+
+def report(fixed: bool = False) -> dict:
+    """The audit JSON for the demo setup (fixed=True: after every planted fix), made stable for committing:
+    temp paths -> /home/demo, fixed timestamp, sorted findings, fingerprints recomputed on the stable paths.
+    Generate on Linux with Python 3.11+ (client-config locations differ per OS; Codex needs tomllib)."""
+    import hashlib
+    import shutil
+    from . import cli, fsutil
+    tmp = Path(tempfile.mkdtemp(prefix="asca-demo-report-"))
+    try:
+        home = tmp / "home"
+        home.mkdir()
+        plant(home, seed=REPORT_SEED, fixed=fixed)
+        out = tmp / "report" / "asca-report"
+        out.parent.mkdir()
+        with fake_env(home):
+            try:
+                _capture(cli.run, ["--home-only", "--no-hermes", "--repos", str(home / "work"), "--format", "none",
+                                   "-o", str(out), "--host-label", "demo"])
+            finally:
+                fsutil.HOME_ONLY = False
+        doc = json.loads(out.with_suffix(".json").read_text(encoding="utf-8"))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    repl = [(str(home), REPORT_HOME), (home.as_posix(), REPORT_HOME), (str(tmp), "/tmp/asca-demo")]
+    doc = _normalise(doc, repl)
+    doc["generated_at"] = REPORT_TIME
+    for f in doc.get("findings", []):
+        raw = "\x00".join((f.get("rule", ""), f.get("location", ""), f.get("subject", "")))
+        f["fingerprint"] = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+    doc["findings"] = sorted(doc.get("findings", []), key=lambda f: (_SEV_ORDER.get(f.get("severity"), 9),
+                                                                      f.get("rule", ""), f.get("location", "")))
+    for k in list(doc.get("targets", {})):
+        if isinstance(doc["targets"][k], list):
+            doc["targets"][k] = sorted(doc["targets"][k])
+    doc["demo"] = {"asca_version": doc.get("version"), "fixed": fixed,
+                   "note": "Real asca output for the planted `asca demo` setup"
+                           + (" after every planted problem was fixed" if fixed else "")
+                           + ". All values are fake (asca-demo markers); paths are rewritten to /home/demo.",
+                   "regenerate": "python3 -m asca demo --write-reports examples (Linux, Python 3.11+)"}
+    return doc
+
+
+def write_reports(directory: Path) -> list[Path]:
+    directory.mkdir(parents=True, exist_ok=True)
+    out = []
+    for name, fixed in (("demo-report.json", False), ("demo-report-fixed.json", True)):
+        p = directory / name
+        p.write_text(json.dumps(report(fixed), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        out.append(p)
+    return out
+
+
 def check(findings: list[dict]) -> list[tuple[str, bool | None, str]]:
     """(label, found, what) for every planted item; found is None when this Python can't check it."""
     rows = []
@@ -190,7 +271,13 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--format", choices=("text", "json"), default="text",
                     help="text: the usual report; json: the report findings as JSON")
     ap.add_argument("--keep", action="store_true", help="keep the temp folder and print its path (to look around)")
+    ap.add_argument("--write-reports", type=Path, metavar="DIR",
+                    help="write stable demo-report.json and demo-report-fixed.json (for the website) and exit")
     a = ap.parse_args(argv)
+    if a.write_reports:
+        for p in write_reports(a.write_reports):
+            print(f"wrote {p}")
+        return 0
     tmpdir = tempfile.mkdtemp(prefix="asca-demo-")
     tmp = Path(tmpdir)
     try:
