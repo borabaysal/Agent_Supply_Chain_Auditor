@@ -53,10 +53,23 @@ _Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where
 
 ```bash
 git clone https://github.com/borabaysal/Agent_Supply_Chain_Auditor && cd Agent_Supply_Chain_Auditor
-python3 -m asca --help                 # run in place, no install needed
+python3 -m asca demo                   # see a result in about 10 seconds, without scanning your machine
+python3 -m asca                        # then scan your own machine (read-only, no network)
 # or
 uv tool install .   # / pipx install .   -> `asca` on PATH
 ```
+
+### Try it first: `asca demo`
+
+`asca demo` builds a throwaway fake home in a temp folder, plants fake problems in it, runs the normal audit, the IDE inventory and `check-repo` on it, prints the usual report under a DEMO banner, and deletes the folder. You see what a real finding looks like before pointing asca at your own files.
+
+Planted: a key-shaped string in a Claude Code transcript, an unpinned and an archived MCP server, a database password in a Claude Code allow rule, `core.fsmonitor` in a downloaded repo, a VS Code task that runs on folder open, a `.pth` startup hook nobody installed, a Codex config pointed at a relay with the sandbox off, and a VS Code extension changed after install. The end of the output lists each one and whether asca found it.
+
+- **Nothing real is read.** The audit runs with `--home-only` and HOME/USERPROFILE/APPDATA pointing into the temp folder (restored afterwards). Managed settings, `/etc`, Docker, TCC, global npm/brew, cron, the registry and environment overrides are skipped.
+- **No network, and nothing is written outside the temp folder.** Nothing planted is ever executed.
+- **The fake keys are made at run time** with an `asca-demo` marker, so asca's source holds no key-shaped strings. `--keep` leaves the folder in place for you to look around; `--format json` prints the findings.
+
+`--home-only` also works on its own: it reads only the home folder, `--repos` and paths given on the command line. That's useful for a mounted home or a CI job.
 
 ## Usage
 

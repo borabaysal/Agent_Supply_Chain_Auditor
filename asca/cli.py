@@ -48,6 +48,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--hermes-home", type=Path, help="Hermes data dir (default: $HERMES_HOME or ~/.hermes)")
     p.add_argument("--hermes-install", type=Path, help="Hermes source/install dir, for version advisories")
     p.add_argument("--no-hermes", action="store_true", help="skip Hermes checks")
+    p.add_argument("--home-only", action="store_true",
+                   help="read only the home folder, --repos and paths given on the command line: no managed settings, "
+                        "/etc, temp folders, system site-packages, Docker, TCC, global npm/brew, cron, registry, "
+                        "/opt or /srv, and environment overrides are ignored (used by `asca demo`)")
     p.add_argument("--repos", type=Path, action="append", default=[], metavar="DIR",
                    help="scan git repos under DIR (repeatable; searches 4 levels deep)")
     p.add_argument("--mcp-config", type=Path, action="append", default=[], metavar="FILE",
@@ -170,7 +174,14 @@ def run(argv: list[str] | None = None) -> int:
     if argv[:1] == ["inventory"]:   # `asca inventory …`: IDE/agent inventory + drift (own options)
         from .inventory.cli import run as inventory_run
         return inventory_run(argv[1:])
+    if argv[:1] == ["demo"]:   # `asca demo`: planted fake problems in a temp folder, nothing real is read
+        from . import demo
+        return demo.main(argv[1:])
     args = build_parser().parse_args(argv)
+    fsutil.HOME_ONLY = bool(args.home_only)
+    if args.home_only:                        # host-wide checks have nothing to read inside a home folder
+        args.no_docker_daemon = args.no_tcc = args.no_agent_versions = True
+    env_or_none = {} if args.home_only else None
     mcpvers.LAUNCHES.clear()                  # pinned MCP launches seen in this run (online lookup)
     try:
         fail_on = Severity.parse(args.fail_on)
@@ -189,11 +200,13 @@ def run(argv: list[str] | None = None) -> int:
             return 2
 
     home = None if args.no_hermes else (args.hermes_home or _default_home())
+    if args.home_only and not args.hermes_home:   # $HERMES_HOME may point outside home: only ~/.hermes counts
+        home = None if args.no_hermes or not (Path.home() / ".hermes").is_dir() else Path.home() / ".hermes"
     if home is not None:
         if not home.is_dir():
             print(f"asca: hermes home {home} not found", file=sys.stderr)
             return 2
-        install = args.hermes_install or _default_install()
+        install = args.hermes_install or (None if args.home_only else _default_install())
         targets["hermes_home"] = str(home)
         targets["hermes_install"] = str(install) if install else ""
         extra = []
@@ -258,7 +271,7 @@ def run(argv: list[str] | None = None) -> int:
         if min(args.session_budget_mb, args.session_file_cap_mb, args.session_max_files) < 1:
             print("asca: session budgets must be >= 1", file=sys.stderr)
             return 2
-        roots = sessions.default_roots(Path.home(), home)
+        roots = sessions.default_roots(Path.home(), home, env_or_none)
         targets["session_history"] = [str(r.path) for r in roots if r.path.exists()]
         findings += sessions.audit(roots, stats, sessions.Budget(
             total_bytes=args.session_budget_mb * sessions.MiB, file_bytes=args.session_file_cap_mb * sessions.MiB,
@@ -266,6 +279,8 @@ def run(argv: list[str] | None = None) -> int:
 
     if not args.no_stray_instructions or args.instructions_dir:
         dirs = [] if args.no_stray_instructions else stray.default_dirs(Path.home())
+        if args.home_only:
+            dirs = [d for d in dirs if fsutil.inside(d, Path.home())]
         dirs += [d for d in args.instructions_dir if d not in dirs]
         targets["instruction_dirs"] = [str(d) for d in dirs]
         findings += stray.audit(dirs, stats)
@@ -279,15 +294,16 @@ def run(argv: list[str] | None = None) -> int:
         findings += ghtoken.audit(tokens, stats)
 
     if not args.no_agent_config:
-        findings += agentcfg.audit(Path.home(), home, stats, extra_claude=args.claude_settings)
+        findings += agentcfg.audit(Path.home(), home, stats, env=env_or_none, extra_claude=args.claude_settings)
 
     if not args.no_user_hooks:
-        findings += userhooks.audit(Path.home(), stats)
+        findings += userhooks.audit(Path.home(), stats, env=env_or_none)
 
     sites = None
     if not args.no_python_startup:
-        sites = pystartup.discover(Path.home(), hermes_install=args.hermes_install or _default_install(),
-                                   repo_roots=list(args.repos), extra=list(args.python_site))
+        sites = pystartup.discover(Path.home(), hermes_install=args.hermes_install or (
+            None if args.home_only else _default_install()), repo_roots=list(args.repos),
+            extra=list(args.python_site), system=not args.home_only)
         targets["python_sites"] = [str(s.path) for s in sites]
         findings += pystartup.audit(sites, stats)
 
@@ -295,20 +311,24 @@ def run(argv: list[str] | None = None) -> int:
         findings += dockerd.audit(home=Path.home(), stats=stats)
 
     if not args.no_dev_credentials:
-        findings += devcreds.audit(Path.home(), stats)
+        findings += devcreds.audit(Path.home(), stats, env=env_or_none)
 
     if not args.no_user_autostart:            # testmetest/Miasma: backdoor + delete-on-revoke monitor
-        findings += autostart.audit(Path.home(), stats)
+        findings += (autostart.audit(Path.home(), stats, root=fsutil.NO_ROOT, run_keys=[]) if args.home_only
+                     else autostart.audit(Path.home(), stats))
 
     if not args.no_ai_stack:                  # the ARTEX playbook: gateways and apps next to your agents
-        findings += aistack.audit(Path.home(), stats, repo_roots=list(args.repos), sites=sites)
+        findings += (aistack.audit(Path.home(), stats, repo_roots=list(args.repos), sites=sites or [],
+                                   root=fsutil.NO_ROOT, env={}, system_dirs=[]) if args.home_only
+                     else aistack.audit(Path.home(), stats, repo_roots=list(args.repos), sites=sites))
 
     # cloud credential files hold keys by design: check who can read them, not what's in them
     findings += secrets.audit_permissions(Path.home() / ".aws" / "credentials", label="~/.aws/credentials")
 
     if not args.no_global_git:
-        targets["global_git_configs"] = [str(p) for p in discover.global_git_configs()]
-        findings += discover.audit_global_git()
+        genv = {"HOME": str(Path.home()), "GIT_CONFIG_NOSYSTEM": "1"} if args.home_only else None
+        targets["global_git_configs"] = [str(p) for p in discover.global_git_configs(genv)]
+        findings += discover.audit_global_git(genv)
 
     if args.online_advisories and mcpvers.LAUNCHES:
         more, errs = mcpvers.online()

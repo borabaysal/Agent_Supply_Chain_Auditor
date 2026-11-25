@@ -23,7 +23,7 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 
-from . import yamlmini
+from . import fsutil, yamlmini
 from .model import Finding, Severity
 
 SYMANTEC = "https://www.security.com/threat-intelligence/openai-claude-unauthorized-relays"
@@ -233,8 +233,8 @@ def _env_pair(loc: str, k: str, v, agent: _Agent) -> None:
 
 def _claude(home: Path, env: dict, agent: _Agent, errors: list[Finding], extra: list[Path]) -> None:
     files = [home / ".claude" / "settings.json", home / ".claude" / "settings.local.json",
-             Path("/Library/Application Support/ClaudeCode/managed-settings.json"),
-             Path("/etc/claude-code/managed-settings.json"), *extra]
+             *fsutil.system(Path("/Library/Application Support/ClaudeCode/managed-settings.json"),
+                            Path("/etc/claude-code/managed-settings.json")), *extra]
     for p in files:
         if not p.is_file():
             continue
