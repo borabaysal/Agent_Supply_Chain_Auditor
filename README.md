@@ -875,21 +875,27 @@ Carbonato gets in through Docker daemons that listen on TCP without authenticati
 
 The testmetest/Miasma worm ([Socket, Nov 2026](https://socket.dev/blog/shai-hulud-descendant-malicious-ruby-gem)) installs `~/.local/share/runtimes/sync.py` as the systemd user service `pkg-runtime` or the LaunchAgent `com.user.pkg-runtime`. It is a backdoor that polls GitHub hourly for commands. On the GitHub-token path it also installs `net-health-checker`, which keeps the stolen token in plain text in `~/.config/net-health-checker/token`, survives logout via `loginctl enable-linger`, and checks the token every 45 seconds. When GitHub answers 401/403, **it deletes your home folder**. Revoking the token, the usual first step, is what sets it off.
 
-asca matches the structure, not those names or hashes. It reads `~/Library/LaunchAgents/*.plist`, `~/.config/systemd/user/*.service`, `~/.config/autostart/*.desktop` and `/var/lib/systemd/linger/<user>`, then the scripts those entries start (interpreter + script, a script run directly, or inline `bash -c`/`python -c`). Nothing is run or loaded. Calls that stay on the machine (`localhost`, `127.0.0.1`) don't count as network.
+asca matches the structure, not those names or hashes. It reads these autostart places, then the code each entry starts (interpreter + script, a script run directly, or inline `bash -c`, `python -c`, `cmd /c`, `powershell -Command`/`-EncodedCommand`, a cron command line). Nothing is run, loaded or unloaded; the registry is only read.
+
+| Where | Rule |
+|---|---|
+| `~/Library/LaunchAgents`, `~/.config/systemd/user`, `~/.config/autostart`, `/var/lib/systemd/linger/<user>`, your own crontab, the Windows Startup folder (`%APPDATA%\...\Startup`: scripts and `.lnk` shortcuts), `HKCU\...\Run`/`RunOnce` | `host.user-autostart` |
+| `/Library/LaunchDaemons`, `/Library/LaunchAgents`, `/etc/systemd/system`, `/etc/systemd/user`, `/etc/xdg/autostart`, `/etc/crontab`, `/etc/cron.d/*`, other users' crontabs (readable when asca runs as root; skipped otherwise), the all-users Startup folder (`%ProgramData%`), `HKLM\...\Run`/`RunOnce` (and `WOW6432Node`) | `host.system-autostart` |
+ Calls that stay on the machine (`localhost`, `127.0.0.1`) don't count as network.
 
 | Rule | When | Severity |
 |---|---|---|
 | `host.revoke-switch` | the script checks for an HTTP 401/403 answer **and** deletes the home folder or `eval`s a stored handler (also when the handler sits in the unit's `Environment=` or the plist's `EnvironmentVariables`). The token file it uses is found through the paths it mentions and shown redacted. | 🟥 critical |
-| `host.user-autostart` | a script in a hidden folder, `~/Library` or a temp folder that calls the GitHub API, downloads and runs code (`curl … \| sh`, fetch + `exec`) or deletes the home folder | 🟧 high |
-| `host.user-autostart` | those signals elsewhere in your home or inline in the entry, or a hidden-folder script that only talks to a remote host | 🟨 medium |
-| `host.user-autostart` | a script elsewhere in your home that only talks to a remote host | 🟦 low |
-| `host.user-autostart` | an interpreter script in a hidden or temp folder with none of these signals, listed so you know it starts | ℹ️ info |
+| `host.user-autostart` / `host.system-autostart` | code in a hidden folder (dot-folder, `~/Library`, `AppData`, `ProgramData`) or a temp folder that calls the GitHub API, downloads and runs code (`curl … \| sh`, `iwr … \| iex`, fetch + `exec`) or deletes the home folder (`rm -rf ~`, `Remove-Item -Recurse $env:USERPROFILE`) | 🟧 high |
+| same | those signals from elsewhere or inline in the entry, or a hidden-folder script that only talks to a remote host | 🟨 medium |
+| same | a script elsewhere that only talks to a remote host | 🟦 low |
+| same | an interpreter script in a hidden or temp folder with none of these signals, listed so you know it starts | ℹ️ info |
 
 **"Rotate first" becomes "remove the switch first".** When a `host.revoke-switch` is found, every finding whose fix says rotate, revoke, regenerate or deactivate (and every leaked-secret finding) gets this in front of its fix: *remove that persistence first, then rotate from a clean device.* The dashboard's "Leaked keys" cards say the same. The switch finding gives the order: disconnect the machine; stop and delete the unit or LaunchAgent and the script, and run `loginctl disable-linger`; only then revoke the token and rotate everything from a clean device; rebuild. Fingerprints don't change, so baselines still match.
 
-On 1,143 autostart entries from 1,010 public dotfiles files (with the scripts they start, where the repo had them), there were no high or critical findings. There were 2 medium (a script in `~/.claude/` calling a ticketing API at login) and 4 low. A first draft that counted any `curl` as a download reported 11 high, mostly `bash -c 'curl http://127.0.0.1/health'` readiness probes.
+On 1,143 autostart entries from 1,010 public dotfiles files (with the scripts they start, where the repo had them), there were no high or critical findings. There were 2 medium (a script in `~/.claude/` calling a ticketing API at login) and 4 low. A first draft that counted any `curl` as a download reported 11 high, mostly `bash -c 'curl http://127.0.0.1/health'` readiness probes. On 3,416 system-level entries from 885 public systemd system units, `cron.d` files and system crontabs (with 140 of the scripts they start), there were no high or critical findings, 1 medium (a root cron job that pipes a script from GitHub into `bash` every 2 minutes, which is what the rule is for) and 27 low.
 
-**Limits:** system-wide units (`/etc/systemd/system`, `/Library/LaunchDaemons`), cron and Windows Run keys / Startup folder aren't read yet. A switch that fetches its handler at run time, or checks the token some other way than an HTTP status, needs a person to read the script.
+**Limits:** distro-shipped units in `/usr/lib/systemd`, `/etc/cron.{hourly,daily,weekly,monthly}` scripts, `at` jobs, Windows Scheduled Tasks and services, and other users' crontabs when asca isn't root aren't read. `.lnk` shortcuts are parsed for their target and arguments only. A switch that fetches its handler at run time, or checks the token some other way than an HTTP status, needs a person to read the script.
 
 ### Self-hosted AI gateways and apps (on by default; `--no-ai-stack` to skip)
 

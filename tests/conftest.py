@@ -70,14 +70,15 @@ def _no_host_ai_stack(monkeypatch, tmp_path_factory):
 
 @pytest.fixture(autouse=True)
 def _no_host_autostart(monkeypatch, tmp_path_factory):
-    """Never read the test machine's LaunchAgents, systemd user units or linger files."""
+    """Never read the test machine's autostart entries (user and system units, LaunchAgents/Daemons, crontabs, linger files, Windows Run keys, Startup folders)."""
     real = autostart.audit
     empty = tmp_path_factory.mktemp("no-host-root")
 
-    def isolated(home, stats, *, root=None, user=None):
+    def isolated(home, stats, *, root=None, user=None, run_keys=None, programdata=None):
         if pathlib.Path(home).resolve() == REAL_HOME:
             return []
-        return real(home, stats, root=empty if root is None else root, user=user or "nobody")
+        return real(home, stats, root=empty if root is None else root, user=user or "nobody",
+                    run_keys=[] if run_keys is None else run_keys, programdata=programdata)
 
     monkeypatch.setattr(autostart, "audit", isolated)
 
