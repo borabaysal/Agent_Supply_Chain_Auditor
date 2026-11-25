@@ -24,7 +24,7 @@ import json
 import re
 from pathlib import Path
 
-from . import repohooks, secrets
+from . import fsutil, repohooks, secrets
 from .model import Finding, Severity, redact
 
 RULE = "secret.agent-allowlist"
@@ -142,8 +142,8 @@ def audit_settings_file(path: Path, *, kind: str, committed: bool = False) -> li
 
 def home_files(home: Path) -> list[tuple[Path, str]]:
     files = [(home / ".claude" / "settings.json", "claude"), (home / ".claude" / "settings.local.json", "claude"),
-             (Path("/Library/Application Support/ClaudeCode/managed-settings.json"), "claude"),
-             (Path("/etc/claude-code/managed-settings.json"), "claude")]
+             *fsutil.system((Path("/Library/Application Support/ClaudeCode/managed-settings.json"), "claude"),
+                            (Path("/etc/claude-code/managed-settings.json"), "claude"))]
     for app in VSCODE_APPS:
         for base in (home / "Library" / "Application Support", home / ".config", home / "AppData" / "Roaming"):
             files.append((base / app / "User" / "settings.json", "vscode"))

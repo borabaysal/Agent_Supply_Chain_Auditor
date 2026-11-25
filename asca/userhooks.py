@@ -42,13 +42,13 @@ def targets(home: Path, env: dict | None = None) -> list[tuple[str, Path, str]]:
     env = dict(os.environ) if env is None else env
     claude = Path(env["CLAUDE_CONFIG_DIR"]) if env.get("CLAUDE_CONFIG_DIR") else home / ".claude"
     out = [("Claude Code", claude / "settings.json", "user"), ("Claude Code", claude / "settings.local.json", "user"),
-           ("Claude Code", Path("/Library/Application Support/ClaudeCode/managed-settings.json"), "managed"),
-           ("Claude Code", Path("/etc/claude-code/managed-settings.json"), "managed"),
+           *fsutil.system(("Claude Code", Path("/Library/Application Support/ClaudeCode/managed-settings.json"),
+                           "managed"), ("Claude Code", Path("/etc/claude-code/managed-settings.json"), "managed")),
            ("Cursor", home / ".cursor" / "hooks.json", "user"),
            ("Gemini CLI", home / ".gemini" / "settings.json", "user"),
-           ("Gemini CLI", Path("/etc/gemini-cli/settings.json"), "managed")]
+           *fsutil.system(("Gemini CLI", Path("/etc/gemini-cli/settings.json"), "managed"))]
     for var in ("ProgramFiles", "ProgramData"):
-        if env.get(var):
+        if env.get(var) and not fsutil.HOME_ONLY:
             out.append(("Claude Code", Path(env[var]) / "ClaudeCode" / "managed-settings.json", "managed"))
     return out
 
