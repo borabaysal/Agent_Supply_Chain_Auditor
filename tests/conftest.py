@@ -11,7 +11,7 @@ import pathlib
 
 import pytest
 
-from asca import agentvers, aistack, devcreds, pthtargets, pystartup, secrets, tcc, userhooks
+from asca import agentvers, aistack, autostart, devcreds, pthtargets, pystartup, secrets, tcc, userhooks
 
 REAL_HOME = pathlib.Path.home().resolve()     # captured before any test changes HOME
 
@@ -66,6 +66,20 @@ def _no_host_ai_stack(monkeypatch, tmp_path_factory):
                     env={} if env is None else env, sites=[] if sites is None else sites, system_dirs=system_dirs)
 
     monkeypatch.setattr(aistack, "audit", isolated)
+
+
+@pytest.fixture(autouse=True)
+def _no_host_autostart(monkeypatch, tmp_path_factory):
+    """Never read the test machine's LaunchAgents, systemd user units or linger files."""
+    real = autostart.audit
+    empty = tmp_path_factory.mktemp("no-host-root")
+
+    def isolated(home, stats, *, root=None, user=None):
+        if pathlib.Path(home).resolve() == REAL_HOME:
+            return []
+        return real(home, stats, root=empty if root is None else root, user=user or "nobody")
+
+    monkeypatch.setattr(autostart, "audit", isolated)
 
 
 @pytest.fixture(autouse=True)

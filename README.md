@@ -28,7 +28,7 @@ _Also included: an [egress auditor](#egress-auditor-asca-egress) that logs where
 | **Integrity** | Hub skills whose on-disk content no longer matches the install-time hash (same algorithm as Hermes' Skills Guard) · skills installed despite a non-`safe` scanner verdict · Hermes Agent versions inside a known-vulnerable range · [installed Claude Code, Codex, Gemini CLI, goose and Claude Desktop versions with known vulnerabilities](#other-coding-agents-claude-code-codex-gemini-cli-goose-claude-desktop), including advisories that never got a CVE or never reached OSV |
 | **Agent takeover** | Hermes `SOUL.md` and memories rewritten to take orders, collect keys or hide activity (Carbonato) · gateway open to anyone (`GATEWAY_ALLOW_ALL_USERS`, `*` allow lists) · Docker API reachable over TCP without client certificates · [details](#agent-takeover-workspace-and-response-checks-part-of-asca) · [macOS Full Disk Access / Accessibility for terminals, IDEs and agent apps](#full-disk-access-for-terminals-ides-and-agents-macos) |
 | **Self-hosted AI stack** | [LiteLLM, Ollama, Open WebUI, Langflow, RAGFlow, Dify, One API and other gateways next to your agents](#self-hosted-ai-gateways-and-apps-on-by-default---no-ai-stack-to-skip): LiteLLM's example master key or none at all · Open WebUI without login or with open sign-up · `OLLAMA_HOST` on all interfaces · compose ports published on all interfaces · Langflow CVE-2025-3248 and RAGFlow CVE-2026-28797 (the ARTEX playbook) |
-| **Developer machine** | [Hooks in user-level and managed agent settings](#hooks-in-user-level-and-managed-agent-settings-on-by-default---no-user-hooks-to-skip) (SOMBERMEME) · [plain-text developer credential files a stealer would take](#developer-credential-files-on-by-default---no-dev-credentials-to-skip) · [pinned MCP launches whose dependencies still float, and pinned versions with known vulnerabilities](#pinned-mcp-servers-dependency-drift-and-known-vulnerabilities) |
+| **Developer machine** | [Hooks in user-level and managed agent settings](#hooks-in-user-level-and-managed-agent-settings-on-by-default---no-user-hooks-to-skip) (SOMBERMEME) · [plain-text developer credential files a stealer would take](#developer-credential-files-on-by-default---no-dev-credentials-to-skip) · [pinned MCP launches whose dependencies still float, and pinned versions with known vulnerabilities](#pinned-mcp-servers-dependency-drift-and-known-vulnerabilities) · [startup persistence and delete-on-revoke switches](#startup-persistence-and-delete-on-revoke-switches-on-by-default---no-user-autostart-to-skip) (testmetest/Miasma) |
 | **Workspace** | Symlinks that lead out of a repo or the agent home, high when they point at credentials (CVE-2026-103916) · MCP servers that are archived and will never be patched (MCPhantom) |
 | **Response** | [`asca spend`](#stolen-key-spend-tripwire-asca-spend-opt-in-online): hourly spend tripwire for stolen OpenRouter and Anthropic keys · Provider-specific steps on every leaked-key finding, plus a local blast-radius card for AWS keys (profile, long-lived or temporary, assumable roles) · a dashboard card per leaked key: every copy across agents, days exposed, and whether it's still your live key · [`asca github-check`](#were-your-github-repos-hit-by-wfx-asca-github-check-opt-in-online) for wfx traces on GitHub |
 
@@ -871,6 +871,26 @@ Carbonato gets in through Docker daemons that listen on TCP without authenticati
 
 `--tls` without `--tlsverify` encrypts the traffic but still lets anyone in, so it counts as unauthenticated. Docker Desktop on macOS has no TCP option (its "expose on 2375" switch exists on Windows only), so on a Mac this check finds nothing.
 
+### Startup persistence and delete-on-revoke switches (on by default; `--no-user-autostart` to skip)
+
+The testmetest/Miasma worm ([Socket, Nov 2026](https://socket.dev/blog/shai-hulud-descendant-malicious-ruby-gem)) installs `~/.local/share/runtimes/sync.py` as the systemd user service `pkg-runtime` or the LaunchAgent `com.user.pkg-runtime`. It is a backdoor that polls GitHub hourly for commands. On the GitHub-token path it also installs `net-health-checker`, which keeps the stolen token in plain text in `~/.config/net-health-checker/token`, survives logout via `loginctl enable-linger`, and checks the token every 45 seconds. When GitHub answers 401/403, **it deletes your home folder**. Revoking the token, the usual first step, is what sets it off.
+
+asca matches the structure, not those names or hashes. It reads `~/Library/LaunchAgents/*.plist`, `~/.config/systemd/user/*.service`, `~/.config/autostart/*.desktop` and `/var/lib/systemd/linger/<user>`, then the scripts those entries start (interpreter + script, a script run directly, or inline `bash -c`/`python -c`). Nothing is run or loaded. Calls that stay on the machine (`localhost`, `127.0.0.1`) don't count as network.
+
+| Rule | When | Severity |
+|---|---|---|
+| `host.revoke-switch` | the script checks for an HTTP 401/403 answer **and** deletes the home folder or `eval`s a stored handler (also when the handler sits in the unit's `Environment=` or the plist's `EnvironmentVariables`). The token file it uses is found through the paths it mentions and shown redacted. | 🟥 critical |
+| `host.user-autostart` | a script in a hidden folder, `~/Library` or a temp folder that calls the GitHub API, downloads and runs code (`curl … \| sh`, fetch + `exec`) or deletes the home folder | 🟧 high |
+| `host.user-autostart` | those signals elsewhere in your home or inline in the entry, or a hidden-folder script that only talks to a remote host | 🟨 medium |
+| `host.user-autostart` | a script elsewhere in your home that only talks to a remote host | 🟦 low |
+| `host.user-autostart` | an interpreter script in a hidden or temp folder with none of these signals, listed so you know it starts | ℹ️ info |
+
+**"Rotate first" becomes "remove the switch first".** When a `host.revoke-switch` is found, every finding whose fix says rotate, revoke, regenerate or deactivate (and every leaked-secret finding) gets this in front of its fix: *remove that persistence first, then rotate from a clean device.* The dashboard's "Leaked keys" cards say the same. The switch finding gives the order: disconnect the machine; stop and delete the unit or LaunchAgent and the script, and run `loginctl disable-linger`; only then revoke the token and rotate everything from a clean device; rebuild. Fingerprints don't change, so baselines still match.
+
+On 1,143 autostart entries from 1,010 public dotfiles files (with the scripts they start, where the repo had them), there were no high or critical findings. There were 2 medium (a script in `~/.claude/` calling a ticketing API at login) and 4 low. A first draft that counted any `curl` as a download reported 11 high, mostly `bash -c 'curl http://127.0.0.1/health'` readiness probes.
+
+**Limits:** system-wide units (`/etc/systemd/system`, `/Library/LaunchDaemons`), cron and Windows Run keys / Startup folder aren't read yet. A switch that fetches its handler at run time, or checks the token some other way than an HTTP status, needs a person to read the script.
+
 ### Self-hosted AI gateways and apps (on by default; `--no-ai-stack` to skip)
 
 In November 2026 [Amazon Threat Intelligence](https://aws.amazon.com/blogs/security/amazon-threat-intelligence-observes-threat-actors-running-cybercrime-campaigns-with-artex-ai-agents/) captured the working memory of ARTEX attack agents. They look for internet-exposed LLM gateways and AI app builders (LiteLLM, One API, New API, Dify, FastGPT, Langflow, RAGFlow, Open WebUI, LobeChat, Ollama), take the provider keys those apps hold, test them and spend them on the next round of hunting. Their playbook listed unfinished installs, open management endpoints, default admin credentials such as "the LiteLLM default master key", Langflow CVE-2025-3248 and RAGFlow CVE-2026-28797. asca reads the files that configure these apps. It never starts or contacts them.
@@ -1069,7 +1089,8 @@ three-line LinkedIn post, each linking the primary source. Nothing is published;
 
 ```bash
 asca post --list                                    # incidents: artex, agent-framework, stealer-view, litellm-cook,
-                                                    # sombermeme, mcp-drift, document-loader, carbonato
+                                                    # sombermeme, mcp-drift, document-loader, carbonato,
+                                                    # miasma-wiper
 asca post artex                                     # sample from a planted setup in a temp folder
 asca post stealer-view --report asca-report.json    # a matching finding from your real report instead
 asca post mcp-drift --format json -o post.json

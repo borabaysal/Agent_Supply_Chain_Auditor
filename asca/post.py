@@ -119,6 +119,24 @@ def _demo_carbonato(tmp: Path) -> list[Finding]:
     return dockerd.audit(root=root, home=tmp / "home", stats={})
 
 
+def _demo_miasma(tmp: Path) -> list[Finding]:
+    from . import autostart
+    home = tmp / "home"
+    script = home / ".local" / "bin" / "monitor.sh"
+    script.parent.mkdir(parents=True)
+    script.write_text(codecs.decode(_MIASMA_WATCHDOG, "rot13"), encoding="utf-8")
+    unit = home / ".config" / "systemd" / "user" / "monitor.service"
+    unit.parent.mkdir(parents=True)
+    unit.write_text(f"[Service]\nExecStart=/bin/bash {script.as_posix()}\n", encoding="utf-8")   # unit syntax
+    return autostart.audit(home, {}, root=tmp / "root", user="nobody")
+
+
+# a watchdog with the worm's shape: checks a token, on 401/403 runs a stored handler (ROT13, like the tests)
+_MIASMA_WATCHDOG = ("#!/ova/onfu\njuvyr gehr; qb\n  F=$(phey -f -b /qri/ahyy -j '%{uggc_pbqr}' "
+                    "uggcf://ncv.tvguho.pbz/hfre)\n  vs [[ \"$F\" =~ ^40[13]$ ]]; gura riny \"$UNAQYRE\"; sv\n"
+                    "  fyrrc 45\nqbar\n")
+
+
 INCIDENTS = [
     Incident("artex", "ARTEX agents hunting AI gateway keys", "2026-11-13", "Amazon Threat Intelligence",
              "https://aws.amazon.com/blogs/security/amazon-threat-intelligence-observes-threat-actors-running-"
@@ -174,6 +192,12 @@ INCIDENTS = [
              "Is my Docker API reachable without authentication?",
              ("host.docker-api-exposed",), _demo_carbonato),
 ]
+INCIDENTS.append(Incident(
+    "miasma-wiper", "testmetest/Miasma: the token monitor that wipes on revoke", "2026-11-06", "Socket",
+    "https://socket.dev/blog/shai-hulud-descendant-malicious-ruby-gem",
+    "A worm left a monitor that deletes your home folder the moment its stolen GitHub token is revoked.",
+    "Is it safe to rotate my keys on this machine?",
+    ("host.revoke-switch", "host.user-autostart"), _demo_miasma))
 BY_ID = {i.id: i for i in INCIDENTS}
 
 # ------------------------------------------------------------------ sanitising and rendering
@@ -188,7 +212,7 @@ _GENERIC_DIRS = {"site-packages", "dist-packages", "docker", "system", "systemd"
 def _short_path(m: re.Match) -> str:
     parts = [p for p in re.split(r"[\\/]", m.group(0)) if p and not re.fullmatch(r"[A-Za-z]:", p)]
     if parts and parts[0] == "~":                       # home-relative: nothing personal in it
-        return "~/" + "/".join(parts[1:]) if len(parts) <= 3 else "~/…/" + "/".join(parts[-2:])
+        return "~/" + "/".join(parts[1:]) if len(parts) <= 4 else "~/…/" + "/".join(parts[-2:])
     if len(parts) <= 1:
         return m.group(0)
     # keep the parent only when it says what the file is, never a user, project or client folder name
