@@ -39,6 +39,7 @@
     "session_history_truncated_files": 0,
     "stray_instruction_files": 0,
     "agent_endpoints": 0,
+    "session_secrets_sent_to_provider": 0,
     "user_hooks": 0,
     "python_sites": 1,
     "python_dists": 0,

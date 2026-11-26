@@ -16,7 +16,7 @@ from . import (__version__, advisories, agentcfg, agentvers, pluginpins, tcc, al
                mcp, persona, pystartup, repohooks, report, respond, secrets, sessions, stray, symlinks, wfsecrets)
 from .model import Finding, Report, Severity
 from . import fsutil
-from . import aistack, autostart, devcreds, mcpvers, userhooks
+from . import aistack, autostart, devcreds, mcpvers, provexpo, userhooks
 
 
 def _default_home() -> Path | None:
@@ -273,9 +273,10 @@ def run(argv: list[str] | None = None) -> int:
             return 2
         roots = sessions.default_roots(Path.home(), home, env_or_none)
         targets["session_history"] = [str(r.path) for r in roots if r.path.exists()]
+        session_secrets: list = []
         findings += sessions.audit(roots, stats, sessions.Budget(
             total_bytes=args.session_budget_mb * sessions.MiB, file_bytes=args.session_file_cap_mb * sessions.MiB,
-            max_files=args.session_max_files))
+            max_files=args.session_max_files), collect=session_secrets)
 
     if not args.no_stray_instructions or args.instructions_dir:
         dirs = [] if args.no_stray_instructions else stray.default_dirs(Path.home())
@@ -295,6 +296,12 @@ def run(argv: list[str] | None = None) -> int:
 
     if not args.no_agent_config:
         findings += agentcfg.audit(Path.home(), home, stats, env=env_or_none, extra_claude=args.claude_settings)
+        # Dragos/OpenRouter: a key in a transcript also went to whoever serves the agent's model
+        table = provexpo.routes(Path.home(), home, env_or_none, extra_claude=args.claude_settings)
+        findings += provexpo.routing(table)
+        if not args.no_session_history:
+            findings += provexpo.sent_to_provider(session_secrets, table)
+            stats["session_secrets_sent_to_provider"] = sum(f.rule == "secret.sent-to-provider" for f in findings)
 
     if not args.no_user_hooks:
         findings += userhooks.audit(Path.home(), stats, env=env_or_none)

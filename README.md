@@ -203,6 +203,35 @@ about 3 in 4 secrets in Claude Code/Cursor/Codex history came from the agent's o
 - Measured on a real Hermes host: 45,482 files (562 MB) in ~67 s. Opening files dominates, so small
   files are prefetched by 8 threads.
 
+#### Keys that went to a model provider (`secret.sent-to-provider`, `agent.provider-routing`)
+
+A transcript is what the agent sent to its model, so a key in it didn't only leak to disk. In November 2026
+[Dragos](https://www.dragos.com/blog/ai-supply-chain-security-canary-tokens) sent about two million prompts
+holding bait credentials through AI routers and providers. Keys stolen at three inference providers were used for
+tens of thousands of AWS API calls, some from requests marked Zero Data Retention.
+[OpenRouter](https://openrouter.ai/blog/announcements/data-processing-incidents-on-inference-providers/) then
+dropped three providers and linked the providers' own incident notices.
+
+For each key the session-history check finds, asca looks up where that agent sends its prompts today: Hermes
+`model.provider` / `model.base_url` and `provider_routing` (per profile), Codex's selected `model_provider` and
+`openai_base_url`, Claude Code's `ANTHROPIC_BASE_URL` in settings, shell files or the environment. Only config
+files and file dates are read.
+
+| Where the prompts go | `secret.sent-to-provider` |
+|---|---|
+| the model vendor's own API (Anthropic, OpenAI, Google, AWS, Azure, Nous, DeepSeek, ...) or a local server | no extra finding |
+| an endpoint asca doesn't recognise (a company gateway, or a reseller relay) | 🟨 medium |
+| a router (OpenRouter, Vercel AI Gateway, ...) or a third-party host of other vendors' models | 🟧 high |
+| a provider with a published prompt-exposure incident (the endpoint itself, or pinned in `provider_routing.only`/`order`), when transcripts holding the key were written on or after its window began | 🟥 critical |
+
+`agent.provider-routing` (🟨 medium) reports routing that pins such a provider, or an agent pointed straight at
+one. The bundled table holds the notices linked from OpenRouter's list, with each provider's own window: Together
+AI (Jun–Jul 2026), Phala (21 Oct–8 Nov), NovitaAI (28 May–11 Nov), GMI Cloud (18 Oct–18 Nov) and Atlas Cloud
+(MiniMax models, until 21 Nov). OpenRouter didn't name the providers it removed, and Together says it wasn't one,
+so the table lists notices, not removals. The endpoint is today's setting: if it changed since a session ran, the
+finding says the key may have gone elsewhere. On 468 public Hermes configs and Claude Code settings files the
+readers ran without crashes.
+
 Fix: **rotate the key first.** Moving it out of `.env` doesn't remove the copies already saved in
 transcripts. Then delete or redact the old transcripts, `chmod -R go-rwx` the history directory,
 and shorten the agent's history retention (or turn off persistence) where the agent has a setting.
@@ -639,7 +668,7 @@ folder (or from folders the same `.pth` adds, like pywin32's `win32\lib`), asca 
 | Finding | Severity |
 |---|---|
 | the file's sha256 differs from its package's `RECORD` (rewritten after pip installed it) | 🟧 high |
-| it reaches the network or runs commands **and** decodes/evaluates code or reads credential files, even when its package lists it (malicious wheels list their own files) | 🟧 high |
+| it reaches the network or runs commands **and** decodes/evaluates code, forks into the background (`os.fork`/`setsid`) or reads credential files, process environments (`/proc/*/environ`), cloud metadata (`169.254.169.254`) or a Kubernetes service-account token, even when its package lists it (malicious wheels list their own files) | 🟧 high |
 | a compiled `.so`/`.pyd` that no package installed sits next to it (Python loads it before the `.py`) | 🟧 high |
 | no package installed it and it isn't virtualenv's own `_virtualenv.py`; high when its `.pth` passed as standard tooling, since the name may be borrowed | 🟨 medium / 🟧 high |
 
@@ -923,12 +952,13 @@ In November 2026 [Amazon Threat Intelligence](https://aws.amazon.com/blogs/secur
 | `aistack.litellm-default-key` | `master_key` / `LITELLM_MASTER_KEY` is `sk-1234`, the value LiteLLM's own `proxy_server_config.yaml` and `.env.example` shipped (Amazon doesn't name the value; this is the one LiteLLM published) | 🟧 high, 🟥 critical when the proxy is published on all interfaces |
 | `aistack.litellm-no-master-key` | a LiteLLM proxy config with no master key, and none set next to it | 🟦 low, 🟧 high when published |
 | `aistack.auth-disabled` | Open WebUI `WEBUI_AUTH=False` (no login) | 🟧 high, 🟥 critical when published |
+| `aistack.auth-disabled` | MONAI Label without `MONAI_LABEL_AUTH_ENABLE=True` (authentication is off by default), in a compose service (including its `env_file`) or a `.env` | 🟨 medium when compose keeps it on loopback, 🟧 high in a bare `.env` (`monailabel start_server` binds 0.0.0.0), 🟥 critical when published |
 | `aistack.open-signup` | Open WebUI sign-up left on with `DEFAULT_USER_ROLE=user` (or `admin`), so new accounts skip approval | 🟨 medium (admin 🟧 high), one step higher when published |
 | `aistack.ollama-host` | `OLLAMA_HOST` on all interfaces in shell profiles, launchd plists (`EnvironmentVariables` or `launchctl setenv`), systemd units and drop-ins, `/etc/environment` or the environment. Ollama has no authentication. | 🟧 high (a specific address: 🟨 medium) |
 | `aistack.port-exposed` | a compose service running one of these images publishes ports on all interfaces (`"4000:4000"`, `"11434"`, long syntax without `host_ip`, `network_mode: host`). Docker's published ports bypass ufw/firewalld. | 🟨 medium (Ollama 🟧 high) |
-| `aistack.vulnerable-version` | Langflow < 1.3.0 (CVE-2025-3248, unauthenticated RCE, in CISA KEV) from site-packages or the image tag; RAGFlow image v0.24.0 (CVE-2026-28797, the advisory lists no patched release) | 🟥 critical |
+| `aistack.vulnerable-version` | Langflow < 1.3.0 (CVE-2025-3248, unauthenticated RCE, in CISA KEV) from site-packages or the image tag; RAGFlow image v0.24.0 (CVE-2026-28797, the advisory lists no patched release); MONAI Label < 0.8.6 (CVE-2026-133968, exploited as a zero-day by [Cairn AI agents](https://aws.amazon.com/blogs/security/chinese-nexus-actors-cairn-ai-agents-found-a-zero-day-on-their-own/), CISA KEV) and < 0.8.8 (two more critical RCEs fixed in 0.8.7 and 0.8.8) from `monailabel` metadata or the `projectmonai/monailabel` tag | 🟥 critical |
 
-Compose `${VAR}`, `${VAR:-default}` and `${VAR-default}` are filled in from the `.env` next to the file, so RAGFlow's `image: ${RAGFLOW_IMAGE}` is matched. Files are found under your home (4 levels deep), each `--repos` root and, on Linux/macOS, `/opt` and `/srv`, skipping dependency and cache folders. Example files (`.env.example`, `docs/`, `tests/`, `examples/`) and a LiteLLM source checkout are skipped. Veloera and Sub2API, which Amazon also names, aren't matched yet: their image names weren't verified. On 1,193 public compose files and LiteLLM configs, the check ran without crashes. Its compose reading matched PyYAML on 971 of 972 files; the one difference is `53:53`, which PyYAML turns into a base-60 number and Compose keeps as a port.
+Compose `${VAR}`, `${VAR:-default}` and `${VAR-default}` are filled in from the `.env` next to the file, so RAGFlow's `image: ${RAGFLOW_IMAGE}` is matched. Files are found under your home (4 levels deep), each `--repos` root and, on Linux/macOS, `/opt` and `/srv`, skipping dependency and cache folders. Example files (`.env.example`, `docs/`, `tests/`, `examples/`) and a LiteLLM source checkout are skipped. A MONAI Label service built locally is recognised by its `monailabel start_server` command. Veloera and Sub2API, which Amazon also names, aren't matched yet: their image names weren't verified. On 136 public files mentioning MONAI Label, 5 deployments were flagged and none of the rest. On 1,193 public compose files and LiteLLM configs, the check ran without crashes. Its compose reading matched PyYAML on 971 of 972 files; the one difference is `53:53`, which PyYAML turns into a base-60 number and Compose keeps as a port.
 
 ### Hooks in user-level and managed agent settings (on by default; `--no-user-hooks` to skip)
 
