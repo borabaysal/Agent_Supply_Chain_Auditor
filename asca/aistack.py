@@ -17,6 +17,8 @@ Everything here is read as text. Nothing is started, nothing is contacted, no co
 | ``OLLAMA_HOST`` bound to all interfaces (Ollama has no authentication) | shell profiles, launchd plists, systemd units, ``/etc/environment``, the environment | high (a specific address: medium) |
 | A known AI gateway/app image whose ports compose publishes on all interfaces (Docker's published ports also bypass ufw/firewalld) | compose files | medium (Ollama: high) |
 | Langflow < 1.3.0 (CVE-2025-3248, unauthenticated RCE, CISA KEV) and RAGFlow v0.24.0 (CVE-2026-28797) | site-packages metadata, compose image tags | critical |
+| MONAI Label < 0.8.6 (CVE-2026-133968, exploited as a zero-day by Cairn agents, CISA KEV) and < 0.8.8 (two more critical RCEs) | ``monailabel`` dist-info, ``projectmonai/monailabel`` image tags | critical |
+| MONAI Label without ``MONAI_LABEL_AUTH_ENABLE=True`` (authentication is off by default) | compose service ``environment``, ``.env`` next to it | high, critical when published on all interfaces |
 
 Compose and ``.env`` files are found under the home folder (depth 4), the ``--repos`` roots and, on POSIX,
 ``/opt`` and ``/srv`` (depth 3), skipping dependency/cache folders, with a directory budget. Example files
@@ -57,7 +59,10 @@ PRODUCTS = [
     (re.compile(r"calciumion/new-api"), "New API"),
     (re.compile(r"labring/fastgpt"), "FastGPT"),
     (re.compile(r"lobehub/lobe-chat"), "LobeChat"),
+    (re.compile(r"projectmonai/monailabel"), "MONAI Label"),
 ]
+CAIRN = "https://aws.amazon.com/blogs/security/chinese-nexus-actors-cairn-ai-agents-found-a-zero-day-on-their-own/"
+MONAI_RELEASES = "https://github.com/Project-MONAI/MONAILabel/releases"
 _FRONTED = {"Dify"}          # its compose publishes the nginx service, not dify-api/dify-web
 _PRODUCT_FIX = {
     "LiteLLM": "Set a long random `master_key` and keep the admin UI and `/key/*` routes off the internet.",
@@ -69,6 +74,8 @@ _PRODUCT_FIX = {
                "bypass Amazon describes.",
     "New API": "Change the default root password and check the `isCliRequest` header bypass Amazon describes.",
     "RAGFlow": "Set `REGISTER_ENABLED=0` once your accounts exist.",
+    "MONAI Label": "Set `MONAI_LABEL_AUTH_ENABLE=True` with a Keycloak realm, and run it as an unprivileged user "
+                   "that can write only to the datastore.",
 }
 VULNS = [  # (product, source, package or image regex, range, ids, summary, fixed)
     ("Langflow", "pypi", "langflow", "< 1.3.0", "CVE-2025-3248",
@@ -80,7 +87,25 @@ VULNS = [  # (product, source, package or image regex, range, ids, summary, fixe
     ("RAGFlow", "image", "infiniflow/ragflow", "= 0.24.0", "CVE-2026-28797",
      "server-side template injection to RCE in the Agent 'Text Processing' component; needs an account, and "
      "self-registration is on by default (REGISTER_ENABLED=1)", None),
+    # Amazon (Nov 20 2026): Cairn agents found the datastore path traversal and wrote a reverse shell into
+    # sitecustomize.py. 0.8.6 fixed it; 0.8.7 and 0.8.8 (Nov 25) fixed two more critical RCEs (bundle_path on the
+    # task PYTHONPATH; request values evaluated in the bundle config), so 0.8.8 is the first safe release.
+    ("MONAI Label", "pypi", "monailabel", "< 0.8.6", "CVE-2026-133968",
+     "datastore path traversal to arbitrary file write and code execution, exploited as a zero-day by Cairn AI "
+     "agents (CISA KEV); 0.8.7 and 0.8.8 fix two more critical RCEs (GHSA-j5c7-p3x5-gw2x, GHSA-gfjg-c3x6-24gw)",
+     "0.8.8"),
+    ("MONAI Label", "image", "projectmonai/monailabel", "< 0.8.6", "CVE-2026-133968",
+     "datastore path traversal to arbitrary file write and code execution, exploited as a zero-day by Cairn AI "
+     "agents (CISA KEV); 0.8.7 and 0.8.8 fix two more critical RCEs (GHSA-j5c7-p3x5-gw2x, GHSA-gfjg-c3x6-24gw)",
+     "0.8.8"),
+    ("MONAI Label", "pypi", "monailabel", ">= 0.8.6, < 0.8.8", "GHSA-j5c7-p3x5-gw2x / GHSA-gfjg-c3x6-24gw",
+     "remote code execution through a client-supplied bundle_path (fixed in 0.8.7) and through request values "
+     "evaluated in the bundle config (fixed in 0.8.8), both critical", "0.8.8"),
+    ("MONAI Label", "image", "projectmonai/monailabel", ">= 0.8.6, < 0.8.8", "GHSA-j5c7-p3x5-gw2x / GHSA-gfjg-c3x6-24gw",
+     "remote code execution through a client-supplied bundle_path (fixed in 0.8.7) and through request values "
+     "evaluated in the bundle config (fixed in 0.8.8), both critical", "0.8.8"),
 ]
+_VULN_SOURCE = {"MONAI Label": f"Amazon's Cairn report, {CAIRN}; releases: {MONAI_RELEASES}"}
 _BUMP = {Severity.LOW: Severity.MEDIUM, Severity.MEDIUM: Severity.HIGH, Severity.HIGH: Severity.CRITICAL,
          Severity.CRITICAL: Severity.CRITICAL}
 
@@ -162,9 +187,16 @@ def port_scopes(port, env: dict) -> list[tuple[str, str]]:
     return [("all", s)]                       # "8080:80", "80" (random host port), on 0.0.0.0
 
 
-def product_of(image: str) -> str | None:
+COMMAND_PRODUCTS = [(re.compile(r"\bmonailabel\s+start_server\b"), "MONAI Label")]
+
+
+def product_of(image: str, command="") -> str | None:
     for rx, name in PRODUCTS:
         if rx.search(image.lower()):
+            return name
+    cmd = " ".join(str(c) for c in command) if isinstance(command, list) else str(command or "")
+    for rx, name in COMMAND_PRODUCTS:
+        if rx.search(cmd.lower()):
             return name
     return None
 
@@ -261,6 +293,26 @@ def _env_checks(ctx: _Ctx, env: dict, where: str, d: Path, service_product: str 
                    f"(Open WebUI is on the ARTEX agents' target list, {AMAZON}).",
             remediation="Remove `WEBUI_AUTH=False` (it is meant for single-user setups on 127.0.0.1) and recreate the "
                         "container."))
+    monai = service_product == "MONAI Label" or (service_product is None and any(
+        k.startswith("MONAI_LABEL_") for k in env))
+    if monai and not _true(env.get("MONAI_LABEL_AUTH_ENABLE", "False")):
+        pub = "MONAI Label" in exposed
+        contained = service_product == "MONAI Label" and not pub      # compose: loopback-only or not published
+        ctx.add(Finding(
+            rule="aistack.auth-disabled", category="ai-stack",
+            severity=Severity.CRITICAL if pub else Severity.MEDIUM if contained else Severity.HIGH,
+            title="MONAI Label runs without authentication"
+                  + (" (`MONAI_LABEL_AUTH_ENABLE` is off)" if "MONAI_LABEL_AUTH_ENABLE" in env else
+                     " (`MONAI_LABEL_AUTH_ENABLE` isn't set; the default is off)")
+                  + (" and is published on all interfaces" if pub else ""),
+            location=where, subject="monailabel:MONAI_LABEL_AUTH_ENABLE",
+            detail="With authentication off, every endpoint (uploads, training, bundle inference) is open to anyone "
+                   "who can connect. Cairn AI agents went from mapping a MONAI Label API to a root shell in about 11 "
+                   f"minutes through its upload endpoint ({CAIRN})."
+                   + (" Compose publishes it on loopback only (or not at all), so only this machine and its "
+                      "containers reach it." if contained else
+                      "" if pub else " Run outside Docker, `monailabel start_server` listens on 0.0.0.0 by default."),
+            remediation=_PRODUCT_FIX["MONAI Label"] + " Keep the port on 127.0.0.1 or a VPN address."))
     role = str(env.get("DEFAULT_USER_ROLE", "")).strip().lower()
     webui = service_product == "Open WebUI" or any(k.startswith("WEBUI_") for k in env)
     if webui and role in ("user", "admin") and not _false(env.get("ENABLE_SIGNUP", "True")) \
@@ -329,7 +381,8 @@ def _compose(ctx: _Ctx, p: Path, doc, env: dict) -> list[tuple[str, dict, str | 
     services = doc.get("services") if isinstance(doc, dict) else None
     if not isinstance(services, dict):
         return []
-    found = {n: product_of(interpolate(s.get("image", ""), env)) for n, s in services.items() if isinstance(s, dict)}
+    found = {n: product_of(interpolate(s.get("image", ""), env), s.get("command") or s.get("entrypoint") or "")
+             for n, s in services.items() if isinstance(s, dict)}
     stack = {x for x in found.values() if x}
     envs = []
     for name, svc in services.items():
@@ -345,6 +398,19 @@ def _compose(ctx: _Ctx, p: Path, doc, env: dict) -> list[tuple[str, dict, str | 
             senv = {str(x).split("=", 1)[0]: interpolate(str(x).split("=", 1)[1], env) for x in raw_env if "=" in str(x)}
         elif isinstance(raw_env, dict):
             senv = {str(k): interpolate("" if v is None else v, env) for k, v in raw_env.items()}
+        if prod == "MONAI Label" and "MONAI_LABEL_AUTH_ENABLE" not in senv:
+            # its auth switch may sit in an env_file (other keys there are reported on that file itself)
+            ef = svc.get("env_file")
+            for e in ([ef] if isinstance(ef, (str, dict)) else ef if isinstance(ef, list) else []):
+                rel = e.get("path") if isinstance(e, dict) else e
+                try:
+                    v = read_env((p.parent / interpolate(rel, env)).read_text(encoding="utf-8-sig",
+                                                                              errors="replace")).get(
+                        "MONAI_LABEL_AUTH_ENABLE")
+                except (OSError, TypeError, ValueError):
+                    v = None
+                if v is not None:
+                    senv["MONAI_LABEL_AUTH_ENABLE"] = v
         envs.append((where, senv, prod))
         if not prod:
             continue
@@ -378,7 +444,8 @@ def _vuln(ctx: _Ctx, prod, what, where, cve, summary, fixed) -> None:
     ctx.add(Finding(
         rule="aistack.vulnerable-version", category="ai-stack", severity=Severity.CRITICAL,
         title=f"{prod} {what.split(':', 1)[1]} has {cve}", location=where, subject=f"{what}:{cve}",
-        detail=f"{cve}: {summary}. It is in the ARTEX agents' playbook ({AMAZON}).",
+        detail=f"{cve}: {summary}. " + (f"Source: {_VULN_SOURCE[prod]}." if prod in _VULN_SOURCE else
+                                         f"It is in the ARTEX agents' playbook ({AMAZON})."),
         remediation=(f"Upgrade to {fixed} or later" if fixed else
                      "The advisory (GHSA-vvwj-fvwh-4whx) lists no patched release; v0.25.0 notes a template-sandbox "
                      "change. Upgrade, keep it off the internet, and turn off self-registration") + "."))

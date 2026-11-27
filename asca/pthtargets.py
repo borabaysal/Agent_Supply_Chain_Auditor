@@ -36,7 +36,11 @@ _IMPORTS = [re.compile(r"\bimport\s+([A-Za-z_][\w.]*(?:\s+as\s+\w+)?(?:\s*,\s*[A
 NET = re.compile(r"\burllib\b|urlopen|\brequests\.|http\.client|\bsocket\.|\bsubprocess\b|os\.system|os\.popen|"
                  r"\bPopen\b|\bhttpx\b|\baiohttp\b")
 RUN = re.compile(r"\bexec\s*\(|\beval\s*\(|b64decode|marshal\.loads|zlib\.decompress|\bcompile\s*\(|bytes\.fromhex")
-CRED = re.compile(r"\.ssh/|\.aws/credentials|\.git-credentials|\.npmrc|\.pypirc|\.netrc|\.docker/config\.json|"
+# agent-framework 1.26.x (Nov 2026): the imported module harvested /proc/*/environ and cloud metadata, then
+# detached with fork/setsid before posting.
+CRED = re.compile(r"/proc/(?:\d+|self|1)/environ|/proc/\{|169\.254\.169\.254|metadata\.google\.internal|"
+                  r"serviceaccount/token|"
+                  r"\.ssh/|\.aws/credentials|\.git-credentials|\.npmrc|\.pypirc|\.netrc|\.docker/config\.json|"
                   r"\.kube/config|id_rsa|id_ed25519|Login Data|\.config/gcloud|\.azure/")
 # Files that tools (not pip) write next to their .pth: (module, marker that their own file contains)
 TOOL_FILES = {"_virtualenv": "VIRTUALENV_PATCH_FILE"}
@@ -183,8 +187,12 @@ def _digest(p: Path) -> str:
     return "sha256=" + base64.urlsafe_b64encode(h.digest()).rstrip(b"=").decode("ascii")
 
 
+# A startup module that forks into the background (agent-framework 1.26.x detached before posting).
+DETACH = re.compile(r"\bos\.fork\s*\(|\bos\.setsid\s*\(|start_new_session\s*=\s*True|\bdaemon\s*\(")
+
+
 def _signals(text: str) -> list[str]:
-    net, run, cred = NET.search(text), RUN.search(text), CRED.search(text)
+    net, run, cred = NET.search(text), RUN.search(text) or DETACH.search(text), CRED.search(text)
     if net and (run or cred):
         return [m.group(0).strip("( ") for m in (net, run, cred) if m]
     return []

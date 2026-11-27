@@ -90,6 +90,7 @@ class _Secret:
     examples: list = field(default_factory=list)
     roots: set = field(default_factory=set)
     example_files: set = field(default_factory=set)
+    by_root: dict = field(default_factory=dict)        # root label -> (root path, set of files)
 
 
 @dataclass
@@ -256,6 +257,7 @@ def _record(found: dict, root: Root, where: str, rule: str, label: str, identity
     s.count += 1
     s.files.add(fname)
     s.roots.add(root.agent)
+    s.by_root.setdefault(root.agent, (root.path, set()))[1].add(fname)
     if len(s.examples) < EXAMPLES and fname not in s.example_files:
         s.example_files.add(fname)
         s.examples.append(where)
@@ -429,7 +431,9 @@ def audit_permissions(root: Root, limit: int = 200_000) -> list[Finding]:
 
 # ------------------------------------------------------------------ entry point
 
-def audit(roots: list[Root], stats: dict, budget: Budget | None = None) -> list[Finding]:
+def audit(roots: list[Root], stats: dict, budget: Budget | None = None,
+          collect: list | None = None) -> list[Finding]:
+    """collect: if given, one dict per secret found (label, hash, preview, roots, files) for provexpo."""
     budget = budget or Budget()
     found: dict[str, _Secret] = {}
     out: list[Finding] = []
@@ -518,6 +522,10 @@ def audit(roots: list[Root], stats: dict, budget: Budget | None = None) -> list[
                     f"tool output (it read a .env or printed a config); any later skill or agent that reads past "
                     f"sessions gets the key."),
             remediation=REMEDIATION))
+        if collect is not None:
+            collect.append({"label": s.label, "hash": h, "preview": s.preview,
+                            "roots": {k: v[0] for k, v in s.by_root.items()},
+                            "files": {k: sorted(v[1]) for k, v in s.by_root.items()}})
 
     stats["session_history_files"] = budget.used_files
     stats["session_history_bytes"] = budget.used_bytes
