@@ -16,7 +16,7 @@ from . import (__version__, advisories, agentcfg, agentvers, pluginpins, tcc, al
                mcp, persona, pystartup, repohooks, report, respond, secrets, sessions, stray, symlinks, wfsecrets)
 from .model import Finding, Report, Severity
 from . import fsutil
-from . import aistack, autostart, devcreds, mcpvers, provexpo, userhooks
+from . import aistack, autostart, devcreds, mcpvers, models, provexpo, userhooks
 
 
 def _default_home() -> Path | None:
@@ -76,6 +76,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-user-autostart", action="store_true",
                    help="skip autostart entries (LaunchAgents/Daemons, systemd units, XDG autostart, cron, Windows Run keys and "
                         "Startup folders) and delete-on-revoke switches")
+    p.add_argument("--no-model-cache", action="store_true",
+                   help="skip local model checks (Hugging Face hub cache, Ollama: integrity, load-time code)")
+    p.add_argument("--model-hash-budget-mb", type=int, default=models.DEFAULT_HASH_BUDGET // models.MiB, metavar="MB",
+                   help="bytes of cached model files to hash per run, smallest first (default %(default)s; 0 = none)")
     p.add_argument("--no-ai-stack", action="store_true",
                    help="skip self-hosted AI gateway/app checks (LiteLLM, Ollama, Open WebUI, Langflow, RAGFlow ...)")
     p.add_argument("--no-docker-daemon", action="store_true",
@@ -323,6 +327,11 @@ def run(argv: list[str] | None = None) -> int:
     if not args.no_user_autostart:            # testmetest/Miasma: backdoor + delete-on-revoke monitor
         findings += (autostart.audit(Path.home(), stats, root=fsutil.NO_ROOT, run_keys=[]) if args.home_only
                      else autostart.audit(Path.home(), stats))
+
+    if not args.no_model_cache:               # JFrog: ARTEX-built HF models run code on AutoConfig load
+        findings += models.audit(Path.home(), stats, env=env_or_none,
+                                 root=None if args.home_only else Path("/"),
+                                 hash_budget=max(0, args.model_hash_budget_mb) * models.MiB)
 
     if not args.no_ai_stack:                  # the ARTEX playbook: gateways and apps next to your agents
         findings += (aistack.audit(Path.home(), stats, repo_roots=list(args.repos), sites=sites or [],

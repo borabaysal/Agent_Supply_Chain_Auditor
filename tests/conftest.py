@@ -11,7 +11,7 @@ import pathlib
 
 import pytest
 
-from asca import agentvers, aistack, autostart, devcreds, pthtargets, pystartup, secrets, tcc, userhooks
+from asca import agentvers, aistack, autostart, devcreds, models, pthtargets, pystartup, secrets, tcc, userhooks
 
 REAL_HOME = pathlib.Path.home().resolve()     # captured before any test changes HOME
 
@@ -50,6 +50,20 @@ def _no_real_home_files(monkeypatch):
     real_collect = userhooks.collect
     monkeypatch.setattr(userhooks, "collect", lambda home, env=None: ([], []) if pathlib.Path(home).resolve() ==
                         REAL_HOME else real_collect(home, env))
+
+
+@pytest.fixture(autouse=True)
+def _no_host_model_cache(monkeypatch):
+    """The model check reads HF_HOME/HF_HUB_CACHE/OLLAMA_MODELS and /usr/share/ollama. Tests see none of the
+    host's unless they pass their own env/root."""
+    real = models.audit
+
+    def isolated(home, stats, *, env=None, root=None, hash_budget=models.DEFAULT_HASH_BUDGET):
+        if pathlib.Path(home).resolve() == REAL_HOME:
+            return []
+        return real(home, stats, env={} if env is None else env, root=root, hash_budget=hash_budget)
+
+    monkeypatch.setattr(models, "audit", isolated)
 
 
 @pytest.fixture(autouse=True)

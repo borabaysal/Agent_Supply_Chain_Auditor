@@ -86,6 +86,7 @@ asca -o reports/2026-10-05             # writes reports/2026-10-05.md and .json
 asca --format json                     # machine-readable on stdout
 asca --no-session-history              # skip transcript scanning (on by default)
 asca --session-budget-mb 4096          # read more history per run (default 1024 MiB, newest first)
+asca --model-hash-budget-mb 20000      # verify more cached model weights per run (default 2048 MiB)
 asca --instructions-dir ~/shared       # also look for stray AGENTS.md/CLAUDE.md here
 ```
 
@@ -555,6 +556,7 @@ python3 -m asca inventory --baseline ~/.config/asca/inventory-baseline.json
 | Claude Code plugins | `~/.claude/plugins/installed_plugins.json` | marketplace, version |
 | OpenClaw extensions | `~/.openclaw/extensions` | npm scope/author, version |
 | Agent skills | Hermes, OpenClaw, Claude Code, Codex skill folders | Hermes provenance: bundled (manifest hash), hub (lock content hash), local |
+| Local models and LoRA adapters | Hugging Face hub cache (`HF_HUB_CACHE`, `HF_HOME/hub`, `~/.cache/huggingface/hub`), Ollama (`OLLAMA_MODELS`, `~/.ollama/models`) | HF org / Ollama namespace as publisher, revision (commit or manifest digest), hash over the content hashes the cache stores files under; an `adapter_config.json` makes it a `model-adapter` with its base model noted. A new publisher, a publisher change, or files changing under the same revision (`inventory.tamper`) alert like any other item. Weights are never read here. |
 
 Each extension and plugin is hashed over its **code and manifests** (JS/TS, Python, shell,
 native binaries, `package.json`, `plugin.yaml`…), not docs or images. Skills are hashed over all
@@ -959,6 +961,23 @@ In November 2026 [Amazon Threat Intelligence](https://aws.amazon.com/blogs/secur
 | `aistack.vulnerable-version` | Langflow < 1.3.0 (CVE-2025-3248, unauthenticated RCE, in CISA KEV) from site-packages or the image tag; RAGFlow image v0.24.0 (CVE-2026-28797, the advisory lists no patched release); MONAI Label < 0.8.6 (CVE-2026-133968, exploited as a zero-day by [Cairn AI agents](https://aws.amazon.com/blogs/security/chinese-nexus-actors-cairn-ai-agents-found-a-zero-day-on-their-own/), CISA KEV) and < 0.8.8 (two more critical RCEs fixed in 0.8.7 and 0.8.8) from `monailabel` metadata or the `projectmonai/monailabel` tag | 🟥 critical |
 
 Compose `${VAR}`, `${VAR:-default}` and `${VAR-default}` are filled in from the `.env` next to the file, so RAGFlow's `image: ${RAGFLOW_IMAGE}` is matched. Files are found under your home (4 levels deep), each `--repos` root and, on Linux/macOS, `/opt` and `/srv`, skipping dependency and cache folders. Example files (`.env.example`, `docs/`, `tests/`, `examples/`) and a LiteLLM source checkout are skipped. A MONAI Label service built locally is recognised by its `monailabel start_server` command. Veloera and Sub2API, which Amazon also names, aren't matched yet: their image names weren't verified. On 136 public files mentioning MONAI Label, 5 deployments were flagged and none of the rest. On 1,193 public compose files and LiteLLM configs, the check ran without crashes. Its compose reading matched PyYAML on 971 of 972 files; the one difference is `53:53`, which PyYAML turns into a base-60 number and Compose keeps as a port.
+
+### Local model weights and load-time code (on by default; `--no-model-cache` to skip)
+
+On 24 Nov 2026 [JFrog](https://research.jfrog.com/post/the-agent-that-robbed-itself-an-ai-driven-hugging-face-malware-campaign-leaks-its-own-operator/) found Hugging Face models built by the ARTEX attack agent. Their `config.json` `auto_map` loads bundled Python that steals `/proc/1/environ`, the environment and Kubernetes tokens, and commits the loot to a Hub repo with a base64-hidden token. The same payload sat in pickles, and the chat template tried Jinja sandbox escapes. The second model had no weights at all, so pickle scanners stayed quiet, and `AutoConfig.from_pretrained(..., trust_remote_code=True)` alone ran it. Microsoft Research and CrowdStrike showed backdoored checkpoints and LoRA adapters; the defence they name is provenance plus comparing with the original. Both caches store files under their content hash, so asca can prove a file is still what was downloaded.
+
+| Rule | What | Severity |
+|---|---|---|
+| `model.known-malicious` | a cached file matching JFrog's published hashes, a repo of the campaign's account, or its payload marker | 🟥 critical |
+| `model.blob-mismatch` | a cached file whose content no longer matches the hash it's stored under (HF: sha256 for LFS files, git's blob sha1 for small ones; Ollama: `sha256-<hex>`), a manifest size that doesn't match, or a snapshot link that leaves the cache | 🟧 high |
+| `model.remote-code` | model code (`auto_map` or bundled `.py`) that reads `/proc/*/environ`, service-account tokens or cloud metadata, posts to the Hub commit API, or holds a base64 `hf_` token | 🟧 high |
+| `model.pickle-code` | a pickle weight file (`.bin`, `.pt`, `.pth`, `.ckpt`, `.pkl`) whose first 16 MiB import `exec`/`eval`/`os.system`/`subprocess` | 🟧 high |
+| `model.chat-template-injection` | a chat template reaching for `__globals__`, `__subclasses__`, `__mro__`, `popen` | 🟧 high |
+| `model.weightless-remote-code` | `auto_map` code and no weight files: 🟨 medium when the Hub answered "not found" for the weights (HF's `.no_exist` record), 🟦 low when they just weren't downloaded (AutoConfig fetches only config and code) | 🟨 medium / 🟦 low |
+| `model.lookalike-publisher` | an org or namespace one edit (or a 0/O, 1/l swap) away from a well-known publisher (`meta-1lama`, `microsft`) | 🟨 medium |
+| `model.hash-budget` | files left unhashed when `--model-hash-budget-mb` (default 2048) ran out; smallest files go first, so configs, code and adapters are always covered | 🟦 low |
+
+Nothing is imported, unpickled, rendered or contacted. It can't catch a backdoor the publisher uploaded itself; the inventory records who published each model and alerts when that changes. On 185 of the most-downloaded `custom_code` and chat models from the Hub (471 `.py` files, 151 chat templates, 114 `auto_map` configs) it gave no critical, high or medium findings; the low "no weights in the cache" notes came from the benchmark downloading text files only. On a real cache (faster-whisper, 1.9 GB) every file matched its stored hash.
 
 ### Hooks in user-level and managed agent settings (on by default; `--no-user-hooks` to skip)
 
