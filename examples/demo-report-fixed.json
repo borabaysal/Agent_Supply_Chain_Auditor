@@ -46,6 +46,8 @@
     "dev_credential_files": 0,
     "user_autostart_entries": 0,
     "system_autostart_entries": 0,
+    "hf_snapshots": 0,
+    "ollama_models": 0,
     "ai_stack_dirs": 18,
     "ai_stack_files": 0,
     "ai_stack_findings": 0,

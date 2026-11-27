@@ -423,6 +423,46 @@ def agent_hooks(home: Path, out: Collected) -> None:
                               note=f"{h['scope']} settings"))
 
 
+def local_models(home: Path, out: Collected, env: dict | None = None) -> None:
+    """Hugging Face cache snapshots, LoRA adapters among them, and Ollama models. Identity is the publisher (HF org,
+    Ollama namespace) and revision; the hash covers the content hashes the caches store files under, so a file that
+    changes under the same revision shows as tamper. Weights are never read here (asca's audit verifies them)."""
+    import os
+    from .. import models
+    env = dict(os.environ) if env is None else env
+    for cache in models.hf_caches(home, env):
+        snaps = [s for s in models.hf_snapshots(cache) if s.repo_type == "models"]
+        per_repo: dict[str, int] = {}
+        for s in snaps:
+            per_repo[s.repo_id] = per_repo.get(s.repo_id, 0) + 1
+        for s in snaps:
+            # the `main` (or only) revision keeps the repo id, so an update reads as a version change and files
+            # changing under the same revision read as tamper; other cached revisions get their own entry
+            rid = s.repo_id if ("main" in s.refs or per_repo[s.repo_id] == 1) else f"{s.repo_id}@{s.commit[:12]}"
+            pairs = [f"{rel}:{Path(s.blobs[rel]).name if rel in s.blobs else 'copy'}" for rel in sorted(s.files)]
+            adapter = "adapter_config.json" in s.files
+            note = ""
+            if adapter:
+                try:
+                    cfg = json.loads(s.files["adapter_config.json"].read_text(encoding="utf-8"))
+                    note = f"LoRA/PEFT adapter for {cfg.get('base_model_name_or_path') or 'unknown base'}"
+                except (OSError, ValueError, AttributeError):
+                    note = "LoRA/PEFT adapter"
+            out.items.append(Item(kind="model-adapter" if adapter else "model", source="huggingface",
+                                  id=rid, name=s.repo_id.split("/")[-1].lower(),
+                                  publisher=(s.org or "unknown").lower(), version=s.commit[:12],
+                                  origin="huggingface" + (f":{','.join(s.refs)}" if s.refs else ""),
+                                  path=str(s.path), hash=text_hash(*pairs), files=len(pairs), note=note))
+    for d in models.ollama_dirs(home, env, None):
+        ms, _ = models.ollama_models(d)
+        for m in ms:
+            adapter = any("adapter" in media for media, _, _ in m.layers)
+            out.items.append(Item(kind="model", source="ollama", id=m.name, name=m.name.split("/")[-1].split(":")[0],
+                                  publisher=m.publisher.lower(), version=m.digest[:12], origin="ollama",
+                                  path=str(m.manifest), hash=text_hash(*sorted(h for _, h, _ in m.layers)),
+                                  files=len(m.layers), note="includes a LoRA adapter layer" if adapter else ""))
+
+
 def collect(home: Path, hermes_home: Path | None, budget: Budget, *, mcp_configs: list[Path] = (),
             ide_dirs: list[tuple[str, Path]] = (), include_skills: bool = True) -> Collected:
     out = Collected()
@@ -437,6 +477,7 @@ def collect(home: Path, hermes_home: Path | None, budget: Budget, *, mcp_configs
         hermes_identity(hermes_home, out)
     if include_skills:
         skills(home, hermes_home, budget, out)
+    local_models(home, out)
     # same key twice (e.g. a skill dir reachable from two roots): keep the first
     seen, uniq = set(), []
     for it in out.items:
